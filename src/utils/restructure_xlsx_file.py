@@ -93,6 +93,7 @@ class FileRestructure:
             # 构建所有字段的全集（用于最终纵向合并）
             all_columns = set(STANDARD_FIELDS[key] + ['SUPPSEQ'])
 
+            # 在处理每个 DataFrame 时，检测日期列并格式化为 ISO8601 格式
             for sheet_name, df in xls.items():
                 # 提取序号：AB1 -> 1，AB12 -> 12
                 match = re.match(rf'^{key}(\d+)$', sheet_name)
@@ -105,6 +106,19 @@ class FileRestructure:
                 if 'SUBJID' in df.columns:
                     df.rename(columns={'SUBJID': 'USUBJID'}, inplace=True)
                 
+                # 检测并格式化日期列
+                for col in df.columns:
+                    try:
+                        # 创建一个副本以尝试转换为日期
+                        temp_col = pd.to_datetime(df[col], errors='coerce')
+                        
+                        # 如果列中有非空值且全为日期类型，则格式化为 YYYY-MM-DD
+                        if not temp_col.isna().all():
+                            df[col] = temp_col.dt.strftime('%Y-%m-%d').fillna(df[col])  # 保留原始非日期值
+                    except Exception:
+                        # 如果转换失败，跳过该列
+                        pass
+
                 # 补全缺失列
                 missing_cols = [col for col in STANDARD_FIELDS[key] if col not in df.columns]
                 for col in missing_cols:
@@ -159,13 +173,18 @@ class FileRestructure:
             # 删除字段SUPPSEQ
             full_df.drop(columns=['SUPPSEQ'], inplace=True)
             
+            # 写出前确保所有日期列为字符串格式
+            for col in full_df.columns:
+                if full_df[col].dtype == 'datetime64[ns]':  # 检查是否为日期类型
+                    full_df[col] = full_df[col].dt.strftime('%Y-%m-%d')
+
             # 生成输出路径
             if output_path:
                 output_file = os.path.join(output_path, f"{base_name}.csv")
             else:
                 output_file = os.path.splitext(input_file)[0] + '.csv'
 
-            # 写出
+            # 写出 CSV 文件
             full_df.to_csv(output_file, index=False, encoding='utf-8-sig')
 
             return True, ""
