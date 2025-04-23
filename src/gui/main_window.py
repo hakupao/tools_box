@@ -4,18 +4,19 @@ from src.gui.widgets.csv_converter import CsvConverterWindow
 from src.gui.widgets.xlsx_converter import XlsxConverterWindow
 from src.gui.widgets.edc_site_adder import EdcSiteAdderWindow
 from src.gui.widgets.xlsx_file_restructuring import FileRestructureWindow
+from src.gui.widgets.data_cleaner import DataCleanerWindow
 from src.version import VERSION
 
 class MainWindow:
     def __init__(self, root):
         self.root = root
         self.root.title("工具集合")
-        self.root.geometry("800x600")
+        self.root.geometry("800x800")
         self.root.configure(bg='#f0f0f0')
         
         # 设置窗口最小尺寸
         self.root.update()
-        self.root.minsize(800, 600)
+        self.root.minsize(800, 800)
         
         # 绑定关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -61,10 +62,14 @@ class MainWindow:
             ("XLSX转CSV", self.function_three),
             ("EDC施设添加", self.function_four),
             ("生成Data Set", self.function_five),
-            ("功能六", self.function_six)
+            ("数据清洗", self.function_six),
+            ("功能七", self.function_seven),
+            ("功能八", self.function_eight),
+            ("功能九", self.function_nine),
+            ("功能十", self.function_ten)
         ]
         
-        self.colors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#1abc9c']
+        self.colors = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f', '#1abc9c', '#34495e', '#d35400', '#2980b9', '#8e44ad']
         
         self._create_widgets()
     
@@ -153,11 +158,28 @@ class MainWindow:
         FileRestructureWindow(self.root, self)
     
     def function_six(self):
-        # 功能六实现位置
+        self.hide()
+        # 打开数据清洗窗口
+        DataCleanerWindow(self.root, self)
+    
+    def function_seven(self):
+        # 功能七实现位置
         pass
     
+    def function_eight(self):
+        # 功能八实现位置
+        pass
+    
+    def function_nine(self):
+        # 功能九实现位置
+        pass
+    
+    def function_ten(self):
+        # 功能十实现位置
+        pass
+
     def on_closing(self):
         """处理窗口关闭事件"""
         # 强制退出程序
         import os
-        os._exit(0) 
+        os._exit(0)
