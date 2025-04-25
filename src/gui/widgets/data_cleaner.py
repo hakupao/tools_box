@@ -79,7 +79,7 @@ class DataCleanerWindow:
             width=15,
             height=1,
             font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
+            bg='#f1c40f',
             fg='white',
             relief='flat',
             cursor='hand2'
