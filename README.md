@@ -82,7 +82,7 @@ tools_box/
 
 ## 安装说明
 
-1. 确保已安装 Python 3.x。
+1. 确保已安装 Python 3.10.11。
 2. 安装依赖包：
 
    ```bash
@@ -102,7 +102,7 @@ tools_box/
 ## 系统要求
 
 - Windows 操作系统
-- Python 3.x
+- Python 3.10.11
 - tkinter（Python 标准库）
 
 ## 开发说明
