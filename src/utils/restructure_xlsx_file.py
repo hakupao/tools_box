@@ -1,6 +1,7 @@
 ﻿import os
 import pandas as pd
 from typing import Optional, Tuple
+import re
 
 # 示例的STANDARD_FIELDS和SORTKEY，可按实际扩充
 STANDARD_FIELDS = {
@@ -78,8 +79,6 @@ class FileRestructure:
     @staticmethod
     def file_restructure(input_file: str, output_path: Optional[str] = None) -> Tuple[bool, str]:
         try:
-            import re
-
             # 文件名（不带扩展名）作为关键字，如 AB.xlsx => AB
             base_name = os.path.splitext(os.path.basename(input_file))[0]
             key = re.match(r'[A-Za-z]+', base_name).group()
@@ -95,14 +94,24 @@ class FileRestructure:
 
             # 在处理每个 DataFrame 时，检测日期列并格式化为 ISO8601 格式
             for sheet_name, df in xls.items():
-                # 提取序号：AB1 -> 1，AB12 -> 12
-                match = re.match(rf'^{key}(\d+)$', sheet_name)
-                if not match:
-                    continue  # 忽略不符合命名规则的sheet
-                seq = match.group(1).zfill(3)
+                seq = None
+                # 检查是否是标准命名方式：AB1、AB12 等
+                match_standard = re.match(rf'^{key}(\d+)$', sheet_name)
+                if match_standard:
+                    seq = match_standard.group(1).zfill(3)
+                # 检查是否是默认命名方式：Sheet1、Sheet2 等
+                else:
+                    match_default = re.match(r'^Sheet(\d+)$', sheet_name)
+                    if match_default:
+                        seq = match_default.group(1).zfill(3)
+                
+                # 如果没有匹配到任何命名模式，则跳过此sheet
+                if seq is None:
+                    continue
+
                 df['SUPPSEQ'] = seq
 
-                # 如果有为“SUBJID”的字段，则改为“USUBJID”，否则不做处理
+                # 如果有为"SUBJID"的字段，则改为"USUBJID"，否则不做处理
                 if 'SUBJID' in df.columns:
                     df.rename(columns={'SUBJID': 'USUBJID'}, inplace=True)
                 
