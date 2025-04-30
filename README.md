@@ -1,153 +1,92 @@
-# Windows 工具箱
+# Tools Box
 
-这是一个基于 Python 的 Windows 工具箱程序，提供了多个实用工具功能，旨在提高日常工作效率。
+一个基于 Python 和 Tkinter 开发的实用工具集合，提供拖拽功能和现代化的用户界面。
 
-## 项目结构
+## 功能特性
 
-```plaintext
-tools_box/
-├── src/                    # 源代码目录
-│   ├── __init__.py
-│   ├── main.py            # 主程序入口
-│   ├── gui/               # GUI 相关代码
-│   │   ├── __init__.py
-│   │   ├── main_window.py # 主窗口
-│   │   └── widgets/       # 自定义控件
-│   │       ├── __init__.py
-│   │       ├── csv_converter.py  # CSV 转换工具
-│   │       ├── date_converter.py # 日期转换工具
-│   │       ├── data_cleaner.py   # 数据清洗工具
-│   │       ├── xlsx_converter.py # XLSX 转换工具
-│   │       ├── edc_site_adder.py # EDC 站点添加工具
-│   │       ├── xlsx_file_restructuring.py # XLSX 文件重构工具
-│   │       └── additional_widgets.py # 其他自定义控件
-│   └── utils/             # 工具函数
-│       ├── __init__.py
-│       ├── csv_converter_utils.py # CSV 转换工具函数
-│       ├── date_utils.py         # 日期处理工具函数
-│       ├── data_cleaning.py      # 数据清洗工具函数
-│       ├── restructure_xlsx_file.py # XLSX 文件重构工具函数
-│       └── additional_utils.py   # 其他工具函数
-├── requirements.txt       # 项目依赖
-├── tools_box.spec         # PyInstaller 打包配置
-├── build/                 # 构建目录
-│   └── tools_box/         # 构建输出
-├── dist/                  # 分发目录
-├── temp_tkdnd/            # tkdnd 临时文件
-│   └── tkdnd/
-└── README.md              # 项目说明
-```
-
-## 功能特点
-
-- **日期转换工具**
-  - 支持将日期格式转换为 ISO8601 格式
-  - 自动补零
-  - 保留空行和非日期数据
-  - 支持批量转换
-
-- **CSV 转换工具**
-  - 支持 CSV 文件的格式转换
-  - 提供数据清洗和格式化功能
-
-- **XLSX 转换工具**
-  - 支持 XLSX 文件的格式转换
-  - 提供多表合并和数据提取功能
-
-- **XLSX 文件重构工具**
-  - 支持多表合并为单一 CSV 文件
-  - 按预定义字段顺序和排序规则重构数据
-  - 自动生成序号字段
-  - 支持拖拽文件和文件夹
-  - 支持自定义输出路径
-  - 实时显示转换进度和错误提示
-
-- **数据清洗工具**
-  - 支持根据仕样书进行数据清洗
-  - 自动过滤非目标患者数据
-  - 根据配置规则保留特定字段
-  - 应用自定义行过滤逻辑
-  - 清理空行数据
-  - 支持拖拽文件和文件夹
-  - 输出文件自动添加前缀标识
-  - 支持自定义输出路径
-  - 实时显示处理进度
-
-- **EDC 站点添加工具**
-  - 支持自动添加 EDC 站点
-  - 可配置点击坐标和循环次数
-  - 实时显示处理日志
-  - 支持 ESC 键随时终止处理
-  - 提供友好的用户界面
-
-## 安装说明
-
-1. 确保已安装 Python 3.10.11。
-2. 安装依赖包：
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## 使用方法
-
-1. 运行主程序：
-
-   ```bash
-   python -m src.main
-   ```
-
-2. 在主界面点击相应的功能按钮使用工具。
+- 支持文件拖拽操作
+- 现代化的用户界面
+- 多工具集成
+- 跨平台支持（Windows）
 
 ## 系统要求
 
+- Python 3.8 或更高版本
 - Windows 操作系统
-- Python 3.10.11
-- tkinter（Python 标准库）
+
+## 安装说明
+
+### 从源码安装
+
+1. 克隆仓库：
+```bash
+git clone [repository-url]
+cd tools_box
+```
+
+2. 创建虚拟环境（推荐）：
+```bash
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+```
+
+3. 安装依赖：
+```bash
+pip install -r requirements.txt
+```
+
+### 使用打包版本
+
+项目提供了打包好的可执行文件，可以直接运行，无需安装 Python 环境。
+
+## 使用方法
+
+1. 运行程序：
+```bash
+python src/main.py
+```
+
+2. 或者直接运行打包后的可执行文件。
+
+## 项目结构
+
+```
+tools_box/
+├── src/                # 源代码目录
+│   ├── gui/           # 图形界面相关代码
+│   ├── utils/         # 工具函数
+│   ├── main.py        # 主程序入口
+│   └── version.py     # 版本信息
+├── requirements.txt   # 项目依赖
+└── tools_box.spec    # PyInstaller 打包配置
+```
+
+## 依赖项
+
+- pandas: 数据处理
+- openpyxl: Excel 文件处理
+- tkinterdnd2: 拖拽功能支持
+- pyinstaller: 程序打包
+- pyautogui: 自动化控制
+- pygetwindow: 窗口管理
+- pywin32: Windows API 接口
+- mouse: 鼠标控制
+- keyboard: 键盘控制
 
 ## 开发说明
 
-- 新增功能时，请在 `src/gui/widgets/` 目录下创建新的窗口类。
-- 工具函数应放在 `src/utils/` 目录下。
-- 主窗口类在 `src/gui/main_window.py` 中维护。
-- 确保新增功能的代码符合项目的代码风格，并添加必要的注释和文档。
-
-## 贡献指南
-
-欢迎对本项目进行贡献！请遵循以下步骤：
-
-1. Fork 本仓库。
-2. 创建一个新的分支：
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-3. 提交代码并推送到你的分支：
-
-   ```bash
-   git commit -m "Add your feature description"
-   git push origin feature/your-feature-name
-   ```
-
-4. 提交 Pull Request。
+1. 确保已安装所有开发依赖
+2. 遵循项目代码规范
+3. 提交代码前运行测试
 
 ## 许可证
 
-本项目基于 MIT 许可证开源，详情请参阅 LICENSE 文件。
+[在此添加许可证信息]
 
-## 写给作者
+## 贡献指南
 
-打包更新方法
+欢迎提交 Issue 和 Pull Request 来帮助改进项目。
 
-1. 清理所有临时文件和构建目录：
+## 联系方式
 
-   ```powershell
-   Remove-Item -Path build,dist,temp_tkdnd -Recurse -Force -ErrorAction SilentlyContinue
-   ```
-
-2. 重新打包：
-
-   ```bash
-   python -m PyInstaller tools_box.spec --clean
-   ```
+[在此添加联系方式]
