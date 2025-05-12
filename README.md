@@ -7,6 +7,12 @@
 - 支持文件拖拽操作
 - 现代化的用户界面
 - 多工具集成
+  - 日期转换工具
+  - CSV/XLSX格式互转
+  - EDC站点自动添加
+  - 数据集生成
+  - 数据清洗
+  - Codelist处理
 - 跨平台支持（Windows）
 
 ## 系统要求
@@ -86,6 +92,22 @@ tools_box/
 ## 贡献指南
 
 欢迎提交 Issue 和 Pull Request 来帮助改进项目。
+
+## 写给作者
+
+打包更新方法
+
+1. 清理所有临时文件和构建目录：
+
+   ```powershell
+   Remove-Item -Path build,dist,temp_tkdnd -Recurse -Force -ErrorAction SilentlyContinue
+   ```
+
+2. 重新打包：
+
+   ```bash
+   python -m PyInstaller tools_box.spec --clean
+   ```
 
 ## 联系方式
 
