@@ -111,8 +111,8 @@ class CodelistProcessor:
                             date_values_count += 1
             
             # 如果非空值中有至少30%是日期格式，则认为该列是日期列
-            # 同时要确保至少有一定数量的非空值样本（比如5个）才做判断
-            if non_empty_values_count >= 5 and date_values_count >= non_empty_values_count * 0.3:
+            # 不再要求最低非空样本数量
+            if non_empty_values_count > 0 and date_values_count >= non_empty_values_count * 0.3:
                 # 如果该列包含日期值，转换格式
                 df[col] = df[col].apply(lambda x: self._convert_date_string(x) if isinstance(x, str) else x)
         
