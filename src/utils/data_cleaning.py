@@ -10,6 +10,7 @@ class DataCleaner:
         self.PAT = set()
         self.KEEP = dict()
         self.ROW_FILTERS = dict()  # 存储行过滤条件
+        self.SUBJID_FIELDS = dict()  # 存储每个文件的主体ID字段名
 
     def select_rule_file(self, file_path: str):
         """
@@ -35,15 +36,23 @@ class DataCleaner:
                 self.KEEP[filename] = set()
             self.KEEP[filename].add(fieldname)
             
-        # 读取 File 表以获取行过滤逻辑
+        # 读取 File 表以获取行过滤逻辑和SUBJIDFIELDID
         try:
             df_file = pd.read_excel(self.rule_file, sheet_name='Files', dtype=str, na_filter=False)
             df_file = df_file[df_file['MIGRATIONFLAG'].isin(self.NEED_KEY)]
             
             self.ROW_FILTERS = {}
+            self.SUBJID_FIELDS = {}
+            
             for _, row in df_file.iterrows():
-                if pd.notna(row.get('PROCESSINGLOGIC')) and pd.notna(row.get('FILENAME')):
-                    filename = row['FILENAME']
+                filename = row['FILENAME']
+                
+                # 存储每个文件的SUBJIDFIELDID
+                if pd.notna(row.get('SUBJIDFIELDID')) and filename:
+                    self.SUBJID_FIELDS[filename] = row['SUBJIDFIELDID']
+                
+                # 处理过滤逻辑
+                if pd.notna(row.get('PROCESSINGLOGIC')) and filename:
                     logic = str(row['PROCESSINGLOGIC']).strip()
                     
                     if logic:
@@ -66,9 +75,13 @@ class DataCleaner:
             df = pd.read_csv(csv_file_path, dtype=str, na_filter=False)
             filename = os.path.splitext(os.path.basename(csv_file_path))[0]
     
-            # 删除不在PAT中的行
-            if 'REGNUM' in df.columns:
-                df = df[df['REGNUM'].isin(self.PAT)]
+            # 删除不在PAT中的行，使用动态字段名
+            subjid_field = self.SUBJID_FIELDS.get(filename)
+            
+            if subjid_field and subjid_field in df.columns:
+                df = df[df[subjid_field].isin(self.PAT)]
+            else:
+                print(f"警告: 文件 {filename} 未配置主体ID字段或找不到配置的字段")
             
             # 应用行过滤规则
             if filename in self.ROW_FILTERS:
@@ -86,10 +99,10 @@ class DataCleaner:
                 columns_to_drop = [col for col in df.columns if col not in fields_to_keep]
                 df.drop(columns=columns_to_drop, inplace=True)
                 
-            # 删除除REGNUM外所有列都为空的行
-            if 'REGNUM' in df.columns and len(df.columns) > 1:
-                # 创建一个临时DataFrame，去掉REGNUM列
-                temp_df = df.drop(columns=['REGNUM'])
+            # 删除除主体ID字段外所有列都为空的行
+            if subjid_field and subjid_field in df.columns and len(df.columns) > 1:
+                # 创建一个临时DataFrame，去掉主体ID字段列
+                temp_df = df.drop(columns=[subjid_field])
                 # 检查每行是否所有值都为空字符串
                 empty_rows = temp_df.apply(lambda x: x.str.strip() == '').all(axis=1)
                 # 删除全空的行

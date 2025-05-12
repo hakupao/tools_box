@@ -5,6 +5,7 @@ from src.gui.widgets.xlsx_converter import XlsxConverterWindow
 from src.gui.widgets.edc_site_adder import EdcSiteAdderWindow
 from src.gui.widgets.xlsx_file_restructuring import FileRestructureWindow
 from src.gui.widgets.data_cleaner import DataCleanerWindow
+from src.gui.widgets.codelist_processor import CodelistProcessorWindow
 from src.version import VERSION
 
 class MainWindow:
@@ -63,7 +64,7 @@ class MainWindow:
             ("EDC施设添加", self.function_four),
             ("生成Data Set", self.function_five),
             ("数据清洗", self.function_six),
-            ("功能七", self.function_seven),
+            ("Codelist处理", self.function_seven),
             ("功能八", self.function_eight),
             ("功能九", self.function_nine),
             ("功能十", self.function_ten)
@@ -163,8 +164,10 @@ class MainWindow:
         DataCleanerWindow(self.root, self)
     
     def function_seven(self):
-        # 功能七实现位置
-        pass
+        # 隐藏主窗口
+        self.hide()
+        # 打开Codelist处理窗口
+        CodelistProcessorWindow(self.root, self)
     
     def function_eight(self):
         # 功能八实现位置
