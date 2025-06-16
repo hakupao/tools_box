@@ -64,11 +64,8 @@ class CodelistProcessor:
                     filename = str(row['FILENAME']).strip()
                     subjid_field = str(row['SUBJIDFIELDID']).strip()
                     
-                    # 处理文件名（可能带有.csv后缀）
-                    if filename.endswith('.csv'):
-                        filename_base = filename[:-4]
-                    else:
-                        filename_base = filename
+                    # 处理文件名，移除可能的.csv后缀
+                    filename_base = os.path.splitext(filename)[0] if filename.lower().endswith('.csv') else filename
                     
                     # 存储映射关系
                     if filename_base and subjid_field and subjid_field.lower() != 'nan' and not pd.isna(subjid_field):
@@ -110,28 +107,101 @@ class CodelistProcessor:
                         if date_pattern.match(value):
                             date_values_count += 1
             
-            # 如果非空值中有至少30%是日期格式，则认为该列是日期列
+            # 如果非空值中有至少20%是日期格式，则认为该列是日期列
             # 不再要求最低非空样本数量
-            if non_empty_values_count > 0 and date_values_count >= non_empty_values_count * 0.3:
+            if non_empty_values_count > 0 and date_values_count >= non_empty_values_count * 0.2:
                 # 如果该列包含日期值，转换格式
                 df[col] = df[col].apply(lambda x: self._convert_date_string(x) if isinstance(x, str) else x)
         
         return df
     
     def _convert_date_string(self, value):
-        """将单个yyyy/mm/dd格式的字符串转换为yyyy-mm-dd格式"""
+        """将单个yyyy/mm/dd格式的字符串转换为yyyy-mm-dd格式
+        支持处理包含UNK等未知数据的日期格式
+        """
         if not value or pd.isna(value) or value == 'nan':
             return value
             
         value = str(value).strip()
+        
+        # 定义未知数据的模式
+        unknown_patterns = ['UNK', 'unk', 'UN', 'un', 'U', 'u', '9999', '99']
+        
+        # 定义检查未知数据的函数
+        def is_unknown_data(part, position):
+            """检查是否为未知数据
+            position: 'year', 'month', 'day'
+            """
+            if part in unknown_patterns:
+                return True
+            # 检查数字形式的未知数据
+            if position == 'year' and part == '9999':
+                return True
+            if position in ['month', 'day'] and part == '99':
+                return True
+            return False
+        
+        # 首先检查标准的数字日期格式
         date_pattern = re.compile(r'^(\d{4})/(\d{1,2})/(\d{1,2})$')
         match = date_pattern.match(value)
         if match:
             year, month, day = match.groups()
-            # 确保月和日是两位数
-            month = month.zfill(2)
-            day = day.zfill(2)
-            return f"{year}-{month}-{day}"
+            # 检查是否包含数字形式的未知数据
+            if year == '9999' or month == '99' or day == '99':
+                # 按照未知数据逻辑处理
+                pass
+            else:
+                # 确保月和日是两位数
+                month = month.zfill(2)
+                day = day.zfill(2)
+                return f"{year}-{month}-{day}"
+        
+        # 处理包含未知数据的日期格式
+        # 分割日期字符串
+        parts = value.split('/')
+        
+        # 如果不是3个部分，直接返回原值
+        if len(parts) != 3:
+            return value
+        
+        year, month, day = parts
+        
+        # 检查是否包含未知数据
+        has_unknown = (is_unknown_data(year, 'year') or 
+                      is_unknown_data(month, 'month') or 
+                      is_unknown_data(day, 'day'))
+        
+        if has_unknown:
+            # 从后向前检查，遇到未知数据就舍弃后面的部分
+            valid_parts = []
+            
+            # 检查年份
+            if not is_unknown_data(year, 'year') and year.isdigit() and len(year) == 4:
+                valid_parts.append(year)
+                
+                # 检查月份
+                if not is_unknown_data(month, 'month') and month.isdigit():
+                    month_int = int(month)
+                    if 1 <= month_int <= 12:
+                        valid_parts.append(month.zfill(2))
+                        
+                        # 检查日期
+                        if not is_unknown_data(day, 'day') and day.isdigit():
+                            day_int = int(day)
+                            if 1 <= day_int <= 31:
+                                valid_parts.append(day.zfill(2))
+            
+            # 根据有效部分的数量返回结果
+            if len(valid_parts) == 3:
+                return f"{valid_parts[0]}-{valid_parts[1]}-{valid_parts[2]}"
+            elif len(valid_parts) == 2:
+                return f"{valid_parts[0]}-{valid_parts[1]}"
+            elif len(valid_parts) == 1:
+                return valid_parts[0]
+            else:
+                return ""
+        
+        # 如果没有未知数据但格式不标准，返回原值
         return value
     
     def _rename_subjid_column(self, df, filename_base):
@@ -161,11 +231,11 @@ class CodelistProcessor:
             current_filename_with_c = current_filename
             current_filename = self._remove_c_prefix(current_filename)
             
-            # 获取当前文件对应的处理规则
-            file_rules = self.process_data[
-                (self.process_data['FILENAME'].astype(str) == current_filename) |
-                (self.process_data['FILENAME'].astype(str) == current_filename + '.csv')
-            ]
+            # 获取当前文件对应的处理规则，处理可能带有.csv后缀的文件名
+            process_filenames = self.process_data['FILENAME'].astype(str).apply(
+                lambda x: os.path.splitext(x)[0] if x.lower().endswith('.csv') else x
+            )
+            file_rules = self.process_data[process_filenames == current_filename]
             
             # 对每个字段进行转换
             for _, rule in file_rules.iterrows():
@@ -206,4 +276,4 @@ class CodelistProcessor:
             return True
             
         except Exception as e:
-            raise Exception(f"处理文件失败: {str(e)}") 
+            raise Exception(f"处理文件失败: {str(e)}")

@@ -22,7 +22,7 @@ class DataCleaner:
         # 读取 Patients 表
         df_patients = pd.read_excel(self.rule_file, sheet_name='Patients', dtype=str, na_filter=False)
         df_patients = df_patients[df_patients['MIGRATIONFLAG'].isin(self.NEED_KEY)]
-        self.PAT = set(df_patients['USUBJID'].dropna())
+        self.PAT = set(df_patients['SUBJID'].dropna())
 
         # 读取 Process 表 (列名在第二行，故跳过第一行)
         df_process = pd.read_excel(self.rule_file, sheet_name='Process', header=1, dtype=str, na_filter=False)
@@ -31,6 +31,8 @@ class DataCleaner:
         self.KEEP = {}
         for _, row in df_process.iterrows():
             filename = row['FILENAME']
+            # 处理文件名，移除可能的.csv后缀
+            filename = os.path.splitext(filename)[0] if filename.lower().endswith('.csv') else filename
             fieldname = row['FIELDNAME']
             if filename not in self.KEEP:
                 self.KEEP[filename] = set()
@@ -46,6 +48,8 @@ class DataCleaner:
             
             for _, row in df_file.iterrows():
                 filename = row['FILENAME']
+                # 处理文件名，移除可能的.csv后缀
+                filename = os.path.splitext(filename)[0] if filename.lower().endswith('.csv') else filename
                 
                 # 存储每个文件的SUBJIDFIELDID
                 if pd.notna(row.get('SUBJIDFIELDID')) and filename:
@@ -73,6 +77,7 @@ class DataCleaner:
         """
         try:
             df = pd.read_csv(csv_file_path, dtype=str, na_filter=False)
+            # 获取不带后缀的文件名，用于匹配规则
             filename = os.path.splitext(os.path.basename(csv_file_path))[0]
     
             # 删除不在PAT中的行，使用动态字段名
