@@ -8,7 +8,7 @@ class FileRestructureWindow:
     def __init__(self, parent, main_window):
         self.window = tk.Toplevel(parent)
         self.window.title("XLSX转CSV工具")
-        self.window.geometry("800x600")
+        self.window.geometry("800x620")
         self.window.configure(bg='#f0f0f0')
         
         # 保存主窗口引用
@@ -103,6 +103,21 @@ class FileRestructureWindow:
         )
         select_folder_btn.pack(side=tk.LEFT, padx=5)
         
+        # 上传仕样书按钮
+        upload_patients_btn = tk.Button(
+            file_frame,
+            text="上传仕样书",
+            command=self.upload_patients_file,
+            width=15,
+            height=1,
+            font=('Microsoft YaHei UI', 11),
+            bg='#f1c40f',
+            fg='white',
+            relief='flat',
+            cursor='hand2'
+        )
+        upload_patients_btn.pack(side=tk.LEFT, padx=5)
+        
         # 添加清空列表按钮
         clear_list_btn = tk.Button(
             file_frame,
@@ -121,6 +136,10 @@ class FileRestructureWindow:
         # 绑定清空列表按钮悬停事件
         clear_list_btn.bind('<Enter>', lambda e: clear_list_btn.configure(bg='#c0392b'))
         clear_list_btn.bind('<Leave>', lambda e: clear_list_btn.configure(bg='#e74c3c'))
+        
+        # 绑定上传仕样书按钮悬停事件
+        upload_patients_btn.bind('<Enter>', lambda e: upload_patients_btn.configure(bg='#d4ac0d'))
+        upload_patients_btn.bind('<Leave>', lambda e: upload_patients_btn.configure(bg='#f1c40f'))
         
         # 文件列表标签
         list_label = tk.Label(
@@ -394,12 +413,17 @@ class FileRestructureWindow:
                     # 更新进度
                     self.update_progress(i, total, os.path.basename(file))
                     
-                    # 转换文件
-                    success = self.converter.file_restructure(file, self.output_path, self.study_id)
+                    # 转换文件，传入patients_mapping参数
+                    success, error_msg = self.converter.file_restructure(
+                        file, 
+                        self.output_path, 
+                        self.study_id,
+                        self.patients_mapping if hasattr(self, 'patients_mapping') else None
+                    )
                     if success:
                         success_count += 1
                     else:
-                        error_files.append(file)
+                        error_files.append(f"{file} (错误: {error_msg})")
                     
                 except Exception as e:
                     error_files.append(f"{file} (错误: {str(e)})")
@@ -420,7 +444,7 @@ class FileRestructureWindow:
         
         finally:
             # 恢复按钮
-            self.convert_btn.configure(state=tk.NORMAL) 
+            self.convert_btn.configure(state=tk.NORMAL)
     
     def on_studyid_changed(self, event):
         """STUDYID选择改变时的回调"""
@@ -430,3 +454,18 @@ class FileRestructureWindow:
         """清空文件列表"""
         self.file_listbox.delete(0, tk.END)
         self.status_label.config(text="")
+    
+    def upload_patients_file(self):
+        """上传仕样书（症例关系Excel）"""
+        file_path = filedialog.askopenfilename(
+            title="选择仕样书（症例关系）Excel文件",
+            filetypes=[("Excel files", "*.xlsx")]
+        )
+        if file_path:
+            try:
+                # 调用FileRestructure的静态方法read_patients_mapping
+                self.patients_mapping = FileRestructure.read_patients_mapping(file_path)
+                self.patients_file = file_path
+                self.status_label.config(text=f"已加载仕样书: {os.path.basename(file_path)}")
+            except Exception as e:
+                messagebox.showerror("错误", f"加载仕样书时发生错误: {str(e)}")

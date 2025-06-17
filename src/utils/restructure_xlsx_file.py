@@ -76,8 +76,23 @@ SORTKEY = {
 }
 
 class FileRestructure:
+    
     @staticmethod
-    def file_restructure(input_file: str, output_path: Optional[str] = None, studyid: str = "CIRCULATE") -> Tuple[bool, str]:
+    def read_patients_mapping(patients_file: str):
+        """
+        读取Excel文件中的Patients表，将USUBJID和SUBJID列作为一一对应的映射关系返回（dict）。
+        """
+        try:
+            df = pd.read_excel(patients_file, sheet_name='Patients', dtype=str, engine='openpyxl')
+            if 'USUBJID' not in df.columns or 'SUBJID' not in df.columns:
+                raise ValueError('Patients表中缺少USUBJID或SUBJID列')
+            mapping = dict(zip(df['SUBJID'], df['USUBJID']))
+            return mapping
+        except Exception as e:
+            raise RuntimeError(f'读取Patients表失败: {e}')
+        
+    @staticmethod
+    def file_restructure(input_file: str, output_path: Optional[str] = None, studyid: str = "CIRCULATE", patients_mapping: Optional[dict] = None) -> Tuple[bool, str]:
         try:
             # 文件名（不带扩展名）作为关键字，如 AB.xlsx => AB
             base_name = os.path.splitext(os.path.basename(input_file))[0]
@@ -115,6 +130,10 @@ class FileRestructure:
                 if 'SUBJID' in df.columns:
                     df.rename(columns={'SUBJID': 'USUBJID'}, inplace=True)
                 
+                # 如果存在patients_mapping，则将USUBJID列中的SUBJID值转换为对应的USUBJID
+                if patients_mapping is not None and 'USUBJID' in df.columns:
+                    df['USUBJID'] = df['USUBJID'].map(lambda x: patients_mapping.get(x, x))
+
                 # 检测并格式化日期列
                 for col in df.columns:
                     try:
@@ -203,3 +222,4 @@ class FileRestructure:
 
         except Exception as e:
             return False, str(e)
+
