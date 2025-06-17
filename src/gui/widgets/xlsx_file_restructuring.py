@@ -204,18 +204,52 @@ class FileRestructureWindow:
         )
         studyid_label.pack(side=tk.LEFT, padx=(0, 10))
         
+        # 设置下拉菜单下拉列表字体为14号
+        self.window.option_add('*TCombobox*Listbox.font', ('Microsoft YaHei UI', 11))
         # STUDYID下拉菜单
         self.studyid_var = tk.StringVar(value="CIRCULATE")
+        
+        # 创建样式
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # 配置Combobox样式
+        style.configure('Custom.TCombobox',
+                       fieldbackground='#f0f0f0',
+                       background='#f0f0f0',
+                       foreground='#2c3e50',
+                       borderwidth=1,
+                       relief='flat',
+                       arrowcolor='#3498db',
+                       focuscolor='none',
+                       padding=5)
+        
+        # 配置下拉列表样式
+        style.map('Custom.TCombobox',
+                 fieldbackground=[('readonly', '#f0f0f0')],
+                 background=[('active', '#e0e0e0'), ('pressed', '#e0e0e0')],
+                 foreground=[('readonly', '#2c3e50')],
+                 arrowcolor=[('active', '#2980b9'), ('pressed', '#2980b9')])
+        
         self.studyid_combobox = ttk.Combobox(
             studyid_frame,
             textvariable=self.studyid_var,
             values=["CIRCULATE", "MONSTAR"],
             state="readonly",
-            font=('Microsoft YaHei UI', 10),
-            width=20
+            font=('Microsoft YaHei UI', 11),
+            width=18,
+            style='Custom.TCombobox'
         )
-        self.studyid_combobox.pack(side=tk.LEFT)
+        self.studyid_combobox.pack(side=tk.LEFT, padx=(0, 10))
         self.studyid_combobox.bind('<<ComboboxSelected>>', self.on_studyid_changed)
+        
+        # 添加悬停效果
+        self.studyid_combobox.bind('<Enter>', lambda e: style.map('Custom.TCombobox',
+            fieldbackground=[('readonly', '#e0e0e0')],
+            background=[('active', '#e0e0e0')]))
+        self.studyid_combobox.bind('<Leave>', lambda e: style.map('Custom.TCombobox',
+            fieldbackground=[('readonly', '#f0f0f0')],
+            background=[('active', '#f0f0f0')]))
         
         # 进度显示区域
         progress_frame = tk.Frame(main_frame, bg='#f0f0f0')
