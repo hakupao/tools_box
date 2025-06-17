@@ -27,6 +27,9 @@ class FileRestructureWindow:
         # 初始化转换器
         self.converter = FileRestructure()
         
+        # 初始化STUDYID选择
+        self.study_id = "CIRCULATE"  # 默认值
+        
         self._create_widgets()
         
         # 设置窗口最小尺寸
@@ -187,6 +190,33 @@ class FileRestructureWindow:
         )
         select_output_btn.pack(side=tk.RIGHT)
         
+        # STUDYID选择区域
+        studyid_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        studyid_frame.pack(fill=tk.X, pady=(10, 10))
+        
+        # STUDYID标签
+        studyid_label = tk.Label(
+            studyid_frame,
+            text="STUDYID：",
+            font=('Microsoft YaHei UI', 11),
+            fg='#2c3e50',
+            bg='#f0f0f0'
+        )
+        studyid_label.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # STUDYID下拉菜单
+        self.studyid_var = tk.StringVar(value="CIRCULATE")
+        self.studyid_combobox = ttk.Combobox(
+            studyid_frame,
+            textvariable=self.studyid_var,
+            values=["CIRCULATE", "MONSTAR"],
+            state="readonly",
+            font=('Microsoft YaHei UI', 10),
+            width=20
+        )
+        self.studyid_combobox.pack(side=tk.LEFT)
+        self.studyid_combobox.bind('<<ComboboxSelected>>', self.on_studyid_changed)
+        
         # 进度显示区域
         progress_frame = tk.Frame(main_frame, bg='#f0f0f0')
         progress_frame.pack(fill=tk.X, pady=(10, 5))
@@ -331,7 +361,7 @@ class FileRestructureWindow:
                     self.update_progress(i, total, os.path.basename(file))
                     
                     # 转换文件
-                    success = self.converter.file_restructure(file, self.output_path)
+                    success = self.converter.file_restructure(file, self.output_path, self.study_id)
                     if success:
                         success_count += 1
                     else:
@@ -358,7 +388,11 @@ class FileRestructureWindow:
             # 恢复按钮
             self.convert_btn.configure(state=tk.NORMAL) 
     
+    def on_studyid_changed(self, event):
+        """STUDYID选择改变时的回调"""
+        self.study_id = self.studyid_var.get()
+    
     def clear_file_list(self):
         """清空文件列表"""
         self.file_listbox.delete(0, tk.END)
-        self.status_label.config(text="") 
+        self.status_label.config(text="")

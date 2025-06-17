@@ -77,7 +77,7 @@ SORTKEY = {
 
 class FileRestructure:
     @staticmethod
-    def file_restructure(input_file: str, output_path: Optional[str] = None) -> Tuple[bool, str]:
+    def file_restructure(input_file: str, output_path: Optional[str] = None, studyid: str = "CIRCULATE") -> Tuple[bool, str]:
         try:
             # 文件名（不带扩展名）作为关键字，如 AB.xlsx => AB
             base_name = os.path.splitext(os.path.basename(input_file))[0]
@@ -170,8 +170,11 @@ class FileRestructure:
             full_df.sort_values(by=sort_cols, inplace=True, ignore_index=True)
             
             # 添加常量字段STUDYID和DOMAIN
-            full_df['STUDYID'] = "CIRCULATE"
+            full_df['STUDYID'] = studyid
             full_df['DOMAIN'] = base_name
+            
+            # 去除完全相同的重复行
+            full_df = full_df.drop_duplicates()
             
             # 如果有f"{base_name}SEQ"字段，则以每个USUBJID字段为基准，增加序号并赋值给f"{base_name}SEQ"
             seq_col = f"{base_name}SEQ"
