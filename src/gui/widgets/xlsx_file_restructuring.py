@@ -24,9 +24,6 @@ class FileRestructureWindow:
         # 初始化输出路径
         self.output_path = None
         
-        # 初始化转换器
-        self.converter = FileRestructure()
-        
         # 初始化STUDYID选择
         self.study_id = "CIRCULATE"  # 默认值
         
@@ -414,7 +411,7 @@ class FileRestructureWindow:
                     self.update_progress(i, total, os.path.basename(file))
                     
                     # 转换文件，传入patients_mapping参数
-                    success, error_msg = self.converter.file_restructure(
+                    success, error_msg = FileRestructure.file_restructure(
                         file, 
                         self.output_path, 
                         self.study_id,
