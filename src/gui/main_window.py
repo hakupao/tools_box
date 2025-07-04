@@ -6,6 +6,8 @@ from src.gui.widgets.edc_site_adder import EdcSiteAdderWindow
 from src.gui.widgets.xlsx_file_restructuring import FileRestructureWindow
 from src.gui.widgets.data_cleaner import DataCleanerWindow
 from src.gui.widgets.codelist_processor import CodelistProcessorWindow
+from src.gui.widgets.data_masking import DataMaskingWindow
+from src.gui.widgets.csv_quote_remover import CsvQuoteRemoverWindow
 from src.version import VERSION
 
 class MainWindow:
@@ -65,8 +67,8 @@ class MainWindow:
             ("生成Data Set", self.function_five),
             ("数据清洗", self.function_six),
             ("Codelist处理", self.function_seven),
-            ("功能八", self.function_eight),
-            ("功能九", self.function_nine),
+            ("数据模糊化", self.function_eight),
+            ("CSV引号去除", self.function_nine),
             ("功能十", self.function_ten)
         ]
         
@@ -170,12 +172,16 @@ class MainWindow:
         CodelistProcessorWindow(self.root, self)
     
     def function_eight(self):
-        # 功能八实现位置
-        pass
+        # 隐藏主窗口
+        self.hide()
+        # 打开数据模糊化窗口
+        DataMaskingWindow(self.root, self)
     
     def function_nine(self):
-        # 功能九实现位置
-        pass
+        # 隐藏主窗口
+        self.hide()
+        # 打开CSV引号去除窗口
+        CsvQuoteRemoverWindow(self.root, self)
     
     def function_ten(self):
         # 功能十实现位置
