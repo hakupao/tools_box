@@ -8,12 +8,23 @@ import platform
 # 获取平台特定的目录名
 def get_platform_dir():
     if platform.system() == 'Windows':
-        return 'win64' if platform.machine().endswith('64') else 'win32'
-    return platform.system().lower()
+        # 检查实际可用的平台目录
+        arch = platform.architecture()[0]
+        machine = platform.machine().lower()
+        
+        # 可能的目录名称
+        possible_dirs = [
+            'win-x64' if '64' in arch or machine.endswith('64') else 'win-x86',
+            'win64' if '64' in arch or machine.endswith('64') else 'win32',
+            'windows-x64' if '64' in arch or machine.endswith('64') else 'windows-x86'
+        ]
+        
+        return possible_dirs
+    return [platform.system().lower()]
 
 # 准备tkdnd文件
 def setup_tkdnd_files():
-    platform_dir = get_platform_dir()
+    possible_platform_dirs = get_platform_dir()
     tkdnd_source = Path(tkinterdnd2.__file__).parent / 'tkdnd'
     tkdnd_target = Path('temp_tkdnd/tkdnd')
     
@@ -25,18 +36,30 @@ def setup_tkdnd_files():
         shutil.rmtree(tkdnd_target)
         tkdnd_target.mkdir(parents=True, exist_ok=True)
     
+    print(f"正在查找 tkdnd 源目录: {tkdnd_source}")
+    
     # 复制所有tkdnd文件
-    for item in tkdnd_source.glob('*'):
-        if item.is_file():
-            shutil.copy2(item, tkdnd_target)
-        elif item.is_dir():
-            if item.name == platform_dir:
-                # 如果是平台特定目录，复制到根目录
-                for platform_file in item.glob('*'):
-                    if platform_file.is_file():
-                        shutil.copy2(platform_file, tkdnd_target)
-            else:
-                shutil.copytree(item, tkdnd_target / item.name, dirs_exist_ok=True)
+    if tkdnd_source.exists():
+        for item in tkdnd_source.glob('*'):
+            if item.is_file():
+                shutil.copy2(item, tkdnd_target)
+                print(f"复制文件: {item.name}")
+            elif item.is_dir():
+                # 检查是否是平台特定目录
+                is_platform_dir = item.name in possible_platform_dirs
+                if is_platform_dir:
+                    print(f"找到平台目录: {item.name}")
+                    # 如果是平台特定目录，复制到根目录
+                    for platform_file in item.glob('*'):
+                        if platform_file.is_file():
+                            shutil.copy2(platform_file, tkdnd_target)
+                            print(f"复制平台文件: {platform_file.name}")
+                else:
+                    # 复制其他目录
+                    shutil.copytree(item, tkdnd_target / item.name, dirs_exist_ok=True)
+                    print(f"复制目录: {item.name}")
+    else:
+        print(f"警告: tkdnd 源目录不存在: {tkdnd_source}")
 
 # 收集数据文件
 def collect_data_files():
@@ -73,9 +96,15 @@ a = Analysis(
         'openpyxl',
         'pyautogui',
         'pygetwindow',
-        'pywin32',
+        'pywintypes',  # 替代 pywin32
+        'pythoncom',   # 替代 pywin32
+        'win32api',    # Windows API
+        'win32con',    # Windows 常量
         'mouse',
-        'keyboard'
+        'keyboard',
+        'json',        # 确保 JSON 支持
+        'pathlib',     # 路径处理
+        'shutil',      # 文件操作
     ],
     hookspath=[],
     hooksconfig={},
@@ -138,13 +167,9 @@ exe = EXE(
     name='工具箱',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,  # 启用符号剥离以减小文件大小
-    upx=True,
-    upx_exclude=[
-        'vcruntime140.dll',
-        'python39.dll',
-        'python3.dll',
-    ],
+    strip=False,  # 在 Windows 上禁用符号剥离（避免 strip 工具缺失错误）
+    upx=False,  # 禁用 UPX 压缩以避免兼容性问题
+    upx_exclude=[],  # UPX 禁用时不需要排除列表
     runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,

@@ -8,6 +8,7 @@ from src.gui.widgets.data_cleaner import DataCleanerWindow
 from src.gui.widgets.codelist_processor import CodelistProcessorWindow
 from src.gui.widgets.data_masking import DataMaskingWindow
 from src.gui.widgets.csv_quote_remover import CsvQuoteRemoverWindow
+from src.gui.widgets.fullwidth_halfwidth_converter import FullwidthHalfwidthConverterWindow
 from src.version import VERSION
 
 class MainWindow:
@@ -69,7 +70,7 @@ class MainWindow:
             ("Codelist处理", self.function_seven),
             ("数据模糊化", self.function_eight),
             ("CSV引号去除", self.function_nine),
-            ("功能十", self.function_ten)
+            ("全角转半角", self.function_ten)
         ]
         
         self.colors = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f', '#1abc9c', '#34495e', '#d35400', '#2980b9', '#8e44ad']
@@ -118,17 +119,20 @@ class MainWindow:
             )
             desc_label.pack()
             
-            # 绑定鼠标悬停事件
-            btn.bind('<Enter>', lambda e, b=btn: self.on_enter(e, b))
-            btn.bind('<Leave>', lambda e, b=btn: self.on_leave(e, b))
+            # 绑定鼠标悬停事件，使用索引来避免函数比较问题
+            btn.bind('<Enter>', lambda e, idx=i: self.on_enter(e, idx))
+            btn.bind('<Leave>', lambda e, idx=i: self.on_leave(e, idx))
     
-    def on_enter(self, event, button):
+    def on_enter(self, event, button_index):
         """鼠标悬停时改变按钮颜色"""
-        button.configure(bg=self.colors[self.buttons.index((button['text'], button['command']))])
+        # 计算一个稍微暗一点的颜色用于悬停效果
+        original_color = self.colors[button_index]
+        # 简单地使按钮稍微暗一点
+        event.widget.configure(bg=original_color)
     
-    def on_leave(self, event, button):
+    def on_leave(self, event, button_index):
         """鼠标离开时恢复按钮颜色"""
-        button.configure(bg=self.colors[self.buttons.index((button['text'], button['command']))])
+        event.widget.configure(bg=self.colors[button_index])
     
     def function_one(self):
         # 隐藏主窗口
@@ -184,8 +188,10 @@ class MainWindow:
         CsvQuoteRemoverWindow(self.root, self)
     
     def function_ten(self):
-        # 功能十实现位置
-        pass
+        # 隐藏主窗口
+        self.hide()
+        # 打开全角转半角转换窗口
+        FullwidthHalfwidthConverterWindow(self.root, self)
 
     def on_closing(self):
         """处理窗口关闭事件"""
