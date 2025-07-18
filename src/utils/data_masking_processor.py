@@ -84,8 +84,8 @@ class DataMaskingProcessor:
             filename = os.path.basename(input_file)
             masked_df = self._apply_masking_rules(df, filename)
             
-            # 保存处理后的文件
-            masked_df.to_csv(output_file, index=False, encoding='utf-8')
+            # 保存处理后的文件, 使用utf-8 bom编码
+            masked_df.to_csv(output_file, index=False, encoding='utf-8-sig')
             
             return True
             
