@@ -158,7 +158,7 @@ class DataMaskingProcessor:
                     lambda x: "テスト医師" if pd.notna(x) and str(x).strip() != '' else x
                 )
             
-            # 6. 将AGE字段的数据，减10（仅限DM.csv文件）
+            # 6. 将AGE字段的数据，减2（仅限DM.csv文件）
             elif column.upper() == 'AGE' and is_dm_file:
                 masked_df[column] = masked_df[column].apply(
                     lambda x: self._subtract_ten_from_age(x)
