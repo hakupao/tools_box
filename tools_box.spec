@@ -105,6 +105,8 @@ a = Analysis(
         'json',        # 确保 JSON 支持
         'pathlib',     # 路径处理
         'shutil',      # 文件操作
+        'backports.tarfile',  # 解决 backports 命名空间下缺失 tarfile 的问题
+        'pkg_resources',      # 让 PyInstaller 正确收集 pkg_resources 依赖
     ],
     hookspath=[],
     hooksconfig={},
@@ -116,7 +118,7 @@ a = Analysis(
         'PIL.ImageTk',  # 如果不使用图像处理
         'scipy', 'sympy',  # 排除科学计算库
         'tornado', 'zmq',  # 排除网络库
-        'docutils', 'setuptools',  # 排除构建工具
+        'docutils',  # 排除构建工具（保留 setuptools 以支持 pkg_resources）
         'pytest', 'unittest',  # 排除测试框架
     ],
     win_no_prefer_redirects=False,

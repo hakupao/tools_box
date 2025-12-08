@@ -128,10 +128,10 @@ class DataMaskingProcessor:
         
         # 遍历所有列，应用相应的处理规则
         for column in masked_df.columns:
-            # 1. 将STUDYID字段的数据改为 "SAKIULEITE"
+            # 1. 将STUDYID字段的数据改为 "[UAT]CIRCULATE"
             if column.upper() == 'STUDYID':
                 masked_df[column] = masked_df[column].apply(
-                    lambda x: "SAKIULEITE" if pd.notna(x) and str(x).strip() != '' else x
+                    lambda x: "[UAT]CIRCULATE" if pd.notna(x) and str(x).strip() != '' else x
                 )
             
             # 2. 将SUBJID和USUBJID字段的数据的前四个字符去掉，然后加上SKLT

@@ -7,3 +7,4 @@ pygetwindow==0.0.9
 pywin32==306 
 mouse
 keyboard==0.13.5
+backports.tarfile>=1.2.0

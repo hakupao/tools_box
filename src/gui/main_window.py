@@ -1,7 +1,5 @@
 import tkinter as tk
 from src.gui.widgets.date_converter import DateConverterWindow
-from src.gui.widgets.csv_converter import CsvConverterWindow
-from src.gui.widgets.xlsx_converter import XlsxConverterWindow
 from src.gui.widgets.edc_site_adder import EdcSiteAdderWindow
 from src.gui.widgets.xlsx_file_restructuring import FileRestructureWindow
 from src.gui.widgets.data_cleaner import DataCleanerWindow
@@ -9,18 +7,20 @@ from src.gui.widgets.codelist_processor import CodelistProcessorWindow
 from src.gui.widgets.data_masking import DataMaskingWindow
 from src.gui.widgets.csv_quote_remover import CsvQuoteRemoverWindow
 from src.gui.widgets.fullwidth_halfwidth_converter import FullwidthHalfwidthConverterWindow
+from src.gui.widgets.file_field_extractor import FileFieldExtractorWindow
+from src.gui.widgets.file_format_converter import FileFormatConverterWindow
 from src.version import VERSION
 
 class MainWindow:
     def __init__(self, root):
         self.root = root
         self.root.title("工具集合")
-        self.root.geometry("800x800")
+        self.root.geometry("1100x800")
         self.root.configure(bg='#f0f0f0')
         
         # 设置窗口最小尺寸
         self.root.update()
-        self.root.minsize(800, 800)
+        self.root.minsize(1100, 800)
         
         # 绑定关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -34,6 +34,7 @@ class MainWindow:
         self.root.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame.grid_columnconfigure(2, weight=1)
         
         # 创建标题框架
         title_frame = tk.Frame(self.main_frame, bg='#f0f0f0')
@@ -61,19 +62,24 @@ class MainWindow:
         
         # 按钮配置
         self.buttons = [
+            ("文件格式转换", self.function_two),
             ("日期转换", self.function_one),
-            ("CSV转XLSX", self.function_two),
-            ("XLSX转CSV", self.function_three),
             ("EDC施设添加", self.function_four),
             ("生成Data Set", self.function_five),
             ("数据清洗", self.function_six),
             ("Codelist处理", self.function_seven),
             ("数据模糊化", self.function_eight),
             ("CSV引号去除", self.function_nine),
-            ("全角转半角", self.function_ten)
+            ("全角转半角", self.function_ten),
+            ("获取文件字段", self.function_eleven)
         ]
         
-        self.colors = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f', '#1abc9c', '#34495e', '#d35400', '#2980b9', '#8e44ad']
+        self.colors = [
+            '#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f',
+            '#1abc9c', '#34495e', '#d35400', '#2980b9', '#8e44ad',
+            '#16a085', '#c0392b', '#f39c12', '#27ae60', '#7f8c8d'
+        ]
+        self.columns = 3
         
         self._create_widgets()
     
@@ -90,8 +96,8 @@ class MainWindow:
         for i, (text, command) in enumerate(self.buttons):
             # 创建按钮容器框架
             btn_frame = tk.Frame(self.main_frame, bg='#f0f0f0')
-            row = (i // 2) + 1
-            col = i % 2
+            row = (i // self.columns) + 1
+            col = i % self.columns
             btn_frame.grid(row=row, column=col, padx=15, pady=15)
             
             # 创建按钮
@@ -143,14 +149,8 @@ class MainWindow:
     def function_two(self):
         # 隐藏主窗口
         self.hide()
-        # 打开CSV转换窗口
-        CsvConverterWindow(self.root, self)
-    
-    def function_three(self):
-        # 隐藏主窗口
-        self.hide()
-        # 打开XLSX转换窗口
-        XlsxConverterWindow(self.root, self)
+        # 打开文件格式转换窗口
+        FileFormatConverterWindow(self.root, self)
     
     def function_four(self):
         # 隐藏主窗口
@@ -192,6 +192,12 @@ class MainWindow:
         self.hide()
         # 打开全角转半角转换窗口
         FullwidthHalfwidthConverterWindow(self.root, self)
+
+    def function_eleven(self):
+        # 隐藏主窗口
+        self.hide()
+        # 打开获取文件字段窗口
+        FileFieldExtractorWindow(self.root, self)
 
     def on_closing(self):
         """处理窗口关闭事件"""
