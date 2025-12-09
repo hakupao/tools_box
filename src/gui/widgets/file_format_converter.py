@@ -23,6 +23,7 @@ class FileFormatConverterWindow:
         self.csv_to_xlsx = CsvToXlsxConverter()
         self.xlsx_to_csv = XlsxToCsvConverter()
         self.csv_bom = CsvEncodingConverter()
+        self.mode_buttons = {}
 
         self.mode_config = {
             "csv_to_xlsx": {
@@ -90,20 +91,8 @@ class FileFormatConverterWindow:
             pady=10,
         )
         mode_frame.pack(fill=tk.X, pady=(0, 15))
-
         self.mode_var = tk.StringVar(value="csv_to_xlsx")
-        for idx, (mode_key, cfg) in enumerate(self.mode_config.items()):
-            radio = tk.Radiobutton(
-                mode_frame,
-                text=cfg["label"],
-                variable=self.mode_var,
-                value=mode_key,
-                font=("Microsoft YaHei UI", 11),
-                bg="#f0f0f0",
-                anchor="w",
-                command=self.on_mode_change,
-            )
-            radio.grid(row=0, column=idx, padx=10, sticky="w")
+        self._build_mode_buttons(mode_frame)
 
         info_frame = tk.Frame(main_frame, bg="#ecf0f1", relief="solid", bd=1)
         info_frame.pack(fill=tk.X, pady=(0, 20))
@@ -281,6 +270,32 @@ class FileFormatConverterWindow:
         back_btn.bind("<Enter>", lambda e: back_btn.configure(bg="#c0392b"))
         back_btn.bind("<Leave>", lambda e: back_btn.configure(bg="#e74c3c"))
 
+    def _build_mode_buttons(self, parent):
+        """创建更美观的模式切换按钮组。"""
+        btn_frame = tk.Frame(parent, bg="#f0f0f0")
+        btn_frame.pack(fill=tk.X, pady=(5, 5))
+
+        for idx, (mode_key, cfg) in enumerate(self.mode_config.items()):
+            btn = tk.Button(
+                btn_frame,
+                text=cfg["label"],
+                command=lambda m=mode_key: self.change_mode(m),
+                font=("Microsoft YaHei UI", 11, "bold"),
+                bg="#ecf0f1",
+                fg="#2c3e50",
+                activebackground="#3498db",
+                activeforeground="white",
+                relief="flat",
+                bd=0,
+                padx=14,
+                pady=10,
+                cursor="hand2",
+            )
+            btn.grid(row=0, column=idx, padx=6, sticky="w")
+            self.mode_buttons[mode_key] = btn
+
+        self._set_mode_styles()
+
     def on_mode_change(self):
         mode = self.mode_var.get()
         cfg = self.mode_config[mode]
@@ -294,6 +309,21 @@ class FileFormatConverterWindow:
             self.status_label.config(text=f"已移除 {removed} 个不符合当前模式的文件")
         else:
             self.status_label.config(text="")
+        self._set_mode_styles()
+
+    def change_mode(self, mode_key: str):
+        """外部按钮点击切换模式。"""
+        self.mode_var.set(mode_key)
+        self.on_mode_change()
+
+    def _set_mode_styles(self):
+        """根据当前模式更新按钮样式。"""
+        current = self.mode_var.get()
+        for key, btn in self.mode_buttons.items():
+            if key == current:
+                btn.configure(bg="#3498db", fg="white")
+            else:
+                btn.configure(bg="#ecf0f1", fg="#2c3e50")
 
     def _filter_list_by_mode(self) -> int:
         """移除列表中与当前模式扩展名不匹配的文件。"""
