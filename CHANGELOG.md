@@ -5,6 +5,15 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.6.0] - 2025-10-21
+
+### 新增
+- 文件格式转换工具：单一窗口支持 CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM) 与 CSV 转 UTF-8(BOM) 三种模式。
+
+### 改进
+- 统一文件格式转换入口，移除旧的分散窗口（CSV→XLSX、XLSX→CSV、CSV BOM）。
+- 转换类型切换使用分段按钮样式，交互与视觉更现代。
+
 ## [1.5.0] - 2024-12-19
 
 ### 新增
