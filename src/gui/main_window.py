@@ -9,6 +9,7 @@ from src.gui.widgets.csv_quote_remover import CsvQuoteRemoverWindow
 from src.gui.widgets.fullwidth_halfwidth_converter import FullwidthHalfwidthConverterWindow
 from src.gui.widgets.file_field_extractor import FileFieldExtractorWindow
 from src.gui.widgets.file_format_converter import FileFormatConverterWindow
+from src.gui.widgets.dead_link_checker import DeadLinkCheckerWindow
 from src.version import VERSION
 
 class MainWindow:
@@ -71,7 +72,8 @@ class MainWindow:
             ("数据模糊化", self.function_eight),
             ("CSV引号去除", self.function_nine),
             ("全角转半角", self.function_ten),
-            ("获取文件字段", self.function_eleven)
+            ("获取文件字段", self.function_eleven),
+            ("死链检测", self.function_twelve)
         ]
         
         self.colors = [
@@ -198,6 +200,12 @@ class MainWindow:
         self.hide()
         # 打开获取文件字段窗口
         FileFieldExtractorWindow(self.root, self)
+
+    def function_twelve(self):
+        # 隐藏主窗口
+        self.hide()
+        # 打开死链检测窗口
+        DeadLinkCheckerWindow(self.root, self)
 
     def on_closing(self):
         """处理窗口关闭事件"""

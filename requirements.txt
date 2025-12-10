@@ -8,3 +8,5 @@ pywin32==306
 mouse
 keyboard==0.13.5
 backports.tarfile>=1.2.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
