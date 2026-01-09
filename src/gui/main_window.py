@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from src.gui.widgets.date_converter import DateConverterWindow
 from src.gui.widgets.edc_site_adder import EdcSiteAdderWindow
 from src.gui.widgets.xlsx_file_restructuring import FileRestructureWindow
@@ -12,12 +13,129 @@ from src.gui.widgets.file_format_converter import FileFormatConverterWindow
 from src.gui.widgets.dead_link_checker import DeadLinkCheckerWindow
 from src.version import VERSION
 
+
 class MainWindow:
+    """
+    主窗口类 - 工具箱的主界面
+    采用现代卡片式布局，按功能分类展示工具
+    """
+    
+    # 配色方案 - 浅色主题
+    COLORS = {
+        'bg_primary': '#f8fafc',       # 浅灰白背景
+        'bg_secondary': '#ffffff',      # 纯白次级背景
+        'bg_card': '#ffffff',           # 白色卡片背景
+        'accent_blue': '#3b82f6',       # 强调色蓝
+        'accent_cyan': '#06b6d4',       # 强调色青
+        'accent_purple': '#8b5cf6',     # 强调色紫
+        'accent_pink': '#ec4899',       # 强调色粉
+        'accent_green': '#10b981',      # 强调色绿
+        'accent_orange': '#f97316',     # 强调色橙
+        'text_primary': '#1e293b',      # 深色主文字
+        'text_secondary': '#64748b',    # 灰色次级文字
+        'text_muted': '#94a3b8',        # 弱化文字
+        'border': '#e2e8f0',            # 浅色边框
+        'hover': '#f1f5f9',             # 浅色悬停
+        'shadow': '#cbd5e1',            # 阴影色
+    }
+    
+    # 工具分类配置
+    TOOL_CATEGORIES = [
+        {
+            'name': '📁 文件处理',
+            'description': '文件格式、结构和内容处理工具',
+            'color': 'accent_blue',
+            'tools': [
+                {
+                    'name': '文件格式转换',
+                    'icon': '🔄',
+                    'desc': '支持CSV、Excel、SAS等多种格式互转',
+                    'func': 'function_two'
+                },
+                {
+                    'name': '生成Data Set',
+                    'icon': '📊',
+                    'desc': '快速生成标准化数据集结构',
+                    'func': 'function_five'
+                },
+                {
+                    'name': '获取文件字段',
+                    'icon': '📋',
+                    'desc': '提取文件中的字段信息列表',
+                    'func': 'function_eleven'
+                },
+                {
+                    'name': '死链检测',
+                    'icon': '🔗',
+                    'desc': '检测文件或网页中的无效链接',
+                    'func': 'function_twelve'
+                },
+            ]
+        },
+        {
+            'name': '🔧 数据处理',
+            'description': '数据清洗、转换和处理工具',
+            'color': 'accent_purple',
+            'tools': [
+                {
+                    'name': '数据清洗',
+                    'icon': '🧹',
+                    'desc': '清理数据中的异常值和空白',
+                    'func': 'function_six'
+                },
+                {
+                    'name': '数据模糊化',
+                    'icon': '🔒',
+                    'desc': '对敏感数据进行脱敏处理',
+                    'func': 'function_eight'
+                },
+                {
+                    'name': 'Codelist处理',
+                    'icon': '📝',
+                    'desc': '处理和管理代码列表数据',
+                    'func': 'function_seven'
+                },
+                {
+                    'name': 'EDC施设添加',
+                    'icon': '🏥',
+                    'desc': 'EDC系统施设信息批量添加',
+                    'func': 'function_four'
+                },
+            ]
+        },
+        {
+            'name': '✨ 格式转换',
+            'description': '文本和格式快速转换工具',
+            'color': 'accent_green',
+            'tools': [
+                {
+                    'name': '日期转换',
+                    'icon': '📅',
+                    'desc': '多种日期格式智能转换',
+                    'func': 'function_one'
+                },
+                {
+                    'name': '全角转半角',
+                    'icon': '🔡',
+                    'desc': '全角半角字符快速转换',
+                    'func': 'function_ten'
+                },
+                {
+                    'name': 'CSV引号去除',
+                    'icon': '✂️',
+                    'desc': '批量去除CSV文件中的引号',
+                    'func': 'function_nine'
+                },
+            ]
+        },
+    ]
+    
     def __init__(self, root):
+        """初始化主窗口"""
         self.root = root
         self.root.title("工具集合")
-        self.root.geometry("1100x800")
-        self.root.configure(bg='#f0f0f0')
+        self.root.geometry("1200x850")
+        self.root.configure(bg=self.COLORS['bg_primary'])
         
         # 设置窗口最小尺寸
         self.root.update()
@@ -26,64 +144,330 @@ class MainWindow:
         # 绑定关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        # 创建主框架
-        self.main_frame = tk.Frame(self.root, bg='#f0f0f0', padx=20, pady=20)
-        self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # 存储按钮引用用于悬停效果
+        self.tool_buttons = {}
         
-        # 配置网格权重，使界面居中
-        self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_columnconfigure(1, weight=1)
-        self.main_frame.grid_columnconfigure(2, weight=1)
+        # 创建界面
+        self._create_ui()
+    
+    def _create_ui(self):
+        """创建主界面"""
+        # 创建主容器，支持滚动
+        self.canvas = tk.Canvas(
+            self.root,
+            bg=self.COLORS['bg_primary'],
+            highlightthickness=0
+        )
+        self.scrollbar = ttk.Scrollbar(
+            self.root,
+            orient="vertical",
+            command=self.canvas.yview
+        )
+        self.scrollable_frame = tk.Frame(
+            self.canvas,
+            bg=self.COLORS['bg_primary']
+        )
         
-        # 创建标题框架
-        title_frame = tk.Frame(self.main_frame, bg='#f0f0f0')
-        title_frame.grid(row=0, column=0, columnspan=2, pady=(0, 30))
+        # 配置滚动
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
         
-        # 创建标题
+        # 创建窗口并让它随父容器宽度调整
+        self.canvas_window = self.canvas.create_window(
+            (0, 0),
+            window=self.scrollable_frame,
+            anchor="nw"
+        )
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        # 绑定canvas尺寸变化事件，让内容宽度跟随canvas
+        self.canvas.bind(
+            "<Configure>",
+            self._on_canvas_configure
+        )
+        
+        # 绑定鼠标滚轮
+        self.canvas.bind_all(
+            "<MouseWheel>",
+            lambda e: self.canvas.yview_scroll(int(-1*(e.delta/120)), "units")
+        )
+        
+        # 布局滚动组件
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        
+        # 创建内容容器，使用固定内边距
+        self.content_frame = tk.Frame(
+            self.scrollable_frame,
+            bg=self.COLORS['bg_primary'],
+            padx=50,
+            pady=30
+        )
+        self.content_frame.pack(fill="both", expand=True)
+        
+        # 创建头部区域
+        self._create_header(self.content_frame)
+        
+        # 创建工具分类卡片
+        self._create_tool_categories(self.content_frame)
+        
+        # 创建页脚
+        self._create_footer(self.content_frame)
+    
+    def _on_canvas_configure(self, event):
+        """当canvas尺寸变化时，调整内容宽度"""
+        # 让内容宽度跟随canvas宽度
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
+    
+    def _create_header(self, parent):
+        """创建头部区域"""
+        header_frame = tk.Frame(parent, bg=self.COLORS['bg_primary'])
+        header_frame.pack(fill="x", pady=(0, 40))
+        
+        # 左侧标题区域
+        title_container = tk.Frame(header_frame, bg=self.COLORS['bg_primary'])
+        title_container.pack(anchor="w")
+        
+        # 主标题
         title_label = tk.Label(
-            title_frame,
-            text="工具箱",
-            font=('Microsoft YaHei UI', 32, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            title_container,
+            text="🛠️ 工具箱",
+            font=('Microsoft YaHei UI', 36, 'bold'),
+            fg=self.COLORS['text_primary'],
+            bg=self.COLORS['bg_primary']
         )
-        title_label.pack()
+        title_label.pack(anchor="w")
         
-        # 创建副标题
+        # 副标题
         subtitle_label = tk.Label(
-            title_frame,
-            text=f"实用工具集合 v{VERSION}",
+            title_container,
+            text=f"实用工具集合  •  v{VERSION}  •  提升工作效率的好帮手",
             font=('Microsoft YaHei UI', 12),
-            fg='#7f8c8d',
-            bg='#f0f0f0'
+            fg=self.COLORS['text_secondary'],
+            bg=self.COLORS['bg_primary']
         )
-        subtitle_label.pack(pady=(5, 0))
+        subtitle_label.pack(anchor="w", pady=(8, 0))
         
-        # 按钮配置
-        self.buttons = [
-            ("文件格式转换", self.function_two),
-            ("日期转换", self.function_one),
-            ("EDC施设添加", self.function_four),
-            ("生成Data Set", self.function_five),
-            ("数据清洗", self.function_six),
-            ("Codelist处理", self.function_seven),
-            ("数据模糊化", self.function_eight),
-            ("CSV引号去除", self.function_nine),
-            ("全角转半角", self.function_ten),
-            ("获取文件字段", self.function_eleven),
-            ("死链检测", self.function_twelve)
-        ]
+        # 分隔线
+        separator = tk.Frame(
+            header_frame,
+            bg=self.COLORS['border'],
+            height=1
+        )
+        separator.pack(fill="x", pady=(25, 0))
+    
+    def _create_tool_categories(self, parent):
+        """创建工具分类卡片区域"""
+        categories_frame = tk.Frame(parent, bg=self.COLORS['bg_primary'])
+        categories_frame.pack(fill="both", expand=True)
         
-        self.colors = [
-            '#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f',
-            '#1abc9c', '#34495e', '#d35400', '#2980b9', '#8e44ad',
-            '#16a085', '#c0392b', '#f39c12', '#27ae60', '#7f8c8d'
-        ]
-        self.columns = 3
+        for category in self.TOOL_CATEGORIES:
+            self._create_category_card(categories_frame, category)
+    
+    def _create_category_card(self, parent, category):
+        """创建单个分类卡片"""
+        accent_color = self.COLORS[category['color']]
         
-        self._create_widgets()
+        # 分类容器，添加边框效果
+        category_frame = tk.Frame(
+            parent,
+            bg=self.COLORS['bg_secondary'],
+            padx=25,
+            pady=20,
+            highlightbackground=self.COLORS['border'],
+            highlightthickness=1
+        )
+        category_frame.pack(fill="x", pady=(0, 20))
+        
+        # 分类标题栏
+        header_frame = tk.Frame(category_frame, bg=self.COLORS['bg_secondary'])
+        header_frame.pack(fill="x", pady=(0, 15))
+        
+        # 分类名称
+        name_label = tk.Label(
+            header_frame,
+            text=category['name'],
+            font=('Microsoft YaHei UI', 16, 'bold'),
+            fg=accent_color,
+            bg=self.COLORS['bg_secondary']
+        )
+        name_label.pack(side="left")
+        
+        # 分类描述
+        desc_label = tk.Label(
+            header_frame,
+            text=category['description'],
+            font=('Microsoft YaHei UI', 10),
+            fg=self.COLORS['text_muted'],
+            bg=self.COLORS['bg_secondary']
+        )
+        desc_label.pack(side="left", padx=(15, 0))
+        
+        # 工具卡片网格容器
+        tools_frame = tk.Frame(category_frame, bg=self.COLORS['bg_secondary'])
+        tools_frame.pack(fill="x", expand=True)
+        
+        # 配置4列，均匀分布
+        num_cols = 4
+        for col in range(num_cols):
+            tools_frame.grid_columnconfigure(col, weight=1, uniform="tool_col")
+        
+        # 配置行高度一致
+        num_tools = len(category['tools'])
+        num_rows = (num_tools + num_cols - 1) // num_cols
+        for row in range(num_rows):
+            tools_frame.grid_rowconfigure(row, weight=1, uniform="tool_row")
+        
+        # 创建工具卡片
+        for idx, tool in enumerate(category['tools']):
+            self._create_tool_card(
+                tools_frame,
+                tool,
+                accent_color,
+                row=idx // num_cols,
+                col=idx % num_cols
+            )
+    
+    def _create_tool_card(self, parent, tool, accent_color, row, col):
+        """创建单个工具卡片"""
+        # 卡片外框，添加边框
+        card_frame = tk.Frame(
+            parent,
+            bg=self.COLORS['bg_card'],
+            padx=18,
+            pady=15,
+            highlightbackground=self.COLORS['border'],
+            highlightthickness=1
+        )
+        card_frame.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
+        
+        # 图标
+        icon_label = tk.Label(
+            card_frame,
+            text=tool['icon'],
+            font=('Segoe UI Emoji', 26),
+            fg=accent_color,
+            bg=self.COLORS['bg_card'],
+            anchor="w"
+        )
+        icon_label.pack(anchor="w", fill="x")
+        
+        # 工具名称
+        name_label = tk.Label(
+            card_frame,
+            text=tool['name'],
+            font=('Microsoft YaHei UI', 12, 'bold'),
+            fg=self.COLORS['text_primary'],
+            bg=self.COLORS['bg_card'],
+            anchor="w"
+        )
+        name_label.pack(anchor="w", fill="x", pady=(6, 3))
+        
+        # 工具描述 - 固定高度确保对齐
+        desc_frame = tk.Frame(
+            card_frame,
+            bg=self.COLORS['bg_card'],
+            height=40  # 固定高度
+        )
+        desc_frame.pack(anchor="w", fill="x")
+        desc_frame.pack_propagate(False)  # 保持固定高度
+        
+        desc_label = tk.Label(
+            desc_frame,
+            text=tool['desc'],
+            font=('Microsoft YaHei UI', 9),
+            fg=self.COLORS['text_secondary'],
+            bg=self.COLORS['bg_card'],
+            wraplength=160,
+            justify="left",
+            anchor="nw"
+        )
+        desc_label.pack(anchor="nw", fill="both", expand=True)
+        
+        # 打开按钮
+        open_btn = tk.Button(
+            card_frame,
+            text="打开工具 →",
+            font=('Microsoft YaHei UI', 9),
+            fg='#ffffff',
+            bg=accent_color,
+            activeforeground='#ffffff',
+            activebackground=accent_color,
+            relief='flat',
+            cursor='hand2',
+            padx=12,
+            pady=4,
+            command=getattr(self, tool['func'])
+        )
+        open_btn.pack(anchor="w", pady=(10, 0))
+        
+        # 存储按钮和颜色信息用于悬停效果
+        button_id = f"{tool['name']}_{id(open_btn)}"
+        self.tool_buttons[button_id] = {
+            'button': open_btn,
+            'card': card_frame,
+            'accent': accent_color,
+            'components': [icon_label, name_label, desc_frame, desc_label]
+        }
+        
+        # 绑定卡片悬停效果
+        for widget in [card_frame, icon_label, name_label, desc_frame, desc_label]:
+            widget.bind('<Enter>', lambda e, bid=button_id: self._on_card_enter(bid))
+            widget.bind('<Leave>', lambda e, bid=button_id: self._on_card_leave(bid))
+        
+        # 按钮悬停效果
+        open_btn.bind('<Enter>', lambda e, btn=open_btn: self._on_button_enter(btn))
+        open_btn.bind('<Leave>', lambda e, btn=open_btn, ac=accent_color: 
+                      self._on_button_leave(btn, ac))
+    
+    def _on_card_enter(self, button_id):
+        """卡片悬停进入效果"""
+        if button_id in self.tool_buttons:
+            info = self.tool_buttons[button_id]
+            info['card'].configure(bg=self.COLORS['hover'])
+            for comp in info['components']:
+                comp.configure(bg=self.COLORS['hover'])
+    
+    def _on_card_leave(self, button_id):
+        """卡片悬停离开效果"""
+        if button_id in self.tool_buttons:
+            info = self.tool_buttons[button_id]
+            info['card'].configure(bg=self.COLORS['bg_card'])
+            for comp in info['components']:
+                comp.configure(bg=self.COLORS['bg_card'])
+    
+    def _on_button_enter(self, button):
+        """按钮悬停进入效果"""
+        button.configure(bg='#1e293b', fg='#ffffff')
+    
+    def _on_button_leave(self, button, accent_color):
+        """按钮悬停离开效果"""
+        button.configure(bg=accent_color, fg='#ffffff')
+    
+    def _create_footer(self, parent):
+        """创建页脚"""
+        footer_frame = tk.Frame(parent, bg=self.COLORS['bg_primary'])
+        footer_frame.pack(fill="x", pady=(30, 10))
+        
+        # 分隔线
+        separator = tk.Frame(
+            footer_frame,
+            bg=self.COLORS['border'],
+            height=1
+        )
+        separator.pack(fill="x", pady=(0, 15))
+        
+        # 版权信息
+        copyright_label = tk.Label(
+            footer_frame,
+            text=f"© 2026 工具箱  •  版本 {VERSION}  •  Made with ❤️",
+            font=('Microsoft YaHei UI', 10),
+            fg=self.COLORS['text_muted'],
+            bg=self.COLORS['bg_primary']
+        )
+        copyright_label.pack()
     
     def hide(self):
         """隐藏主窗口"""
@@ -92,55 +476,6 @@ class MainWindow:
     def show(self):
         """显示主窗口"""
         self.root.deiconify()
-    
-    def _create_widgets(self):
-        # 创建按钮网格
-        for i, (text, command) in enumerate(self.buttons):
-            # 创建按钮容器框架
-            btn_frame = tk.Frame(self.main_frame, bg='#f0f0f0')
-            row = (i // self.columns) + 1
-            col = i % self.columns
-            btn_frame.grid(row=row, column=col, padx=15, pady=15)
-            
-            # 创建按钮
-            btn = tk.Button(
-                btn_frame,
-                text=text,
-                command=command,
-                width=25,
-                height=2,
-                font=('Microsoft YaHei UI', 11),
-                bg=self.colors[i],
-                fg='white',
-                relief='flat',
-                cursor='hand2'
-            )
-            btn.pack(pady=5)
-            
-            # 创建按钮描述标签
-            desc_label = tk.Label(
-                btn_frame,
-                text="点击使用此功能",
-                font=('Microsoft YaHei UI', 9),
-                fg='#95a5a6',
-                bg='#f0f0f0'
-            )
-            desc_label.pack()
-            
-            # 绑定鼠标悬停事件，使用索引来避免函数比较问题
-            btn.bind('<Enter>', lambda e, idx=i: self.on_enter(e, idx))
-            btn.bind('<Leave>', lambda e, idx=i: self.on_leave(e, idx))
-    
-    def on_enter(self, event, button_index):
-        """鼠标悬停时改变按钮颜色"""
-        # 计算一个稍微暗一点的颜色用于悬停效果
-        original_color = self.colors[button_index]
-        # 简单地使按钮稍微暗一点
-        event.widget.configure(bg=original_color)
-    
-    def on_leave(self, event, button_index):
-        """鼠标离开时恢复按钮颜色"""
-        event.widget.configure(bg=self.colors[button_index])
     
     def function_one(self):
         # 隐藏主窗口
