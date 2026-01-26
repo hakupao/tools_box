@@ -5,14 +5,17 @@
 ## 目录
 
 1. [日期工具 API](#日期工具-api)
-2. [CSV转换器 API](#csv转换器-api) 
-3. [XLSX转换器 API](#xlsx转换器-api)
-4. [全角转半角转换器 API](#全角转半角转换器-api)
-5. [数据清洗器 API](#数据清洗器-api)
-6. [Codelist处理器 API](#codelist处理器-api)
-7. [数据模糊化处理器 API](#数据模糊化处理器-api)
-8. [CSV引号去除处理器 API](#csv引号去除处理器-api)
-9. [XLSX重构处理器 API](#xlsx重构处理器-api)
+2. [CSV转换器 API](#csv转换器-api)
+3. [CSV编码转换器 API](#csv编码转换器-api)
+4. [XLSX转换器 API](#xlsx转换器-api)
+5. [全角转半角转换器 API](#全角转半角转换器-api)
+6. [数据清洗器 API](#数据清洗器-api)
+7. [Codelist处理器 API](#codelist处理器-api)
+8. [数据模糊化处理器 API](#数据模糊化处理器-api)
+9. [CSV引号去除处理器 API](#csv引号去除处理器-api)
+10. [XLSX重构处理器 API](#xlsx重构处理器-api)
+11. [文件字段提取器 API](#文件字段提取器-api)
+12. [死链检测器 API](#死链检测器-api)
 
 ---
 
@@ -38,7 +41,7 @@ print(result)  # "2024-12-19"
 
 #### 支持的输入格式
 - `YYYY-MM-DD`
-- `YYYY/MM/DD` 
+- `YYYY/MM/DD`
 - `DD/MM/YYYY`
 - `MM/DD/YYYY`
 - `DD-MM-YYYY`
@@ -75,6 +78,35 @@ if success:
     print("转换成功")
 else:
     print(f"转换失败: {error}")
+```
+
+---
+
+## CSV编码转换器 API
+
+### `CsvEncodingConverter`
+
+将 CSV 文件重新保存为目标编码（默认 UTF-8 BOM）。
+
+#### 方法
+
+##### `convert_file(input_file, output_path=None)`
+
+将单个 CSV 文件转换为目标编码。
+
+**参数:**
+- `input_file` (str): 输入 CSV 文件路径
+- `output_path` (str, optional): 输出目录路径，None 时覆盖原文件
+
+**返回值:**
+- `Tuple[bool, str]`: (是否成功, 错误信息)
+
+#### 示例
+```python
+from src.utils.csv_encoding_converter import CsvEncodingConverter
+
+converter = CsvEncodingConverter()
+success, error = converter.convert_file("data.csv")
 ```
 
 ---
@@ -246,7 +278,7 @@ success = cleaner.clean_csv_file("data.csv", "output/")
 
 **文件要求:**
 - Process 表：字段映射规则
-- CodeList 表：编码映射关系  
+- CodeList 表：编码映射关系
 - Files 表：SUBJID 字段映射
 
 ##### `process_csv_file(input_file, output_path=None)`
@@ -320,7 +352,8 @@ SDTM 数据集模糊化处理器。
 - `masking_function`: 模糊化函数
 
 #### 内置模糊化规则
-- 年龄减值：AGE 相关字段减 2
+- 年龄减值：AGE 相关字段减 2（DM.csv）
+- DTC 字段日期提前两年
 - USUBJID 过滤：基于基准列表过滤数据
 
 #### 示例
@@ -431,6 +464,89 @@ success = restructure.restructure_file("AB.xlsx", "output/")
 
 ---
 
+## 文件字段提取器 API
+
+### `FileFieldExtractor`
+
+批量提取 CSV / Excel 文件的字段名称并输出汇总结果。
+
+#### 方法
+
+##### `extract_fields(folder_path, include_subfolders=False, progress_callback=None)`
+
+从文件夹中提取字段信息。
+
+**参数:**
+- `folder_path` (str): 目标文件夹
+- `include_subfolders` (bool): 是否递归子文件夹
+- `progress_callback` (callable, optional): 进度回调
+
+**返回值:**
+- `dict`: 包含 `output_file`、`details`、`processed_files`、`errors`、`total_fields`
+
+#### 示例
+```python
+from src.utils.file_field_extractor import FileFieldExtractor
+
+extractor = FileFieldExtractor()
+result = extractor.extract_fields("data/", include_subfolders=True)
+print(result["output_file"])
+```
+
+---
+
+## 死链检测器 API
+
+### `DeadLinkChecker`
+
+检测 HTML 文件中的链接有效性。
+
+#### 方法
+
+##### `check_html_file(file_path, base_url="", progress_callback=None)`
+
+检测单个 HTML 文件。
+
+**参数:**
+- `file_path` (str): HTML 文件路径
+- `base_url` (str, optional): 基础 URL，用于解析相对链接
+- `progress_callback` (callable, optional): 进度回调
+
+**返回值:**
+- `dict`: 检测结果（包含统计与详情）
+
+##### `check_folder(folder_path, base_url="", include_subfolders=False, progress_callback=None)`
+
+检测文件夹内所有 HTML 文件。
+
+**参数:**
+- `folder_path` (str): 目标文件夹
+- `base_url` (str, optional): 基础 URL
+- `include_subfolders` (bool): 是否递归子文件夹
+- `progress_callback` (callable, optional): 进度回调
+
+**返回值:**
+- `dict`: 文件夹检测汇总结果
+
+##### `generate_report(results, output_file)`
+
+生成检测报告文本文件。
+
+**参数:**
+- `results` (dict): 检测结果
+- `output_file` (str): 报告输出路径
+
+#### 示例
+```python
+from src.utils.dead_link_checker import DeadLinkChecker
+
+checker = DeadLinkChecker(timeout=10)
+results = checker.check_html_file("index.html")
+checker.generate_report(results, "dead_link_report.txt")
+```
+
+---
+
 ## 通用接口规范
 
 ### 错误处理
@@ -529,9 +645,10 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：1.5.0
+当前 API 版本：1.6.0
 
 ### 向后兼容性
+- 1.5.x 版本的 API 完全兼容
 - 1.4.x 版本的 API 完全兼容
 - 1.3.x 版本需要注意参数变化
 - 1.2.x 及以下版本建议升级
@@ -554,4 +671,4 @@ batch_convert_csv_to_xlsx("input/", "output/")
 3. 检查错误日志
 4. 联系开发团队
 
-**联系方式**: [待添加] 
+**联系方式**: [待添加]

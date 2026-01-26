@@ -5,29 +5,32 @@
 ## 功能特性
 
 - 🖱️ 支持文件拖拽操作
-- 🎨 现代化的用户界面设计
-- 📦 多工具集成（9个专业工具）
+- 🎨 分类卡片式主界面与滚动浏览
+- 📦 多工具集成（11个专业工具）
 - 🔄 批量文件处理能力
 - 📊 数据格式转换与清洗
+- 🔍 字段提取与 HTML 死链检测
 - 🔧 自动化操作支持
-- 🌐 跨平台支持（Windows）
+- 🌐 Windows 平台支持
 
 ## 工具列表
 
-### 数据转换工具
-1. **日期转换工具** - 支持多种日期格式的智能转换
-2. **文件格式转换工具** - 单一界面切换三种模式：CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM)、CSV 转 UTF-8(BOM)
-3. **全角转半角工具** - 将全角字符转换为半角字符
+### 文件处理工具
+1. **文件格式转换工具** - 单一界面切换三种模式：CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM)、CSV 转 UTF-8(BOM)
+2. **生成 Data Set 工具** - XLSX 文件重构为标准 CDISC SDTM 格式
+3. **获取文件字段工具** - 批量提取 CSV/XLSX 字段并输出汇总
+4. **死链检测工具** - 扫描 HTML 文件/文件夹并生成检测报告
 
 ### 数据处理工具
-4. **数据清洗工具** - 基于仕样书规则进行数据清洗和过滤
-5. **Codelist处理工具** - 编码映射和多语言值转换
-6. **数据模糊化工具** - SDTM数据集隐私保护和模糊化处理
-7. **CSV引号去除工具** - 智能清理CSV文件中的多余引号
+5. **数据清洗工具** - 基于仕样书规则进行数据清洗和过滤
+6. **Codelist 处理工具** - 编码映射和多语言值转换
+7. **数据模糊化工具** - SDTM 数据集隐私保护和模糊化处理
+8. **EDC 站点添加工具** - 自动化 EDC 系统的站点批量添加
 
-### 专业工具
-8. **EDC站点添加工具** - 自动化EDC系统的站点批量添加
-9. **生成Data Set工具** - XLSX文件重构为标准CDISC SDTM格式
+### 格式转换工具
+9. **日期转换工具** - 支持多种日期格式的智能转换
+10. **全角转半角工具** - 将全角字符转换为半角字符
+11. **CSV 引号去除工具** - 智能清理 CSV 文件中的多余引号
 
 ## 系统要求
 
@@ -35,6 +38,7 @@
 - **操作系统**: Windows 10/11
 - **内存**: 建议 4GB 或以上
 - **磁盘空间**: 至少 100MB 可用空间
+- **网络**: 死链检测功能需要可访问网络
 
 ## 安装说明
 
@@ -79,9 +83,30 @@ tools_box/
 │   ├── gui/               # 图形界面相关代码
 │   │   ├── main_window.py # 主窗口
 │   │   └── widgets/       # 各工具窗口组件
-│   ├── utils/             # 工具函数和处理器
-│   ├── main.py            # 主程序入口
-│   └── version.py         # 版本信息
+│   │       ├── date_converter.py           # 日期转换窗口
+│   │       ├── file_format_converter.py    # 文件格式转换窗口（CSV/XLSX/BOM）
+│   │       ├── file_field_extractor.py     # 获取文件字段窗口
+│   │       ├── dead_link_checker.py        # 死链检测窗口
+│   │       ├── fullwidth_halfwidth_converter.py # 全角转半角窗口
+│   │       ├── data_cleaner.py             # 数据清洗窗口
+│   │       ├── codelist_processor.py       # Codelist处理窗口
+│   │       ├── data_masking.py             # 数据模糊化窗口
+│   │       ├── csv_quote_remover.py        # CSV引号去除窗口
+│   │       ├── edc_site_adder.py           # EDC站点添加窗口
+│   │       └── xlsx_file_restructuring.py  # XLSX重构窗口
+│   └── utils/             # 工具函数和处理器
+│       ├── date_utils.py                   # 日期处理工具
+│       ├── csv_to_xlsx_converter.py        # CSV转XLSX处理器
+│       ├── xlsx_to_csv_converter.py        # XLSX转CSV处理器
+│       ├── csv_encoding_converter.py       # CSV转UTF-8(BOM)处理器
+│       ├── file_field_extractor.py         # 获取文件字段处理器
+│       ├── dead_link_checker.py            # 死链检测处理器
+│       ├── fullwidth_to_halfwidth_converter.py # 全角转半角处理器
+│       ├── data_cleaning.py                # 数据清洗处理器
+│       ├── codelist_process.py             # Codelist处理器
+│       ├── data_masking_processor.py       # 数据模糊化处理器
+│       ├── csv_quote_remover_processor.py  # CSV引号去除处理器
+│       └── restructure_xlsx_file.py        # XLSX重构处理器
 ├── docs/                  # 项目文档
 ├── requirements.txt       # 项目依赖
 ├── tools_box.spec        # PyInstaller 打包配置
@@ -96,6 +121,10 @@ tools_box/
 - **openpyxl** (3.1.2) - Excel 文件读写
 - **tkinterdnd2** (0.3.0) - 文件拖拽功能支持
 
+### 网络与解析
+- **requests** (>=2.31.0) - 网络请求与链接检测
+- **beautifulsoup4** (>=4.12.0) - HTML 解析
+
 ### 自动化库
 - **pyautogui** (0.9.54) - GUI 自动化控制
 - **pygetwindow** (0.0.9) - 窗口管理
@@ -105,6 +134,7 @@ tools_box/
 
 ### 打包工具
 - **pyinstaller** (6.3.0) - 程序打包
+- **backports.tarfile** (>=1.2.0) - 打包兼容性支持
 
 ## 开发说明
 
@@ -133,8 +163,8 @@ python -m PyInstaller tools_box.spec --clean
 
 ## 技术特点
 
-- **现代化界面**: 采用现代化的 GUI 设计风格
-- **响应式布局**: 支持窗口大小调整和适配
+- **现代化界面**: 分类卡片布局与统一的 GUI 风格
+- **响应式布局**: 支持窗口大小调整和滚动适配
 - **错误处理**: 完善的异常处理和用户提示机制
 - **内存优化**: 针对大文件处理进行了内存优化
 - **编码兼容**: 统一使用 UTF-8-SIG 编码处理中文
