@@ -1,8 +1,10 @@
+import csv
 import os
 import re
-from typing import Callable, Dict, List, Optional, Set
+from datetime import date, datetime, time
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set
 
-import pandas as pd
+from openpyxl import load_workbook
 
 
 class XlsxSheetSplitter:
@@ -60,8 +62,8 @@ class XlsxSheetSplitter:
         output_dir = output_path or os.path.dirname(input_file)
         os.makedirs(output_dir, exist_ok=True)
 
-        excel_file = pd.ExcelFile(input_file, engine="openpyxl")
-        sheet_names = list(excel_file.sheet_names)
+        workbook = load_workbook(input_file, read_only=True, data_only=True)
+        sheet_names = list(workbook.sheetnames)
         total = len(sheet_names)
 
         used_names: Set[str] = set()
@@ -69,26 +71,30 @@ class XlsxSheetSplitter:
         sheet_outputs: List[Dict[str, str]] = []
         errors: List[str] = []
 
-        for index, sheet_name in enumerate(sheet_names, 1):
-            if progress_callback:
-                progress_callback(index, total, sheet_name)
+        try:
+            for index, sheet_name in enumerate(sheet_names, 1):
+                if progress_callback:
+                    progress_callback(index, total, sheet_name)
 
-            safe_name = self._sanitize_sheet_name(sheet_name)
-            safe_name = self._make_unique_name(safe_name, used_names)
-            output_file = os.path.join(output_dir, f"{safe_name}.csv")
+                safe_name = self._sanitize_sheet_name(sheet_name)
+                safe_name = self._make_unique_name(safe_name, used_names)
+                output_file = os.path.join(output_dir, f"{safe_name}.csv")
 
-            try:
-                df = excel_file.parse(sheet_name, dtype=str, na_filter=False)
-            except Exception as exc:  # pylint: disable=broad-except
-                errors.append(f"{sheet_name}: {exc}")
-                df = pd.DataFrame()
+                try:
+                    worksheet = workbook[sheet_name]
+                    rows = self._read_sheet_as_strings(worksheet.iter_rows())
+                except Exception as exc:  # pylint: disable=broad-except
+                    errors.append(f"{sheet_name}: {exc}")
+                    rows = []
 
-            try:
-                df.to_csv(output_file, index=False, encoding=self.output_encoding)
-                output_files.append(output_file)
-                sheet_outputs.append({"sheet": sheet_name, "output_file": output_file})
-            except Exception as exc:  # pylint: disable=broad-except
-                errors.append(f"{sheet_name}: {exc}")
+                try:
+                    self._write_csv(output_file, rows)
+                    output_files.append(output_file)
+                    sheet_outputs.append({"sheet": sheet_name, "output_file": output_file})
+                except Exception as exc:  # pylint: disable=broad-except
+                    errors.append(f"{sheet_name}: {exc}")
+        finally:
+            workbook.close()
 
         return {
             "input_file": input_file,
@@ -127,3 +133,140 @@ class XlsxSheetSplitter:
                 used_names.add(candidate)
                 return candidate
             counter += 1
+
+    @staticmethod
+    def _read_sheet_as_strings(rows: Iterable[Iterable[object]]) -> List[List[str]]:
+        output_rows: List[List[str]] = []
+        max_nonempty_col = -1
+
+        for row in rows:
+            string_row = [XlsxSheetSplitter._cell_to_string(cell) for cell in row]
+            for idx in range(len(string_row) - 1, -1, -1):
+                if string_row[idx] != "":
+                    if idx > max_nonempty_col:
+                        max_nonempty_col = idx
+                    break
+            output_rows.append(string_row)
+
+        if max_nonempty_col >= 0:
+            output_rows = [row[: max_nonempty_col + 1] for row in output_rows]
+
+        while output_rows and all(cell == "" for cell in output_rows[-1]):
+            output_rows.pop()
+
+        return output_rows
+
+    def _write_csv(self, output_file: str, rows: List[List[str]]) -> None:
+        with open(output_file, "w", newline="", encoding=self.output_encoding) as handle:
+            writer = csv.writer(handle)
+            writer.writerows(rows)
+
+    @staticmethod
+    def _cell_to_string(cell: object) -> str:
+        if cell is None:
+            return ""
+
+        value = getattr(cell, "value", cell)
+        if value is None:
+            return ""
+
+        if getattr(cell, "is_date", False) and isinstance(value, (datetime, date)):
+            number_format = getattr(cell, "number_format", "")
+            return XlsxSheetSplitter._format_excel_date(value, number_format)
+
+        return str(value)
+
+    @staticmethod
+    def _format_excel_date(value: object, number_format: str) -> str:
+        fmt = (number_format or "").lower()
+        fmt = fmt.split(";")[0]
+        fmt = re.sub(r"\[[^\]]*\]", "", fmt)
+        fmt = re.sub(r'"[^"]*"', "", fmt)
+
+        if "h" in fmt:
+            date_part, time_part = fmt.split("h", 1)
+            time_part = "h" + time_part
+        else:
+            date_part, time_part = fmt, ""
+
+        date_tokens = XlsxSheetSplitter._extract_date_tokens(date_part)
+        sep = XlsxSheetSplitter._detect_date_separator(date_part)
+        date_str = XlsxSheetSplitter._render_date_tokens(value, date_tokens, sep)
+
+        include_time = XlsxSheetSplitter._should_include_time(value, time_part)
+        if not include_time:
+            return date_str
+
+        time_str = XlsxSheetSplitter._render_time(value, time_part)
+        return f"{date_str} {time_str}"
+
+    @staticmethod
+    def _extract_date_tokens(date_part: str) -> Sequence[str]:
+        tokens: List[str] = []
+        i = 0
+        while i < len(date_part):
+            ch = date_part[i]
+            if ch in {"y", "m", "d"}:
+                j = i + 1
+                while j < len(date_part) and date_part[j] == ch:
+                    j += 1
+                tokens.append(date_part[i:j])
+                i = j
+            else:
+                i += 1
+        return tokens
+
+    @staticmethod
+    def _detect_date_separator(date_part: str) -> str:
+        if "/" in date_part:
+            return "/"
+        if "-" in date_part:
+            return "-"
+        if "." in date_part:
+            return "."
+        return "-"
+
+    @staticmethod
+    def _render_date_tokens(value: object, tokens: Sequence[str], sep: str) -> str:
+        if not isinstance(value, (datetime, date)):
+            return str(value)
+
+        year = value.year
+        month = value.month
+        day = value.day
+
+        if not tokens:
+            return f"{year:04d}{sep}{month:02d}{sep}{day:02d}"
+
+        parts: List[str] = []
+        for token in tokens:
+            if token.startswith("y"):
+                if len(token) <= 2:
+                    parts.append(f"{year % 100:02d}")
+                else:
+                    parts.append(f"{year:04d}")
+            elif token.startswith("m"):
+                if len(token) >= 2:
+                    parts.append(f"{month:02d}")
+                else:
+                    parts.append(str(month))
+            elif token.startswith("d"):
+                if len(token) >= 2:
+                    parts.append(f"{day:02d}")
+                else:
+                    parts.append(str(day))
+
+        return sep.join(parts)
+
+    @staticmethod
+    def _should_include_time(value: object, time_part: str) -> bool:
+        if not isinstance(value, datetime):
+            return False
+        if value.time() != time(0, 0, 0):
+            return True
+        return bool(time_part and ("h" in time_part or "s" in time_part))
+
+    @staticmethod
+    def _render_time(value: datetime, time_part: str) -> str:
+        include_seconds = "s" in time_part
+        return value.strftime("%H:%M:%S" if include_seconds else "%H:%M")
