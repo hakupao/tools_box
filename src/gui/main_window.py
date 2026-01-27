@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+
+from .theme import get_theme
 from src.gui.widgets.date_converter import DateConverterWindow
 from src.gui.widgets.edc_site_adder import EdcSiteAdderWindow
 from src.gui.widgets.xlsx_file_restructuring import FileRestructureWindow
@@ -11,6 +13,7 @@ from src.gui.widgets.fullwidth_halfwidth_converter import FullwidthHalfwidthConv
 from src.gui.widgets.file_field_extractor import FileFieldExtractorWindow
 from src.gui.widgets.file_format_converter import FileFormatConverterWindow
 from src.gui.widgets.dead_link_checker import DeadLinkCheckerWindow
+from src.gui.widgets.xlsx_sheet_splitter import XlsxSheetSplitterWindow
 from src.version import VERSION
 
 
@@ -20,37 +23,24 @@ class MainWindow:
     采用现代卡片式布局，按功能分类展示工具
     """
     
-    # 配色方案 - 浅色主题
-    COLORS = {
-        'bg_primary': '#f8fafc',       # 浅灰白背景
-        'bg_secondary': '#ffffff',      # 纯白次级背景
-        'bg_card': '#ffffff',           # 白色卡片背景
-        'accent_blue': '#3b82f6',       # 强调色蓝
-        'accent_cyan': '#06b6d4',       # 强调色青
-        'accent_purple': '#8b5cf6',     # 强调色紫
-        'accent_pink': '#ec4899',       # 强调色粉
-        'accent_green': '#10b981',      # 强调色绿
-        'accent_orange': '#f97316',     # 强调色橙
-        'text_primary': '#1e293b',      # 深色主文字
-        'text_secondary': '#64748b',    # 灰色次级文字
-        'text_muted': '#94a3b8',        # 弱化文字
-        'border': '#e2e8f0',            # 浅色边框
-        'hover': '#f1f5f9',             # 浅色悬停
-        'shadow': '#cbd5e1',            # 阴影色
-    }
-    
     # 工具分类配置
     TOOL_CATEGORIES = [
         {
             'name': '📁 文件处理',
             'description': '文件格式、结构和内容处理工具',
-            'color': 'accent_blue',
+            'color': 'accent',
             'tools': [
                 {
                     'name': '文件格式转换',
                     'icon': '🔄',
                     'desc': '支持CSV、Excel、SAS等多种格式互转',
                     'func': 'function_two'
+                },
+                {
+                    'name': '工作表拆分',
+                    'icon': '📄',
+                    'desc': '将Excel工作表拆分为多个CSV',
+                    'func': 'function_thirteen'
                 },
                 {
                     'name': '生成Data Set',
@@ -133,13 +123,16 @@ class MainWindow:
     def __init__(self, root):
         """初始化主窗口"""
         self.root = root
+        self.theme = get_theme(self.root)
+        self.colors = self.theme.colors
+        self.fonts = self.theme.fonts
         self.root.title("工具集合")
-        self.root.geometry("1200x850")
-        self.root.configure(bg=self.COLORS['bg_primary'])
+        self.root.geometry("1220x860")
+        self.root.configure(bg=self.colors.bg)
         
         # 设置窗口最小尺寸
         self.root.update()
-        self.root.minsize(1100, 800)
+        self.root.minsize(1120, 820)
         
         # 绑定关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -155,7 +148,7 @@ class MainWindow:
         # 创建主容器，支持滚动
         self.canvas = tk.Canvas(
             self.root,
-            bg=self.COLORS['bg_primary'],
+            bg=self.colors.bg,
             highlightthickness=0
         )
         self.scrollbar = ttk.Scrollbar(
@@ -165,7 +158,7 @@ class MainWindow:
         )
         self.scrollable_frame = tk.Frame(
             self.canvas,
-            bg=self.COLORS['bg_primary']
+            bg=self.colors.bg
         )
         
         # 配置滚动
@@ -201,9 +194,9 @@ class MainWindow:
         # 创建内容容器，使用固定内边距
         self.content_frame = tk.Frame(
             self.scrollable_frame,
-            bg=self.COLORS['bg_primary'],
-            padx=50,
-            pady=30
+            bg=self.colors.bg,
+            padx=46,
+            pady=36
         )
         self.content_frame.pack(fill="both", expand=True)
         
@@ -223,20 +216,20 @@ class MainWindow:
     
     def _create_header(self, parent):
         """创建头部区域"""
-        header_frame = tk.Frame(parent, bg=self.COLORS['bg_primary'])
+        header_frame = tk.Frame(parent, bg=self.colors.bg)
         header_frame.pack(fill="x", pady=(0, 40))
         
         # 左侧标题区域
-        title_container = tk.Frame(header_frame, bg=self.COLORS['bg_primary'])
+        title_container = tk.Frame(header_frame, bg=self.colors.bg)
         title_container.pack(anchor="w")
         
         # 主标题
         title_label = tk.Label(
             title_container,
             text="🛠️ 工具箱",
-            font=('Microsoft YaHei UI', 36, 'bold'),
-            fg=self.COLORS['text_primary'],
-            bg=self.COLORS['bg_primary']
+            font=self.fonts["hero"],
+            fg=self.colors.text,
+            bg=self.colors.bg
         )
         title_label.pack(anchor="w")
         
@@ -244,23 +237,23 @@ class MainWindow:
         subtitle_label = tk.Label(
             title_container,
             text=f"实用工具集合  •  v{VERSION}  •  提升工作效率的好帮手",
-            font=('Microsoft YaHei UI', 12),
-            fg=self.COLORS['text_secondary'],
-            bg=self.COLORS['bg_primary']
+            font=self.fonts["small"],
+            fg=self.colors.text_muted,
+            bg=self.colors.bg
         )
         subtitle_label.pack(anchor="w", pady=(8, 0))
         
         # 分隔线
         separator = tk.Frame(
             header_frame,
-            bg=self.COLORS['border'],
+            bg=self.colors.stroke_soft,
             height=1
         )
         separator.pack(fill="x", pady=(25, 0))
     
     def _create_tool_categories(self, parent):
         """创建工具分类卡片区域"""
-        categories_frame = tk.Frame(parent, bg=self.COLORS['bg_primary'])
+        categories_frame = tk.Frame(parent, bg=self.colors.bg)
         categories_frame.pack(fill="both", expand=True)
         
         for category in self.TOOL_CATEGORIES:
@@ -268,30 +261,31 @@ class MainWindow:
     
     def _create_category_card(self, parent, category):
         """创建单个分类卡片"""
-        accent_color = self.COLORS[category['color']]
+        accent_color = getattr(self.colors, category['color'])
         
         # 分类容器，添加边框效果
         category_frame = tk.Frame(
             parent,
-            bg=self.COLORS['bg_secondary'],
-            padx=25,
-            pady=20,
-            highlightbackground=self.COLORS['border'],
-            highlightthickness=1
+            bg=self.colors.surface,
+            padx=26,
+            pady=22,
+            highlightbackground=self.colors.stroke,
+            highlightthickness=1,
+            bd=0
         )
-        category_frame.pack(fill="x", pady=(0, 20))
+        category_frame.pack(fill="x", pady=(0, 22))
         
         # 分类标题栏
-        header_frame = tk.Frame(category_frame, bg=self.COLORS['bg_secondary'])
+        header_frame = tk.Frame(category_frame, bg=self.colors.surface)
         header_frame.pack(fill="x", pady=(0, 15))
         
         # 分类名称
         name_label = tk.Label(
             header_frame,
             text=category['name'],
-            font=('Microsoft YaHei UI', 16, 'bold'),
+            font=self.fonts["section"],
             fg=accent_color,
-            bg=self.COLORS['bg_secondary']
+            bg=self.colors.surface
         )
         name_label.pack(side="left")
         
@@ -299,14 +293,14 @@ class MainWindow:
         desc_label = tk.Label(
             header_frame,
             text=category['description'],
-            font=('Microsoft YaHei UI', 10),
-            fg=self.COLORS['text_muted'],
-            bg=self.COLORS['bg_secondary']
+            font=self.fonts["small"],
+            fg=self.colors.text_muted,
+            bg=self.colors.surface
         )
         desc_label.pack(side="left", padx=(15, 0))
         
         # 工具卡片网格容器
-        tools_frame = tk.Frame(category_frame, bg=self.COLORS['bg_secondary'])
+        tools_frame = tk.Frame(category_frame, bg=self.colors.surface)
         tools_frame.pack(fill="x", expand=True)
         
         # 配置4列，均匀分布
@@ -335,21 +329,22 @@ class MainWindow:
         # 卡片外框，添加边框
         card_frame = tk.Frame(
             parent,
-            bg=self.COLORS['bg_card'],
+            bg=self.colors.card,
             padx=18,
-            pady=15,
-            highlightbackground=self.COLORS['border'],
-            highlightthickness=1
+            pady=16,
+            highlightbackground=self.colors.stroke_soft,
+            highlightthickness=1,
+            bd=0
         )
-        card_frame.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
+        card_frame.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
         
         # 图标
         icon_label = tk.Label(
             card_frame,
             text=tool['icon'],
-            font=('Segoe UI Emoji', 26),
+            font=('Segoe UI Emoji', 24),
             fg=accent_color,
-            bg=self.COLORS['bg_card'],
+            bg=self.colors.card,
             anchor="w"
         )
         icon_label.pack(anchor="w", fill="x")
@@ -358,9 +353,9 @@ class MainWindow:
         name_label = tk.Label(
             card_frame,
             text=tool['name'],
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            fg=self.COLORS['text_primary'],
-            bg=self.COLORS['bg_card'],
+            font=self.fonts["body_bold"],
+            fg=self.colors.text,
+            bg=self.colors.card,
             anchor="w"
         )
         name_label.pack(anchor="w", fill="x", pady=(6, 3))
@@ -368,7 +363,7 @@ class MainWindow:
         # 工具描述 - 固定高度确保对齐
         desc_frame = tk.Frame(
             card_frame,
-            bg=self.COLORS['bg_card'],
+            bg=self.colors.card,
             height=40  # 固定高度
         )
         desc_frame.pack(anchor="w", fill="x")
@@ -377,9 +372,9 @@ class MainWindow:
         desc_label = tk.Label(
             desc_frame,
             text=tool['desc'],
-            font=('Microsoft YaHei UI', 9),
-            fg=self.COLORS['text_secondary'],
-            bg=self.COLORS['bg_card'],
+            font=self.fonts["tiny"],
+            fg=self.colors.text_muted,
+            bg=self.colors.card,
             wraplength=160,
             justify="left",
             anchor="nw"
@@ -390,11 +385,7 @@ class MainWindow:
         open_btn = tk.Button(
             card_frame,
             text="打开工具 →",
-            font=('Microsoft YaHei UI', 9),
-            fg='#ffffff',
-            bg=accent_color,
-            activeforeground='#ffffff',
-            activebackground=accent_color,
+            font=self.fonts["small"],
             relief='flat',
             cursor='hand2',
             padx=12,
@@ -402,6 +393,7 @@ class MainWindow:
             command=getattr(self, tool['func'])
         )
         open_btn.pack(anchor="w", pady=(10, 0))
+        self.theme.style_button(open_btn, variant="primary")
         
         # 存储按钮和颜色信息用于悬停效果
         button_id = f"{tool['name']}_{id(open_btn)}"
@@ -417,44 +409,32 @@ class MainWindow:
             widget.bind('<Enter>', lambda e, bid=button_id: self._on_card_enter(bid))
             widget.bind('<Leave>', lambda e, bid=button_id: self._on_card_leave(bid))
         
-        # 按钮悬停效果
-        open_btn.bind('<Enter>', lambda e, btn=open_btn: self._on_button_enter(btn))
-        open_btn.bind('<Leave>', lambda e, btn=open_btn, ac=accent_color: 
-                      self._on_button_leave(btn, ac))
     
     def _on_card_enter(self, button_id):
         """卡片悬停进入效果"""
         if button_id in self.tool_buttons:
             info = self.tool_buttons[button_id]
-            info['card'].configure(bg=self.COLORS['hover'])
+            info['card'].configure(bg=self.colors.card_hover)
             for comp in info['components']:
-                comp.configure(bg=self.COLORS['hover'])
+                comp.configure(bg=self.colors.card_hover)
     
     def _on_card_leave(self, button_id):
         """卡片悬停离开效果"""
         if button_id in self.tool_buttons:
             info = self.tool_buttons[button_id]
-            info['card'].configure(bg=self.COLORS['bg_card'])
+            info['card'].configure(bg=self.colors.card)
             for comp in info['components']:
-                comp.configure(bg=self.COLORS['bg_card'])
-    
-    def _on_button_enter(self, button):
-        """按钮悬停进入效果"""
-        button.configure(bg='#1e293b', fg='#ffffff')
-    
-    def _on_button_leave(self, button, accent_color):
-        """按钮悬停离开效果"""
-        button.configure(bg=accent_color, fg='#ffffff')
+                comp.configure(bg=self.colors.card)
     
     def _create_footer(self, parent):
         """创建页脚"""
-        footer_frame = tk.Frame(parent, bg=self.COLORS['bg_primary'])
+        footer_frame = tk.Frame(parent, bg=self.colors.bg)
         footer_frame.pack(fill="x", pady=(30, 10))
         
         # 分隔线
         separator = tk.Frame(
             footer_frame,
-            bg=self.COLORS['border'],
+            bg=self.colors.stroke_soft,
             height=1
         )
         separator.pack(fill="x", pady=(0, 15))
@@ -463,9 +443,9 @@ class MainWindow:
         copyright_label = tk.Label(
             footer_frame,
             text=f"© 2026 工具箱  •  版本 {VERSION}  •  Made with ❤️",
-            font=('Microsoft YaHei UI', 10),
-            fg=self.COLORS['text_muted'],
-            bg=self.COLORS['bg_primary']
+            font=self.fonts["small"],
+            fg=self.colors.text_muted,
+            bg=self.colors.bg
         )
         copyright_label.pack()
     
@@ -541,6 +521,12 @@ class MainWindow:
         self.hide()
         # 打开死链检测窗口
         DeadLinkCheckerWindow(self.root, self)
+
+    def function_thirteen(self):
+        # 隐藏主窗口
+        self.hide()
+        # 打开工作表拆分窗口
+        XlsxSheetSplitterWindow(self.root, self)
 
     def on_closing(self):
         """处理窗口关闭事件"""

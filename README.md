@@ -6,7 +6,7 @@
 
 - 🖱️ 支持文件拖拽操作
 - 🎨 分类卡片式主界面与滚动浏览
-- 📦 多工具集成（11个专业工具）
+- 📦 多工具集成（12个专业工具）
 - 🔄 批量文件处理能力
 - 📊 数据格式转换与清洗
 - 🔍 字段提取与 HTML 死链检测
@@ -17,20 +17,21 @@
 
 ### 文件处理工具
 1. **文件格式转换工具** - 单一界面切换三种模式：CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM)、CSV 转 UTF-8(BOM)
-2. **生成 Data Set 工具** - XLSX 文件重构为标准 CDISC SDTM 格式
-3. **获取文件字段工具** - 批量提取 CSV/XLSX 字段并输出汇总
-4. **死链检测工具** - 扫描 HTML 文件/文件夹并生成检测报告
+2. **工作表拆分工具** - 将 Excel 工作表拆分为多个 CSV（UTF-8 BOM）
+3. **生成 Data Set 工具** - XLSX 文件重构为标准 CDISC SDTM 格式
+4. **获取文件字段工具** - 批量提取 CSV/XLSX 字段并输出汇总
+5. **死链检测工具** - 扫描 HTML 文件/文件夹并生成检测报告
 
 ### 数据处理工具
-5. **数据清洗工具** - 基于仕样书规则进行数据清洗和过滤
-6. **Codelist 处理工具** - 编码映射和多语言值转换
-7. **数据模糊化工具** - SDTM 数据集隐私保护和模糊化处理
-8. **EDC 站点添加工具** - 自动化 EDC 系统的站点批量添加
+6. **数据清洗工具** - 基于仕样书规则进行数据清洗和过滤
+7. **Codelist 处理工具** - 编码映射和多语言值转换
+8. **数据模糊化工具** - SDTM 数据集隐私保护和模糊化处理
+9. **EDC 站点添加工具** - 自动化 EDC 系统的站点批量添加
 
 ### 格式转换工具
-9. **日期转换工具** - 支持多种日期格式的智能转换
-10. **全角转半角工具** - 将全角字符转换为半角字符
-11. **CSV 引号去除工具** - 智能清理 CSV 文件中的多余引号
+10. **日期转换工具** - 支持多种日期格式的智能转换
+11. **全角转半角工具** - 将全角字符转换为半角字符
+12. **CSV 引号去除工具** - 智能清理 CSV 文件中的多余引号
 
 ## 系统要求
 
@@ -85,6 +86,7 @@ tools_box/
 │   │   └── widgets/       # 各工具窗口组件
 │   │       ├── date_converter.py           # 日期转换窗口
 │   │       ├── file_format_converter.py    # 文件格式转换窗口（CSV/XLSX/BOM）
+│   │       ├── xlsx_sheet_splitter.py      # 工作表拆分窗口
 │   │       ├── file_field_extractor.py     # 获取文件字段窗口
 │   │       ├── dead_link_checker.py        # 死链检测窗口
 │   │       ├── fullwidth_halfwidth_converter.py # 全角转半角窗口
@@ -98,6 +100,7 @@ tools_box/
 │       ├── date_utils.py                   # 日期处理工具
 │       ├── csv_to_xlsx_converter.py        # CSV转XLSX处理器
 │       ├── xlsx_to_csv_converter.py        # XLSX转CSV处理器
+│       ├── xlsx_sheet_splitter.py          # 工作表拆分处理器
 │       ├── csv_encoding_converter.py       # CSV转UTF-8(BOM)处理器
 │       ├── file_field_extractor.py         # 获取文件字段处理器
 │       ├── dead_link_checker.py            # 死链检测处理器

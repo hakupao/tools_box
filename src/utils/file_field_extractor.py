@@ -22,6 +22,7 @@ class FileFieldExtractor:
         self,
         folder_path: str,
         include_subfolders: bool = False,
+        header_row: int = 1,
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
     ) -> Dict[str, object]:
         """
@@ -30,6 +31,7 @@ class FileFieldExtractor:
         Args:
             folder_path: The target directory containing files.
             include_subfolders: Whether to traverse subfolders recursively.
+            header_row: 1-based row index used as header names.
             progress_callback: Optional callable to report progress. Receives
                 the current index (1-based), total files count, and current file name.
 
@@ -42,6 +44,9 @@ class FileFieldExtractor:
         """
         if not os.path.isdir(folder_path):
             raise ValueError("请选择有效的文件夹路径。")
+
+        if header_row < 1:
+            raise ValueError("列名行号必须大于等于 1。")
 
         files = self._collect_files(folder_path, include_subfolders)
         if not files:
@@ -57,7 +62,7 @@ class FileFieldExtractor:
                 progress_callback(idx, total_files, os.path.basename(file_path))
 
             try:
-                fields = self._extract_fields_from_file(file_path)
+                fields = self._extract_fields_from_file(file_path, header_row)
                 details[file_path] = fields
                 total_fields += len(fields)
             except Exception as exc:  # pylint: disable=broad-except
@@ -91,15 +96,15 @@ class FileFieldExtractor:
     def _is_supported(self, filename: str) -> bool:
         return os.path.splitext(filename)[1].lower() in self.SUPPORTED_EXTENSIONS
 
-    def _extract_fields_from_file(self, file_path: str) -> List[str]:
+    def _extract_fields_from_file(self, file_path: str, header_row: int) -> List[str]:
         extension = os.path.splitext(file_path)[1].lower()
         if extension == ".csv":
-            return self._extract_from_csv(file_path)
+            return self._extract_from_csv(file_path, header_row)
         if extension in {".xlsx", ".xlsm"}:
-            return self._extract_from_excel(file_path)
+            return self._extract_from_excel(file_path, header_row)
         raise ValueError(f"暂不支持的文件类型: {extension}")
 
-    def _extract_from_csv(self, file_path: str) -> List[str]:
+    def _extract_from_csv(self, file_path: str, header_row: int) -> List[str]:
         last_exception: Optional[Exception] = None
         for encoding in self.encodings:
             try:
@@ -109,13 +114,14 @@ class FileFieldExtractor:
                     encoding=encoding,
                     dtype=str,
                     on_bad_lines="skip",
+                    header=header_row - 1,
                 )
                 return [str(col) for col in df.columns]
             except Exception as exc:  # pylint: disable=broad-except
                 last_exception = exc
         raise ValueError(f"无法解析CSV文件（编码可能不受支持）: {last_exception}")
 
-    def _extract_from_excel(self, file_path: str) -> List[str]:
+    def _extract_from_excel(self, file_path: str, header_row: int) -> List[str]:
         fields: List[str] = []
         try:
             excel_file = pd.ExcelFile(file_path, engine="openpyxl")
@@ -124,7 +130,7 @@ class FileFieldExtractor:
 
         for sheet in excel_file.sheet_names:
             try:
-                df = excel_file.parse(sheet, nrows=0, dtype=str)
+                df = excel_file.parse(sheet, nrows=0, dtype=str, header=header_row - 1)
                 fields.extend([f"{sheet}: {col}" for col in df.columns])
             except Exception as exc:  # pylint: disable=broad-except
                 fields.append(f"{sheet}: 读取失败 ({exc})")
@@ -154,4 +160,3 @@ class FileFieldExtractor:
             )
             counter += 1
         return output_path
-

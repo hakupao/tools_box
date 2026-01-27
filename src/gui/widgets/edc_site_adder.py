@@ -9,13 +9,17 @@ import keyboard
 import threading
 import json
 import sys
+from ..theme import get_theme
 
 class EdcSiteAdderWindow:
     def __init__(self, parent, main_window):
         self.window = tk.Toplevel(parent)
         self.window.title("EDC站点添加工具")
         self.window.geometry("950x800")
-        self.window.configure(bg='#f0f0f0')
+        self.theme = get_theme(self.window)
+        self.colors = self.theme.colors
+        self.fonts = self.theme.fonts
+        self.window.configure(bg=self.colors.bg)
         
         # 保存主窗口引用
         self.main_window = main_window
@@ -115,25 +119,35 @@ class EdcSiteAdderWindow:
             time.sleep(0.01)  # 进一步降低检测间隔，提高响应速度
     
     def _create_widgets(self):
+        colors = self.colors
+        fonts = self.fonts
         # 创建主框架
-        main_frame = tk.Frame(self.window, bg='#f0f0f0', padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(
+            self.window,
+            bg=colors.surface,
+            padx=24,
+            pady=22,
+            highlightbackground=colors.stroke,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
         
         # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        title_frame = tk.Frame(main_frame, bg=colors.surface)
         title_frame.pack(fill=tk.X, pady=(0, 20))
         
         # 创建左侧标题框架
-        title_left_frame = tk.Frame(title_frame, bg='#f0f0f0')
+        title_left_frame = tk.Frame(title_frame, bg=colors.surface)
         title_left_frame.pack(side=tk.LEFT, fill=tk.Y)
         
         # 创建标题
         title_label = tk.Label(
             title_left_frame,
             text="EDC站点添加工具",
-            font=('Microsoft YaHei UI', 18, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["title"],
+            fg=colors.text,
+            bg=colors.surface
         )
         title_label.pack(side=tk.LEFT)
         
@@ -141,14 +155,14 @@ class EdcSiteAdderWindow:
         version_label = tk.Label(
             title_left_frame,
             text="v1.0",
-            font=('Microsoft YaHei UI', 9),
-            fg='#7f8c8d',
-            bg='#f0f0f0'
+            font=fonts["tiny"],
+            fg=colors.text_muted,
+            bg=colors.surface
         )
         version_label.pack(side=tk.LEFT, padx=(5, 0), pady=(8, 0))
         
         # 创建右侧按钮框架
-        title_right_frame = tk.Frame(title_frame, bg='#f0f0f0')
+        title_right_frame = tk.Frame(title_frame, bg=colors.surface)
         title_right_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
         # 创建返回按钮
@@ -158,14 +172,15 @@ class EdcSiteAdderWindow:
             command=self.back_to_main,
             width=12,
             height=1,
-            font=('Microsoft YaHei UI', 10),
-            bg='#e74c3c',
+            font=fonts["small"],
+            bg=colors.danger,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         back_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(back_btn, variant="secondary")
         
         # 创建配置按钮
         config_btn = tk.Button(
@@ -174,21 +189,22 @@ class EdcSiteAdderWindow:
             command=self.show_config_dialog,
             width=12,
             height=1,
-            font=('Microsoft YaHei UI', 10),
-            bg='#3498db',
+            font=fonts["small"],
+            bg=colors.accent,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         config_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        self.theme.style_button(config_btn, variant="secondary")
         
         # 创建左右分栏框架
-        content_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        content_frame = tk.Frame(main_frame, bg=colors.surface)
         content_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
         
         # 左侧框架 - 说明文本区域
-        left_frame = tk.Frame(content_frame, bg='#f0f0f0', width=450)
+        left_frame = tk.Frame(content_frame, bg=colors.surface, width=450)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 15))
         left_frame.pack_propagate(False)  # 防止框架缩小
         
@@ -196,9 +212,9 @@ class EdcSiteAdderWindow:
         instruction_header = tk.Label(
             left_frame,
             text="使用说明",
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["section"],
+            fg=colors.text,
+            bg=colors.surface,
             anchor='w'
         )
         instruction_header.pack(fill=tk.X, pady=(0, 5))
@@ -236,9 +252,9 @@ class EdcSiteAdderWindow:
         instruction_text_box = scrolledtext.ScrolledText(
             left_frame,
             wrap=tk.WORD,
-            font=('Microsoft YaHei UI', 10),
-            bg='#f9f9f9',
-            fg='#34495e',
+            font=fonts["small"],
+            bg=colors.input_bg,
+            fg=colors.text,
             padx=12,
             pady=12,
             relief=tk.FLAT,
@@ -247,13 +263,14 @@ class EdcSiteAdderWindow:
         instruction_text_box.pack(fill=tk.BOTH, expand=True)
         instruction_text_box.insert(tk.END, instruction_text)
         instruction_text_box.configure(state='disabled')  # 设为只读
+        self.theme.style_text(instruction_text_box)
         
         # 右侧框架 - 控制和日志区域
-        right_frame = tk.Frame(content_frame, bg='#f0f0f0')
+        right_frame = tk.Frame(content_frame, bg=colors.surface)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
         # 创建开始按钮框架（用于居中）
-        btn_frame = tk.Frame(right_frame, bg='#f0f0f0')
+        btn_frame = tk.Frame(right_frame, bg=colors.surface)
         btn_frame.pack(fill=tk.X, pady=(5, 20))
         
         # 创建开始按钮
@@ -263,77 +280,89 @@ class EdcSiteAdderWindow:
             command=self.start_processing,
             width=15,
             height=2,
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            bg='#2ecc71',
+            font=fonts["section"],
+            bg=colors.success,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         start_btn.pack(side=tk.TOP, anchor=tk.CENTER)
+        self.theme.style_button(start_btn, variant="primary")
         
         # 创建日志标签
         log_label = tk.Label(
             right_frame,
             text="处理日志",
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["section"],
+            fg=colors.text,
+            bg=colors.surface,
             anchor='w'
         )
         log_label.pack(fill=tk.X, pady=(0, 5))
         
         # 创建日志文本框
-        log_frame = tk.Frame(right_frame, bg='#f0f0f0', highlightbackground="#eee", highlightthickness=1)
+        log_frame = tk.Frame(right_frame, bg=colors.surface, highlightbackground=colors.stroke_soft, highlightthickness=1)
         log_frame.pack(fill=tk.BOTH, expand=True)
         
         self.log_text = scrolledtext.ScrolledText(
             log_frame,
             wrap=tk.WORD,
-            font=('Consolas', 10),
-            bg='#ffffff',
-            fg='#2c3e50',
+            font=fonts["mono"],
+            bg=colors.input_bg,
+            fg=colors.text,
             padx=10,
             pady=10,
             relief=tk.FLAT,
             borderwidth=0
         )
         self.log_text.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+        self.theme.style_text(self.log_text)
     
     def show_config_dialog(self):
         """显示配置对话框"""
+        colors = self.colors
+        fonts = self.fonts
         # 创建配置窗口
         config_window = tk.Toplevel(self.window)
         config_window.title("配置参数")
         config_window.geometry("600x600")
-        config_window.configure(bg='#f0f0f0')
+        config_window.configure(bg=colors.bg)
         config_window.transient(self.window)  # 设置为父窗口的临时窗口
         config_window.grab_set()  # 模态窗口
         
         # 创建主框架
-        main_frame = tk.Frame(config_window, bg='#f0f0f0', padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(
+            config_window,
+            bg=colors.surface,
+            padx=20,
+            pady=20,
+            highlightbackground=colors.stroke_soft,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
         
         # 创建标题
         title_label = tk.Label(
             main_frame,
             text="配置参数",
-            font=('Microsoft YaHei UI', 16, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["section"],
+            fg=colors.text,
+            bg=colors.surface
         )
         title_label.pack(pady=(0, 20))
         
         # 创建循环次数配置
-        loop_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        loop_frame = tk.Frame(main_frame, bg=colors.surface)
         loop_frame.pack(fill=tk.X, pady=(0, 10))
         
         loop_label = tk.Label(
             loop_frame,
             text="最大循环次数:",
-            font=('Microsoft YaHei UI', 11),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["body"],
+            fg=colors.text,
+            bg=colors.surface,
             width=15,
             anchor='w'
         )
@@ -343,22 +372,23 @@ class EdcSiteAdderWindow:
         loop_entry = tk.Entry(
             loop_frame,
             textvariable=loop_var,
-            font=('Microsoft YaHei UI', 11),
+            font=fonts["body"],
             width=10
         )
         loop_entry.pack(side=tk.LEFT)
+        self.theme.style_entry(loop_entry)
         
         # 创建坐标获取框架
-        coord_getter_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        coord_getter_frame = tk.Frame(main_frame, bg=colors.surface)
         coord_getter_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 创建坐标获取标签
         coord_getter_label = tk.Label(
             coord_getter_frame,
             text="坐标获取:",
-            font=('Microsoft YaHei UI', 11),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["body"],
+            fg=colors.text,
+            bg=colors.surface,
             width=15,
             anchor='w'
         )
@@ -369,9 +399,9 @@ class EdcSiteAdderWindow:
         coord_display_label = tk.Label(
             coord_getter_frame,
             textvariable=coord_display_var,
-            font=('Microsoft YaHei UI', 11, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface,
             width=20
         )
         coord_display_label.pack(side=tk.LEFT, padx=(0, 10))
@@ -381,9 +411,9 @@ class EdcSiteAdderWindow:
         locked_label = tk.Label(
             coord_getter_frame,
             text="按F2锁定/解锁坐标",
-            font=('Microsoft YaHei UI', 9),
-            fg='#95a5a6',
-            bg='#f0f0f0'
+            font=fonts["tiny"],
+            fg=colors.text_muted,
+            bg=colors.surface
         )
         locked_label.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -398,7 +428,7 @@ class EdcSiteAdderWindow:
             if not coord_getter_running:
                 # 开始获取坐标
                 coord_getter_running = True
-                coord_getter_btn.configure(text="停止获取", bg='#e74c3c')
+                coord_getter_btn.configure(text="停止获取", bg=colors.danger)
                 
                 # 设置窗口半透明和置顶
                 config_window.attributes('-alpha', 0.8)
@@ -420,7 +450,7 @@ class EdcSiteAdderWindow:
             else:
                 # 停止获取坐标
                 coord_getter_running = False
-                coord_getter_btn.configure(text="开始获取", bg='#3498db')
+                coord_getter_btn.configure(text="开始获取", bg=colors.accent)
                 
                 # 恢复窗口不透明和不置顶
                 config_window.attributes('-alpha', 1.0)
@@ -435,12 +465,12 @@ class EdcSiteAdderWindow:
                 x, y = pyautogui.position()
                 locked_coords = (x, y)
                 locked_var.set(True)
-                locked_label.configure(text="坐标已锁定 (F2解锁)", fg='#e74c3c')
+                locked_label.configure(text="坐标已锁定 (F2解锁)", fg=colors.danger)
             else:
                 # 解锁坐标
                 locked_coords = None
                 locked_var.set(False)
-                locked_label.configure(text="按F2锁定/解锁坐标", fg='#95a5a6')
+                locked_label.configure(text="按F2锁定/解锁坐标", fg=colors.text_muted)
         
         # 绑定F2热键
         keyboard.on_press_key('F2', toggle_lock)
@@ -451,30 +481,31 @@ class EdcSiteAdderWindow:
             command=toggle_coord_getter,
             width=10,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
+            font=fonts["body"],
+            bg=colors.accent,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         coord_getter_btn.pack(side=tk.LEFT)
+        self.theme.style_button(coord_getter_btn, variant="secondary")
         
         # 创建点击坐标配置
-        coords_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        coords_frame = tk.Frame(main_frame, bg=colors.surface)
         coords_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
         
         coords_label = tk.Label(
             coords_frame,
             text="点击坐标配置:",
-            font=('Microsoft YaHei UI', 11, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface
         )
         coords_label.pack(anchor=tk.W, pady=(0, 10))
         
         # 创建坐标输入框架
-        coords_input_frame = tk.Frame(coords_frame, bg='#f0f0f0')
+        coords_input_frame = tk.Frame(coords_frame, bg=colors.surface)
         coords_input_frame.pack(fill=tk.BOTH, expand=True)
         
         # 创建坐标输入框
@@ -487,9 +518,9 @@ class EdcSiteAdderWindow:
             label = tk.Label(
                 coords_input_frame,
                 text=f"{key}:",
-                font=('Microsoft YaHei UI', 11),
-                fg='#2c3e50',
-                bg='#f0f0f0',
+                font=fonts["body"],
+                fg=colors.text,
+                bg=colors.surface,
                 width=15,
                 anchor='w'
             )
@@ -501,9 +532,10 @@ class EdcSiteAdderWindow:
                 coords_input_frame,
                 textvariable=x_var,
                 width=8,
-                font=('Microsoft YaHei UI', 9)
+                font=fonts["tiny"]
             )
             x_entry.grid(row=row, column=2, padx=5, pady=5)
+            self.theme.style_entry(x_entry)
             
             # 创建Y坐标输入
             y_var = tk.StringVar(value=str(coord["y"]))
@@ -511,9 +543,10 @@ class EdcSiteAdderWindow:
                 coords_input_frame,
                 textvariable=y_var,
                 width=8,
-                font=('Microsoft YaHei UI', 9)
+                font=fonts["tiny"]
             )
             y_entry.grid(row=row, column=3, padx=5, pady=5)
+            self.theme.style_entry(y_entry)
             
             # 保存变量引用
             coord_vars[key] = {"x": x_var, "y": y_var}
@@ -521,7 +554,7 @@ class EdcSiteAdderWindow:
             row += 1
         
         # 创建按钮框架
-        button_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        button_frame = tk.Frame(main_frame, bg=colors.surface)
         button_frame.pack(fill=tk.X, pady=(20, 0))
         
         # 创建保存按钮
@@ -554,13 +587,14 @@ class EdcSiteAdderWindow:
             command=save_config_values,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#2ecc71',
+            font=fonts["body"],
+            bg=colors.success,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         save_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(save_btn, variant="primary")
         
         # 创建重置按钮
         reset_btn = tk.Button(
@@ -569,13 +603,14 @@ class EdcSiteAdderWindow:
             command=self.reset_to_default_config,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#f39c12',
+            font=fonts["body"],
+            bg=colors.warning,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         reset_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        self.theme.style_button(reset_btn, variant="warning")
         
         # 创建取消按钮
         cancel_btn = tk.Button(
@@ -584,13 +619,14 @@ class EdcSiteAdderWindow:
             command=config_window.destroy,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#e74c3c',
+            font=fonts["body"],
+            bg=colors.danger,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         cancel_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        self.theme.style_button(cancel_btn, variant="ghost")
         
         # 窗口关闭时停止坐标获取
         def on_config_window_closing():
@@ -801,7 +837,10 @@ class EdcSiteAdderWindow:
         self.window = tk.Toplevel(parent)
         self.window.title("EDC站点添加工具")
         self.window.geometry("950x800")
-        self.window.configure(bg='#f0f0f0')
+        self.theme = get_theme(self.window)
+        self.colors = self.theme.colors
+        self.fonts = self.theme.fonts
+        self.window.configure(bg=self.colors.bg)
         
         # 保存主窗口引用
         self.main_window = main_window
@@ -901,25 +940,35 @@ class EdcSiteAdderWindow:
             time.sleep(0.01)  # 进一步降低检测间隔，提高响应速度
     
     def _create_widgets(self):
+        colors = self.colors
+        fonts = self.fonts
         # 创建主框架
-        main_frame = tk.Frame(self.window, bg='#f0f0f0', padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(
+            self.window,
+            bg=colors.surface,
+            padx=24,
+            pady=22,
+            highlightbackground=colors.stroke,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
         
         # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        title_frame = tk.Frame(main_frame, bg=colors.surface)
         title_frame.pack(fill=tk.X, pady=(0, 20))
         
         # 创建左侧标题框架
-        title_left_frame = tk.Frame(title_frame, bg='#f0f0f0')
+        title_left_frame = tk.Frame(title_frame, bg=colors.surface)
         title_left_frame.pack(side=tk.LEFT, fill=tk.Y)
         
         # 创建标题
         title_label = tk.Label(
             title_left_frame,
             text="EDC站点添加工具",
-            font=('Microsoft YaHei UI', 18, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["title"],
+            fg=colors.text,
+            bg=colors.surface
         )
         title_label.pack(side=tk.LEFT)
         
@@ -927,14 +976,14 @@ class EdcSiteAdderWindow:
         version_label = tk.Label(
             title_left_frame,
             text="v1.0",
-            font=('Microsoft YaHei UI', 9),
-            fg='#7f8c8d',
-            bg='#f0f0f0'
+            font=fonts["tiny"],
+            fg=colors.text_muted,
+            bg=colors.surface
         )
         version_label.pack(side=tk.LEFT, padx=(5, 0), pady=(8, 0))
         
         # 创建右侧按钮框架
-        title_right_frame = tk.Frame(title_frame, bg='#f0f0f0')
+        title_right_frame = tk.Frame(title_frame, bg=colors.surface)
         title_right_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
         # 创建返回按钮
@@ -944,14 +993,15 @@ class EdcSiteAdderWindow:
             command=self.back_to_main,
             width=12,
             height=1,
-            font=('Microsoft YaHei UI', 10),
-            bg='#e74c3c',
+            font=fonts["small"],
+            bg=colors.danger,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         back_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(back_btn, variant="secondary")
         
         # 创建配置按钮
         config_btn = tk.Button(
@@ -960,21 +1010,22 @@ class EdcSiteAdderWindow:
             command=self.show_config_dialog,
             width=12,
             height=1,
-            font=('Microsoft YaHei UI', 10),
-            bg='#3498db',
+            font=fonts["small"],
+            bg=colors.accent,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         config_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        self.theme.style_button(config_btn, variant="secondary")
         
         # 创建左右分栏框架
-        content_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        content_frame = tk.Frame(main_frame, bg=colors.surface)
         content_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
         
         # 左侧框架 - 说明文本区域
-        left_frame = tk.Frame(content_frame, bg='#f0f0f0', width=450)
+        left_frame = tk.Frame(content_frame, bg=colors.surface, width=450)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 15))
         left_frame.pack_propagate(False)  # 防止框架缩小
         
@@ -982,9 +1033,9 @@ class EdcSiteAdderWindow:
         instruction_header = tk.Label(
             left_frame,
             text="使用说明",
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["section"],
+            fg=colors.text,
+            bg=colors.surface,
             anchor='w'
         )
         instruction_header.pack(fill=tk.X, pady=(0, 5))
@@ -1022,9 +1073,9 @@ class EdcSiteAdderWindow:
         instruction_text_box = scrolledtext.ScrolledText(
             left_frame,
             wrap=tk.WORD,
-            font=('Microsoft YaHei UI', 10),
-            bg='#f9f9f9',
-            fg='#34495e',
+            font=fonts["small"],
+            bg=colors.input_bg,
+            fg=colors.text,
             padx=12,
             pady=12,
             relief=tk.FLAT,
@@ -1033,13 +1084,14 @@ class EdcSiteAdderWindow:
         instruction_text_box.pack(fill=tk.BOTH, expand=True)
         instruction_text_box.insert(tk.END, instruction_text)
         instruction_text_box.configure(state='disabled')  # 设为只读
+        self.theme.style_text(instruction_text_box)
         
         # 右侧框架 - 控制和日志区域
-        right_frame = tk.Frame(content_frame, bg='#f0f0f0')
+        right_frame = tk.Frame(content_frame, bg=colors.surface)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
         # 创建开始按钮框架（用于居中）
-        btn_frame = tk.Frame(right_frame, bg='#f0f0f0')
+        btn_frame = tk.Frame(right_frame, bg=colors.surface)
         btn_frame.pack(fill=tk.X, pady=(5, 20))
         
         # 创建开始按钮
@@ -1049,77 +1101,89 @@ class EdcSiteAdderWindow:
             command=self.start_processing,
             width=15,
             height=2,
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            bg='#2ecc71',
+            font=fonts["section"],
+            bg=colors.success,
             fg='white',
             relief='flat',
             borderwidth=0,
             cursor='hand2'
         )
         start_btn.pack(side=tk.TOP, anchor=tk.CENTER)
+        self.theme.style_button(start_btn, variant="primary")
         
         # 创建日志标签
         log_label = tk.Label(
             right_frame,
             text="处理日志",
-            font=('Microsoft YaHei UI', 12, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["section"],
+            fg=colors.text,
+            bg=colors.surface,
             anchor='w'
         )
         log_label.pack(fill=tk.X, pady=(0, 5))
         
         # 创建日志文本框
-        log_frame = tk.Frame(right_frame, bg='#f0f0f0', highlightbackground="#eee", highlightthickness=1)
+        log_frame = tk.Frame(right_frame, bg=colors.surface, highlightbackground=colors.stroke_soft, highlightthickness=1)
         log_frame.pack(fill=tk.BOTH, expand=True)
         
         self.log_text = scrolledtext.ScrolledText(
             log_frame,
             wrap=tk.WORD,
-            font=('Consolas', 10),
-            bg='#ffffff',
-            fg='#2c3e50',
+            font=fonts["mono"],
+            bg=colors.input_bg,
+            fg=colors.text,
             padx=10,
             pady=10,
             relief=tk.FLAT,
             borderwidth=0
         )
         self.log_text.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+        self.theme.style_text(self.log_text)
     
     def show_config_dialog(self):
         """显示配置对话框"""
+        colors = self.colors
+        fonts = self.fonts
         # 创建配置窗口
         config_window = tk.Toplevel(self.window)
         config_window.title("配置参数")
         config_window.geometry("600x600")
-        config_window.configure(bg='#f0f0f0')
+        config_window.configure(bg=colors.bg)
         config_window.transient(self.window)  # 设置为父窗口的临时窗口
         config_window.grab_set()  # 模态窗口
         
         # 创建主框架
-        main_frame = tk.Frame(config_window, bg='#f0f0f0', padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(
+            config_window,
+            bg=colors.surface,
+            padx=20,
+            pady=20,
+            highlightbackground=colors.stroke_soft,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
         
         # 创建标题
         title_label = tk.Label(
             main_frame,
             text="配置参数",
-            font=('Microsoft YaHei UI', 16, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["section"],
+            fg=colors.text,
+            bg=colors.surface
         )
         title_label.pack(pady=(0, 20))
         
         # 创建循环次数配置
-        loop_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        loop_frame = tk.Frame(main_frame, bg=colors.surface)
         loop_frame.pack(fill=tk.X, pady=(0, 10))
         
         loop_label = tk.Label(
             loop_frame,
             text="最大循环次数:",
-            font=('Microsoft YaHei UI', 11),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["body"],
+            fg=colors.text,
+            bg=colors.surface,
             width=15,
             anchor='w'
         )
@@ -1129,22 +1193,23 @@ class EdcSiteAdderWindow:
         loop_entry = tk.Entry(
             loop_frame,
             textvariable=loop_var,
-            font=('Microsoft YaHei UI', 11),
+            font=fonts["body"],
             width=10
         )
         loop_entry.pack(side=tk.LEFT)
+        self.theme.style_entry(loop_entry)
         
         # 创建坐标获取框架
-        coord_getter_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        coord_getter_frame = tk.Frame(main_frame, bg=colors.surface)
         coord_getter_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 创建坐标获取标签
         coord_getter_label = tk.Label(
             coord_getter_frame,
             text="坐标获取:",
-            font=('Microsoft YaHei UI', 11),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["body"],
+            fg=colors.text,
+            bg=colors.surface,
             width=15,
             anchor='w'
         )
@@ -1155,9 +1220,9 @@ class EdcSiteAdderWindow:
         coord_display_label = tk.Label(
             coord_getter_frame,
             textvariable=coord_display_var,
-            font=('Microsoft YaHei UI', 11, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0',
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface,
             width=20
         )
         coord_display_label.pack(side=tk.LEFT, padx=(0, 10))
@@ -1167,9 +1232,9 @@ class EdcSiteAdderWindow:
         locked_label = tk.Label(
             coord_getter_frame,
             text="按F2锁定/解锁坐标",
-            font=('Microsoft YaHei UI', 9),
-            fg='#95a5a6',
-            bg='#f0f0f0'
+            font=fonts["tiny"],
+            fg=colors.text_muted,
+            bg=colors.surface
         )
         locked_label.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -1184,7 +1249,7 @@ class EdcSiteAdderWindow:
             if not coord_getter_running:
                 # 开始获取坐标
                 coord_getter_running = True
-                coord_getter_btn.configure(text="停止获取", bg='#e74c3c')
+                coord_getter_btn.configure(text="停止获取", bg=colors.danger)
                 
                 # 设置窗口半透明和置顶
                 config_window.attributes('-alpha', 0.8)
@@ -1206,7 +1271,7 @@ class EdcSiteAdderWindow:
             else:
                 # 停止获取坐标
                 coord_getter_running = False
-                coord_getter_btn.configure(text="开始获取", bg='#3498db')
+                coord_getter_btn.configure(text="开始获取", bg=colors.accent)
                 
                 # 恢复窗口不透明和不置顶
                 config_window.attributes('-alpha', 1.0)
@@ -1221,12 +1286,12 @@ class EdcSiteAdderWindow:
                 x, y = pyautogui.position()
                 locked_coords = (x, y)
                 locked_var.set(True)
-                locked_label.configure(text="坐标已锁定 (F2解锁)", fg='#e74c3c')
+                locked_label.configure(text="坐标已锁定 (F2解锁)", fg=colors.danger)
             else:
                 # 解锁坐标
                 locked_coords = None
                 locked_var.set(False)
-                locked_label.configure(text="按F2锁定/解锁坐标", fg='#95a5a6')
+                locked_label.configure(text="按F2锁定/解锁坐标", fg=colors.text_muted)
         
         # 绑定F2热键
         keyboard.on_press_key('F2', toggle_lock)
@@ -1237,29 +1302,30 @@ class EdcSiteAdderWindow:
             command=toggle_coord_getter,
             width=10,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
+            font=fonts["body"],
+            bg=colors.accent,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         coord_getter_btn.pack(side=tk.LEFT)
+        self.theme.style_button(coord_getter_btn, variant="secondary")
         
         # 创建点击坐标配置
-        coords_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        coords_frame = tk.Frame(main_frame, bg=colors.surface)
         coords_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
         
         coords_label = tk.Label(
             coords_frame,
             text="点击坐标配置:",
-            font=('Microsoft YaHei UI', 11, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface
         )
         coords_label.pack(anchor=tk.W, pady=(0, 10))
         
         # 创建坐标输入框架
-        coords_input_frame = tk.Frame(coords_frame, bg='#f0f0f0')
+        coords_input_frame = tk.Frame(coords_frame, bg=colors.surface)
         coords_input_frame.pack(fill=tk.BOTH, expand=True)
         
         # 创建坐标输入框
@@ -1272,9 +1338,9 @@ class EdcSiteAdderWindow:
             label = tk.Label(
                 coords_input_frame,
                 text=f"{key}:",
-                font=('Microsoft YaHei UI', 11),
-                fg='#2c3e50',
-                bg='#f0f0f0',
+                font=fonts["body"],
+                fg=colors.text,
+                bg=colors.surface,
                 width=15,
                 anchor='w'
             )
@@ -1286,9 +1352,10 @@ class EdcSiteAdderWindow:
                 coords_input_frame,
                 textvariable=x_var,
                 width=8,
-                font=('Microsoft YaHei UI', 9)
+                font=fonts["tiny"]
             )
             x_entry.grid(row=row, column=2, padx=5, pady=5)
+            self.theme.style_entry(x_entry)
             
             # 创建Y坐标输入
             y_var = tk.StringVar(value=str(coord["y"]))
@@ -1296,9 +1363,10 @@ class EdcSiteAdderWindow:
                 coords_input_frame,
                 textvariable=y_var,
                 width=8,
-                font=('Microsoft YaHei UI', 9)
+                font=fonts["tiny"]
             )
             y_entry.grid(row=row, column=3, padx=5, pady=5)
+            self.theme.style_entry(y_entry)
             
             # 保存变量引用
             coord_vars[key] = {"x": x_var, "y": y_var}
@@ -1306,7 +1374,7 @@ class EdcSiteAdderWindow:
             row += 1
         
         # 创建按钮框架
-        button_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        button_frame = tk.Frame(main_frame, bg=colors.surface)
         button_frame.pack(fill=tk.X, pady=(20, 0))
         
         # 创建保存按钮
@@ -1339,13 +1407,14 @@ class EdcSiteAdderWindow:
             command=save_config_values,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#2ecc71',
+            font=fonts["body"],
+            bg=colors.success,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         save_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(save_btn, variant="primary")
         
         # 创建重置按钮
         reset_btn = tk.Button(
@@ -1354,13 +1423,14 @@ class EdcSiteAdderWindow:
             command=self.reset_to_default_config,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#f39c12',
+            font=fonts["body"],
+            bg=colors.warning,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         reset_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        self.theme.style_button(reset_btn, variant="warning")
         
         # 创建取消按钮
         cancel_btn = tk.Button(
@@ -1369,13 +1439,14 @@ class EdcSiteAdderWindow:
             command=config_window.destroy,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#e74c3c',
+            font=fonts["body"],
+            bg=colors.danger,
             fg='white',
             relief='flat',
             cursor='hand2'
         )
         cancel_btn.pack(side=tk.RIGHT, padx=(0, 10))
+        self.theme.style_button(cancel_btn, variant="ghost")
         
         # 窗口关闭时停止坐标获取
         def on_config_window_closing():

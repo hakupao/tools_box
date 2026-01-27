@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
 from ...utils.data_masking_processor import DataMaskingProcessor
+from ..theme import get_theme
 
 class DataMaskingWindow:
     """数据模糊化窗口类"""
@@ -12,7 +13,10 @@ class DataMaskingWindow:
         self.window = tk.Toplevel(parent)
         self.window.title("数据模糊化工具")
         self.window.geometry("800x600")
-        self.window.configure(bg='#f0f0f0')
+        self.theme = get_theme(self.window)
+        self.colors = self.theme.colors
+        self.fonts = self.theme.fonts
+        self.window.configure(bg=self.colors.bg)
         
         # 保存主窗口引用
         self.main_window = main_window
@@ -38,21 +42,31 @@ class DataMaskingWindow:
     
     def _create_widgets(self):
         """创建界面组件"""
+        colors = self.colors
+        fonts = self.fonts
         # 创建主框架
-        main_frame = tk.Frame(self.window, bg='#f0f0f0', padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(
+            self.window,
+            bg=colors.surface,
+            padx=24,
+            pady=22,
+            highlightbackground=colors.stroke,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
         
         # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        title_frame = tk.Frame(main_frame, bg=colors.surface)
         title_frame.pack(fill=tk.X, pady=(0, 20))
         
         # 创建标题
         title_label = tk.Label(
             title_frame,
             text="数据模糊化工具",
-            font=('Microsoft YaHei UI', 20, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["title"],
+            fg=colors.text,
+            bg=colors.surface
         )
         title_label.pack(side=tk.LEFT)
         
@@ -63,16 +77,15 @@ class DataMaskingWindow:
             command=self.back_to_main,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#e74c3c',
-            fg='white',
+            font=fonts["body"],
             relief='flat',
             cursor='hand2'
         )
         back_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(back_btn, variant="secondary")
         
         # 创建文件选择区域
-        file_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        file_frame = tk.Frame(main_frame, bg=colors.surface)
         file_frame.pack(fill=tk.X, pady=(0, 20))
         
         # 文件选择按钮
@@ -82,13 +95,12 @@ class DataMaskingWindow:
             command=self.select_file,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
-            fg='white',
+            font=fonts["body"],
             relief='flat',
             cursor='hand2'
         )
         select_file_btn.pack(side=tk.LEFT, padx=5)
+        self.theme.style_button(select_file_btn, variant="secondary")
         
         select_folder_btn = tk.Button(
             file_frame,
@@ -96,13 +108,12 @@ class DataMaskingWindow:
             command=self.select_folder,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
-            fg='white',
+            font=fonts["body"],
             relief='flat',
             cursor='hand2'
         )
         select_folder_btn.pack(side=tk.LEFT, padx=5)
+        self.theme.style_button(select_folder_btn, variant="secondary")
         
         # 添加清空列表按钮
         clear_list_btn = tk.Button(
@@ -111,39 +122,37 @@ class DataMaskingWindow:
             command=self.clear_file_list,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#e74c3c',
-            fg='white',
+            font=fonts["body"],
             relief='flat',
             cursor='hand2'
         )
         clear_list_btn.pack(side=tk.LEFT, padx=5)
+        self.theme.style_button(clear_list_btn, variant="ghost")
         
         # 绑定清空列表按钮悬停事件
-        clear_list_btn.bind('<Enter>', lambda e: clear_list_btn.configure(bg='#c0392b'))
-        clear_list_btn.bind('<Leave>', lambda e: clear_list_btn.configure(bg='#e74c3c'))
         
         # 文件列表标签
         list_label = tk.Label(
             main_frame,
             text="待处理文件：",
-            font=('Microsoft YaHei UI', 12),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface
         )
         list_label.pack(anchor='w')
         
         # 创建列表框架
-        list_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        list_frame = tk.Frame(main_frame, bg=colors.surface)
         list_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 10))
         
         # 文件列表
         self.file_listbox = tk.Listbox(
             list_frame,
-            font=('Consolas', 10),
+            font=fonts["mono"],
             selectmode=tk.EXTENDED
         )
         self.file_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.theme.style_listbox(self.file_listbox)
         
         # 添加滚动条
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
@@ -151,16 +160,16 @@ class DataMaskingWindow:
         self.file_listbox.configure(yscrollcommand=scrollbar.set)
         
         # 输出路径选择区域
-        output_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        output_frame = tk.Frame(main_frame, bg=colors.surface)
         output_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 输出路径标签
         output_label = tk.Label(
             output_frame,
             text="输出路径：",
-            font=('Microsoft YaHei UI', 11),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["body"],
+            fg=colors.text,
+            bg=colors.surface
         )
         output_label.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -169,9 +178,9 @@ class DataMaskingWindow:
         self.output_path_label = tk.Label(
             output_frame,
             textvariable=self.output_path_var,
-            font=('Microsoft YaHei UI', 10),
-            fg='#7f8c8d',
-            bg='#f0f0f0',
+            font=fonts["small"],
+            fg=colors.text_muted,
+            bg=colors.surface,
             anchor=tk.W
         )
         self.output_path_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -183,16 +192,15 @@ class DataMaskingWindow:
             command=self.select_output_path,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
-            fg='white',
+            font=fonts["body"],
             relief='flat',
             cursor='hand2'
         )
         select_output_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(select_output_btn, variant="secondary")
         
         # 进度显示区域
-        progress_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        progress_frame = tk.Frame(main_frame, bg=colors.surface)
         progress_frame.pack(fill=tk.X, pady=(10, 5))
         
         # 进度条
@@ -209,9 +217,9 @@ class DataMaskingWindow:
         self.progress_label = tk.Label(
             progress_frame,
             text="",
-            font=('Microsoft YaHei UI', 10),
-            fg='#7f8c8d',
-            bg='#f0f0f0'
+            font=fonts["small"],
+            fg=colors.text_muted,
+            bg=colors.surface
         )
         self.progress_label.pack(fill=tk.X)
         
@@ -222,35 +230,22 @@ class DataMaskingWindow:
             command=self.process_files,
             width=20,
             height=2,
-            font=('Microsoft YaHei UI', 11),
-            bg='#2ecc71',
-            fg='white',
+            font=fonts["body_bold"],
             relief='flat',
             cursor='hand2'
         )
         self.process_btn.pack(pady=10)
+        self.theme.style_button(self.process_btn, variant="primary")
         
         # 状态标签
         self.status_label = tk.Label(
             main_frame,
             text="",
-            font=('Microsoft YaHei UI', 10),
-            fg='#7f8c8d',
-            bg='#f0f0f0'
+            font=fonts["small"],
+            fg=colors.text_muted,
+            bg=colors.surface
         )
         self.status_label.pack(pady=(5, 0))
-        
-        # 绑定按钮悬停事件
-        select_file_btn.bind('<Enter>', lambda e: select_file_btn.configure(bg='#2980b9'))
-        select_file_btn.bind('<Leave>', lambda e: select_file_btn.configure(bg='#3498db'))
-        select_folder_btn.bind('<Enter>', lambda e: select_folder_btn.configure(bg='#2980b9'))
-        select_folder_btn.bind('<Leave>', lambda e: select_folder_btn.configure(bg='#3498db'))
-        select_output_btn.bind('<Enter>', lambda e: select_output_btn.configure(bg='#2980b9'))
-        select_output_btn.bind('<Leave>', lambda e: select_output_btn.configure(bg='#3498db'))
-        self.process_btn.bind('<Enter>', lambda e: self.process_btn.configure(bg='#27ae60'))
-        self.process_btn.bind('<Leave>', lambda e: self.process_btn.configure(bg='#2ecc71'))
-        back_btn.bind('<Enter>', lambda e: back_btn.configure(bg='#c0392b'))
-        back_btn.bind('<Leave>', lambda e: back_btn.configure(bg='#e74c3c'))
     
     def back_to_main(self):
         """返回主界面"""

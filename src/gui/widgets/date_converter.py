@@ -1,13 +1,18 @@
 import tkinter as tk
 from tkinter import scrolledtext
+
 from ...utils.date_utils import convert_to_iso8601
+from ..theme import get_theme
 
 class DateConverterWindow:
     def __init__(self, parent, main_window):
         self.window = tk.Toplevel(parent)
         self.window.title("日期转换工具")
         self.window.geometry("1200x600")
-        self.window.configure(bg='#f0f0f0')
+        self.theme = get_theme(self.window)
+        self.colors = self.theme.colors
+        self.fonts = self.theme.fonts
+        self.window.configure(bg=self.colors.bg)
         
         # 保存主窗口引用
         self.main_window = main_window
@@ -18,21 +23,31 @@ class DateConverterWindow:
         self._create_widgets()
     
     def _create_widgets(self):
+        colors = self.colors
+        fonts = self.fonts
         # 创建主框架
-        main_frame = tk.Frame(self.window, bg='#f0f0f0', padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(
+            self.window,
+            bg=colors.surface,
+            padx=24,
+            pady=22,
+            highlightbackground=colors.stroke,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
         
         # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        title_frame = tk.Frame(main_frame, bg=colors.surface)
         title_frame.pack(fill=tk.X, pady=(0, 20))
         
         # 创建标题
         title_label = tk.Label(
             title_frame,
             text="日期格式转换",
-            font=('Microsoft YaHei UI', 20, 'bold'),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["title"],
+            fg=colors.text,
+            bg=colors.surface
         )
         title_label.pack(side=tk.LEFT)
         
@@ -43,33 +58,32 @@ class DateConverterWindow:
             command=self.back_to_main,
             width=15,
             height=1,
-            font=('Microsoft YaHei UI', 11),
-            bg='#e74c3c',
-            fg='white',
+            font=fonts["body"],
             relief='flat',
             cursor='hand2'
         )
         back_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(back_btn, variant="secondary")
         
         # 创建左右布局框架
-        content_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        content_frame = tk.Frame(main_frame, bg=colors.surface)
         content_frame.pack(fill=tk.BOTH, expand=True)
         
         # 左侧框架
-        left_frame = tk.Frame(content_frame, bg='#f0f0f0')
+        left_frame = tk.Frame(content_frame, bg=colors.surface)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
         # 右侧框架
-        right_frame = tk.Frame(content_frame, bg='#f0f0f0')
+        right_frame = tk.Frame(content_frame, bg=colors.surface)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
         
         # 左侧输入区域
         input_label = tk.Label(
             left_frame,
             text="输入数据：",
-            font=('Microsoft YaHei UI', 12),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface
         )
         input_label.pack(anchor='w')
         
@@ -77,9 +91,10 @@ class DateConverterWindow:
             left_frame,
             width=50,
             height=20,
-            font=('Consolas', 10)
+            font=fonts["mono"]
         )
         self.input_text.pack(fill=tk.BOTH, expand=True, pady=(5, 10))
+        self.theme.style_text(self.input_text)
         
         # 转换按钮
         convert_btn = tk.Button(
@@ -88,21 +103,20 @@ class DateConverterWindow:
             command=self.convert_dates,
             width=20,
             height=2,
-            font=('Microsoft YaHei UI', 11),
-            bg='#3498db',
-            fg='white',
+            font=fonts["body_bold"],
             relief='flat',
             cursor='hand2'
         )
         convert_btn.pack(pady=10)
+        self.theme.style_button(convert_btn, variant="primary")
         
         # 右侧输出区域
         output_label = tk.Label(
             right_frame,
             text="转换结果：",
-            font=('Microsoft YaHei UI', 12),
-            fg='#2c3e50',
-            bg='#f0f0f0'
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface
         )
         output_label.pack(anchor='w')
         
@@ -110,9 +124,10 @@ class DateConverterWindow:
             right_frame,
             width=50,
             height=20,
-            font=('Consolas', 10)
+            font=fonts["mono"]
         )
         self.output_text.pack(fill=tk.BOTH, expand=True, pady=(5, 10))
+        self.theme.style_text(self.output_text)
         
         # 复制按钮
         copy_btn = tk.Button(
@@ -121,21 +136,12 @@ class DateConverterWindow:
             command=self.copy_all,
             width=20,
             height=2,
-            font=('Microsoft YaHei UI', 11),
-            bg='#2ecc71',
-            fg='white',
+            font=fonts["body_bold"],
             relief='flat',
             cursor='hand2'
         )
         copy_btn.pack(pady=10)
-        
-        # 绑定按钮悬停事件
-        convert_btn.bind('<Enter>', lambda e: convert_btn.configure(bg='#2980b9'))
-        convert_btn.bind('<Leave>', lambda e: convert_btn.configure(bg='#3498db'))
-        copy_btn.bind('<Enter>', lambda e: copy_btn.configure(bg='#27ae60'))
-        copy_btn.bind('<Leave>', lambda e: copy_btn.configure(bg='#2ecc71'))
-        back_btn.bind('<Enter>', lambda e: back_btn.configure(bg='#c0392b'))
-        back_btn.bind('<Leave>', lambda e: back_btn.configure(bg='#e74c3c'))
+        self.theme.style_button(copy_btn, variant="secondary")
     
     def back_to_main(self):
         """返回主界面"""

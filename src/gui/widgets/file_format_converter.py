@@ -6,6 +6,7 @@ from tkinterdnd2 import DND_FILES
 from ...utils.csv_to_xlsx_converter import CsvToXlsxConverter
 from ...utils.xlsx_to_csv_converter import XlsxToCsvConverter
 from ...utils.csv_encoding_converter import CsvEncodingConverter
+from ..theme import get_theme
 
 
 class FileFormatConverterWindow:
@@ -15,7 +16,10 @@ class FileFormatConverterWindow:
         self.window = tk.Toplevel(parent)
         self.window.title("文件格式转换")
         self.window.geometry("850x650")
-        self.window.configure(bg="#f0f0f0")
+        self.theme = get_theme(self.window)
+        self.colors = self.theme.colors
+        self.fonts = self.theme.fonts
+        self.window.configure(bg=self.colors.bg)
 
         self.main_window = main_window
         self.output_path = None
@@ -52,18 +56,29 @@ class FileFormatConverterWindow:
         self.window.minsize(850, 650)
 
     def _create_widgets(self):
-        main_frame = tk.Frame(self.window, bg="#f0f0f0", padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        colors = self.colors
+        fonts = self.fonts
 
-        title_frame = tk.Frame(main_frame, bg="#f0f0f0")
+        main_frame = tk.Frame(
+            self.window,
+            bg=colors.surface,
+            padx=24,
+            pady=22,
+            highlightbackground=colors.stroke,
+            highlightthickness=1,
+            bd=0,
+        )
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
+
+        title_frame = tk.Frame(main_frame, bg=colors.surface)
         title_frame.pack(fill=tk.X, pady=(0, 20))
 
         title_label = tk.Label(
             title_frame,
             text="文件格式转换",
-            font=("Microsoft YaHei UI", 22, "bold"),
-            fg="#2c3e50",
-            bg="#f0f0f0",
+            font=fonts["title"],
+            fg=colors.text,
+            bg=colors.surface,
         )
         title_label.pack(side=tk.LEFT)
 
@@ -73,42 +88,49 @@ class FileFormatConverterWindow:
             command=self.back_to_main,
             width=15,
             height=1,
-            font=("Microsoft YaHei UI", 11),
-            bg="#e74c3c",
-            fg="white",
+            font=fonts["body"],
             relief="flat",
             cursor="hand2",
         )
         back_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(back_btn, variant="secondary")
 
         mode_frame = tk.LabelFrame(
             main_frame,
             text="转换类型",
-            font=("Microsoft YaHei UI", 11, "bold"),
-            fg="#2c3e50",
-            bg="#f0f0f0",
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface,
             padx=10,
             pady=10,
         )
+        mode_frame.configure(highlightbackground=colors.stroke_soft, highlightthickness=1, bd=0)
         mode_frame.pack(fill=tk.X, pady=(0, 15))
         self.mode_var = tk.StringVar(value="csv_to_xlsx")
         self._build_mode_buttons(mode_frame)
 
-        info_frame = tk.Frame(main_frame, bg="#ecf0f1", relief="solid", bd=1)
+        info_frame = tk.Frame(
+            main_frame,
+            bg=colors.surface_alt,
+            relief="flat",
+            highlightbackground=colors.stroke_soft,
+            highlightthickness=1,
+            bd=0,
+        )
         info_frame.pack(fill=tk.X, pady=(0, 20))
         self.info_label = tk.Label(
             info_frame,
             text="当前模式：CSV 转 XLSX",
-            font=("Microsoft YaHei UI", 10),
-            fg="#2c3e50",
-            bg="#ecf0f1",
+            font=fonts["small"],
+            fg=colors.text,
+            bg=colors.surface_alt,
             pady=10,
             anchor="w",
             justify=tk.LEFT,
         )
         self.info_label.pack(fill=tk.X, padx=10)
 
-        file_frame = tk.Frame(main_frame, bg="#f0f0f0")
+        file_frame = tk.Frame(main_frame, bg=colors.surface)
         file_frame.pack(fill=tk.X, pady=(0, 20))
 
         select_folder_btn = tk.Button(
@@ -117,13 +139,12 @@ class FileFormatConverterWindow:
             command=self.select_folder,
             width=15,
             height=1,
-            font=("Microsoft YaHei UI", 11),
-            bg="#3498db",
-            fg="white",
+            font=fonts["body"],
             relief="flat",
             cursor="hand2",
         )
         select_folder_btn.pack(side=tk.LEFT, padx=5)
+        self.theme.style_button(select_folder_btn, variant="secondary")
 
         select_file_btn = tk.Button(
             file_frame,
@@ -131,13 +152,12 @@ class FileFormatConverterWindow:
             command=self.select_file,
             width=15,
             height=1,
-            font=("Microsoft YaHei UI", 11),
-            bg="#3498db",
-            fg="white",
+            font=fonts["body"],
             relief="flat",
             cursor="hand2",
         )
         select_file_btn.pack(side=tk.LEFT, padx=5)
+        self.theme.style_button(select_file_btn, variant="secondary")
 
         clear_list_btn = tk.Button(
             file_frame,
@@ -145,46 +165,46 @@ class FileFormatConverterWindow:
             command=self.clear_file_list,
             width=15,
             height=1,
-            font=("Microsoft YaHei UI", 11),
-            bg="#e74c3c",
-            fg="white",
+            font=fonts["body"],
             relief="flat",
             cursor="hand2",
         )
         clear_list_btn.pack(side=tk.LEFT, padx=5)
+        self.theme.style_button(clear_list_btn, variant="ghost")
 
         list_label = tk.Label(
             main_frame,
             text="待处理文件：",
-            font=("Microsoft YaHei UI", 12),
-            fg="#2c3e50",
-            bg="#f0f0f0",
+            font=fonts["body_bold"],
+            fg=colors.text,
+            bg=colors.surface,
         )
         list_label.pack(anchor="w")
 
-        list_frame = tk.Frame(main_frame, bg="#f0f0f0")
+        list_frame = tk.Frame(main_frame, bg=colors.surface)
         list_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 10))
 
         self.file_listbox = tk.Listbox(
             list_frame,
-            font=("Consolas", 10),
+            font=fonts["mono"],
             selectmode=tk.EXTENDED,
         )
         self.file_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.theme.style_listbox(self.file_listbox)
 
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.file_listbox.configure(yscrollcommand=scrollbar.set)
 
-        output_frame = tk.Frame(main_frame, bg="#f0f0f0")
+        output_frame = tk.Frame(main_frame, bg=colors.surface)
         output_frame.pack(fill=tk.X, pady=(0, 10))
 
         output_label = tk.Label(
             output_frame,
             text="输出路径：",
-            font=("Microsoft YaHei UI", 11),
-            fg="#2c3e50",
-            bg="#f0f0f0",
+            font=fonts["body"],
+            fg=colors.text,
+            bg=colors.surface,
         )
         output_label.pack(side=tk.LEFT, padx=(0, 10))
 
@@ -192,9 +212,9 @@ class FileFormatConverterWindow:
         self.output_path_label = tk.Label(
             output_frame,
             textvariable=self.output_path_var,
-            font=("Microsoft YaHei UI", 10),
-            fg="#7f8c8d",
-            bg="#f0f0f0",
+            font=fonts["small"],
+            fg=colors.text_muted,
+            bg=colors.surface,
             anchor=tk.W,
         )
         self.output_path_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -205,15 +225,14 @@ class FileFormatConverterWindow:
             command=self.select_output_path,
             width=15,
             height=1,
-            font=("Microsoft YaHei UI", 11),
-            bg="#3498db",
-            fg="white",
+            font=fonts["body"],
             relief="flat",
             cursor="hand2",
         )
         select_output_btn.pack(side=tk.RIGHT)
+        self.theme.style_button(select_output_btn, variant="secondary")
 
-        progress_frame = tk.Frame(main_frame, bg="#f0f0f0")
+        progress_frame = tk.Frame(main_frame, bg=colors.surface)
         progress_frame.pack(fill=tk.X, pady=(10, 5))
 
         self.progress_var = tk.DoubleVar()
@@ -228,9 +247,9 @@ class FileFormatConverterWindow:
         self.progress_label = tk.Label(
             progress_frame,
             text="",
-            font=("Microsoft YaHei UI", 10),
-            fg="#7f8c8d",
-            bg="#f0f0f0",
+            font=fonts["small"],
+            fg=colors.text_muted,
+            bg=colors.surface,
         )
         self.progress_label.pack(fill=tk.X)
 
@@ -240,39 +259,27 @@ class FileFormatConverterWindow:
             command=self.convert_files,
             width=20,
             height=2,
-            font=("Microsoft YaHei UI", 11),
-            bg="#2ecc71",
-            fg="white",
+            font=fonts["body_bold"],
             relief="flat",
             cursor="hand2",
         )
         self.convert_btn.pack(pady=10)
+        self.theme.style_button(self.convert_btn, variant="primary")
 
         self.status_label = tk.Label(
             main_frame,
             text="",
-            font=("Microsoft YaHei UI", 10),
-            fg="#7f8c8d",
-            bg="#f0f0f0",
+            font=fonts["small"],
+            fg=colors.text_muted,
+            bg=colors.surface,
         )
         self.status_label.pack(pady=(5, 0))
 
-        select_folder_btn.bind("<Enter>", lambda e: select_folder_btn.configure(bg="#2980b9"))
-        select_folder_btn.bind("<Leave>", lambda e: select_folder_btn.configure(bg="#3498db"))
-        select_file_btn.bind("<Enter>", lambda e: select_file_btn.configure(bg="#2980b9"))
-        select_file_btn.bind("<Leave>", lambda e: select_file_btn.configure(bg="#3498db"))
-        select_output_btn.bind("<Enter>", lambda e: select_output_btn.configure(bg="#2980b9"))
-        select_output_btn.bind("<Leave>", lambda e: select_output_btn.configure(bg="#3498db"))
-        clear_list_btn.bind("<Enter>", lambda e: clear_list_btn.configure(bg="#c0392b"))
-        clear_list_btn.bind("<Leave>", lambda e: clear_list_btn.configure(bg="#e74c3c"))
-        self.convert_btn.bind("<Enter>", lambda e: self.convert_btn.configure(bg="#27ae60"))
-        self.convert_btn.bind("<Leave>", lambda e: self.convert_btn.configure(bg="#2ecc71"))
-        back_btn.bind("<Enter>", lambda e: back_btn.configure(bg="#c0392b"))
-        back_btn.bind("<Leave>", lambda e: back_btn.configure(bg="#e74c3c"))
-
     def _build_mode_buttons(self, parent):
         """创建更美观的模式切换按钮组。"""
-        btn_frame = tk.Frame(parent, bg="#f0f0f0")
+        colors = self.colors
+        fonts = self.fonts
+        btn_frame = tk.Frame(parent, bg=colors.surface)
         btn_frame.pack(fill=tk.X, pady=(5, 5))
 
         for idx, (mode_key, cfg) in enumerate(self.mode_config.items()):
@@ -280,11 +287,7 @@ class FileFormatConverterWindow:
                 btn_frame,
                 text=cfg["label"],
                 command=lambda m=mode_key: self.change_mode(m),
-                font=("Microsoft YaHei UI", 11, "bold"),
-                bg="#ecf0f1",
-                fg="#2c3e50",
-                activebackground="#3498db",
-                activeforeground="white",
+                font=fonts["body_bold"],
                 relief="flat",
                 bd=0,
                 padx=14,
@@ -320,10 +323,7 @@ class FileFormatConverterWindow:
         """根据当前模式更新按钮样式。"""
         current = self.mode_var.get()
         for key, btn in self.mode_buttons.items():
-            if key == current:
-                btn.configure(bg="#3498db", fg="white")
-            else:
-                btn.configure(bg="#ecf0f1", fg="#2c3e50")
+            self.theme.style_segment_button(btn, active=(key == current))
 
     def _filter_list_by_mode(self) -> int:
         """移除列表中与当前模式扩展名不匹配的文件。"""

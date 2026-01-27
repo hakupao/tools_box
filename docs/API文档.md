@@ -8,14 +8,15 @@
 2. [CSV转换器 API](#csv转换器-api)
 3. [CSV编码转换器 API](#csv编码转换器-api)
 4. [XLSX转换器 API](#xlsx转换器-api)
-5. [全角转半角转换器 API](#全角转半角转换器-api)
-6. [数据清洗器 API](#数据清洗器-api)
-7. [Codelist处理器 API](#codelist处理器-api)
-8. [数据模糊化处理器 API](#数据模糊化处理器-api)
-9. [CSV引号去除处理器 API](#csv引号去除处理器-api)
-10. [XLSX重构处理器 API](#xlsx重构处理器-api)
-11. [文件字段提取器 API](#文件字段提取器-api)
-12. [死链检测器 API](#死链检测器-api)
+5. [工作表拆分器 API](#工作表拆分器-api)
+6. [全角转半角转换器 API](#全角转半角转换器-api)
+7. [数据清洗器 API](#数据清洗器-api)
+8. [Codelist处理器 API](#codelist处理器-api)
+9. [数据模糊化处理器 API](#数据模糊化处理器-api)
+10. [CSV引号去除处理器 API](#csv引号去除处理器-api)
+11. [XLSX重构处理器 API](#xlsx重构处理器-api)
+12. [文件字段提取器 API](#文件字段提取器-api)
+13. [死链检测器 API](#死链检测器-api)
 
 ---
 
@@ -141,6 +142,43 @@ from src.utils.xlsx_to_csv_converter import XlsxToCsvConverter
 
 converter = XlsxToCsvConverter()
 success, error = converter.convert_file("data.xlsx")
+```
+
+---
+
+## 工作表拆分器 API
+
+### `XlsxSheetSplitter`
+
+将 Excel 文件按工作表拆分为 CSV 文件。
+
+#### 方法
+
+##### `split_file(input_file, output_path=None, progress_callback=None)`
+
+将单个 Excel 文件拆分为多个 CSV 文件。
+
+**参数:**
+- `input_file` (str): 输入 Excel 文件路径
+- `output_path` (str, optional): 输出目录路径，None 时输出到原目录
+- `progress_callback` (callable, optional): 进度回调 `(current, total, sheet_name)`
+
+**返回值:**
+- `dict`: 包含 `output_dir`、`output_files`、`errors`、`total_sheets`、`success`
+
+#### 处理特性
+- 工作表名作为 CSV 文件名，非法字符替换为 `_`
+- 若替换后文件名重复，会自动追加序号
+- 空表与隐藏表也会输出
+- 输出编码为 UTF-8-SIG
+
+#### 示例
+```python
+from src.utils.xlsx_sheet_splitter import XlsxSheetSplitter
+
+splitter = XlsxSheetSplitter()
+result = splitter.split_file("data.xlsx", "output/")
+print(result["output_files"])
 ```
 
 ---
@@ -472,13 +510,14 @@ success = restructure.restructure_file("AB.xlsx", "output/")
 
 #### 方法
 
-##### `extract_fields(folder_path, include_subfolders=False, progress_callback=None)`
+##### `extract_fields(folder_path, include_subfolders=False, header_row=1, progress_callback=None)`
 
 从文件夹中提取字段信息。
 
 **参数:**
 - `folder_path` (str): 目标文件夹
 - `include_subfolders` (bool): 是否递归子文件夹
+- `header_row` (int): 列名所在行（从 1 开始）
 - `progress_callback` (callable, optional): 进度回调
 
 **返回值:**
@@ -645,7 +684,7 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：1.6.0
+当前 API 版本：1.7.0
 
 ### 向后兼容性
 - 1.5.x 版本的 API 完全兼容
