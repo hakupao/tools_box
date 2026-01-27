@@ -1,33 +1,37 @@
-import os
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from tkinterdnd2 import DND_FILES
+from __future__ import annotations
 
+import os
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from qfluentwidgets import (
+    BodyLabel,
+    CaptionLabel,
+    ComboBox,
+    PrimaryPushButton,
+    ProgressBar,
+    PushButton,
+    TitleLabel,
+)
+
+from ...utils.csv_encoding_converter import CsvEncodingConverter
 from ...utils.csv_to_xlsx_converter import CsvToXlsxConverter
 from ...utils.xlsx_to_csv_converter import XlsxToCsvConverter
-from ...utils.csv_encoding_converter import CsvEncodingConverter
-from ..theme import get_theme
+from ..qt_common import FileListWidget, show_error, show_info, show_warning
 
 
-class FileFormatConverterWindow:
-    """合并的文件格式转换窗口，支持 CSV<->XLSX 和 CSV UTF-8(BOM) 转换。"""
+class FileFormatConverterPage(QWidget):
+    """文件格式转换页面：CSV/XLSX/BOM 三种模式。"""
 
-    def __init__(self, parent, main_window):
-        self.window = tk.Toplevel(parent)
-        self.window.title("文件格式转换")
-        self.window.geometry("850x650")
-        self.theme = get_theme(self.window)
-        self.colors = self.theme.colors
-        self.fonts = self.theme.fonts
-        self.window.configure(bg=self.colors.bg)
-
+    def __init__(self, main_window) -> None:
+        super().__init__()
+        self.setObjectName("file_format")
         self.main_window = main_window
-        self.output_path = None
 
+        self.output_path: str | None = None
         self.csv_to_xlsx = CsvToXlsxConverter()
         self.xlsx_to_csv = XlsxToCsvConverter()
         self.csv_bom = CsvEncodingConverter()
-        self.mode_buttons = {}
 
         self.mode_config = {
             "csv_to_xlsx": {
@@ -47,374 +51,149 @@ class FileFormatConverterWindow:
             },
         }
 
-        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.window.drop_target_register(DND_FILES)
-        self.window.dnd_bind("<<Drop>>", self.handle_drop)
+        self._build_ui()
 
-        self._create_widgets()
-        self.window.update()
-        self.window.minsize(850, 650)
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 28, 32, 28)
+        layout.setSpacing(16)
 
-    def _create_widgets(self):
-        colors = self.colors
-        fonts = self.fonts
+        header_layout = QHBoxLayout()
+        header_left = QVBoxLayout()
+        title = TitleLabel("文件格式转换")
+        subtitle = BodyLabel("CSV / XLSX / UTF-8 BOM 一体化转换")
+        subtitle.setTextColor("#6B7280", "#6B7280")
+        header_left.addWidget(title)
+        header_left.addWidget(subtitle)
+        header_left.addStretch(1)
 
-        main_frame = tk.Frame(
-            self.window,
-            bg=colors.surface,
-            padx=24,
-            pady=22,
-            highlightbackground=colors.stroke,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
+        back_btn = PushButton("返回主页")
+        back_btn.clicked.connect(lambda: self.main_window.switch_to(self.main_window.home_interface))
+        header_layout.addLayout(header_left, stretch=1)
+        header_layout.addWidget(back_btn, alignment=Qt.AlignRight | Qt.AlignTop)
+        layout.addLayout(header_layout)
 
-        title_frame = tk.Frame(main_frame, bg=colors.surface)
-        title_frame.pack(fill=tk.X, pady=(0, 20))
+        mode_row = QHBoxLayout()
+        mode_label = BodyLabel("转换模式")
+        self.mode_combo = ComboBox()
+        for key, cfg in self.mode_config.items():
+            self.mode_combo.addItem(cfg["label"], userData=key)
+        self.mode_combo.currentIndexChanged.connect(self.on_mode_change)
 
-        title_label = tk.Label(
-            title_frame,
-            text="文件格式转换",
-            font=fonts["title"],
-            fg=colors.text,
-            bg=colors.surface,
-        )
-        title_label.pack(side=tk.LEFT)
+        mode_row.addWidget(mode_label)
+        mode_row.addWidget(self.mode_combo, stretch=1)
+        mode_row.addStretch(1)
+        layout.addLayout(mode_row)
 
-        back_btn = tk.Button(
-            title_frame,
-            text="返回主界面",
-            command=self.back_to_main,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        back_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(back_btn, variant="secondary")
+        self.info_label = CaptionLabel("当前模式：CSV 转 XLSX")
+        self.info_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.info_label)
 
-        mode_frame = tk.LabelFrame(
-            main_frame,
-            text="转换类型",
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface,
-            padx=10,
-            pady=10,
-        )
-        mode_frame.configure(highlightbackground=colors.stroke_soft, highlightthickness=1, bd=0)
-        mode_frame.pack(fill=tk.X, pady=(0, 15))
-        self.mode_var = tk.StringVar(value="csv_to_xlsx")
-        self._build_mode_buttons(mode_frame)
+        action_row = QHBoxLayout()
+        select_folder_btn = PushButton("选择文件夹")
+        select_folder_btn.clicked.connect(self.select_folder)
+        select_file_btn = PushButton("选择文件")
+        select_file_btn.clicked.connect(self.select_file)
+        clear_btn = PushButton("清空列表")
+        clear_btn.clicked.connect(self.clear_file_list)
 
-        info_frame = tk.Frame(
-            main_frame,
-            bg=colors.surface_alt,
-            relief="flat",
-            highlightbackground=colors.stroke_soft,
-            highlightthickness=1,
-            bd=0,
-        )
-        info_frame.pack(fill=tk.X, pady=(0, 20))
-        self.info_label = tk.Label(
-            info_frame,
-            text="当前模式：CSV 转 XLSX",
-            font=fonts["small"],
-            fg=colors.text,
-            bg=colors.surface_alt,
-            pady=10,
-            anchor="w",
-            justify=tk.LEFT,
-        )
-        self.info_label.pack(fill=tk.X, padx=10)
+        action_row.addWidget(select_folder_btn)
+        action_row.addWidget(select_file_btn)
+        action_row.addWidget(clear_btn)
+        action_row.addStretch(1)
+        layout.addLayout(action_row)
 
-        file_frame = tk.Frame(main_frame, bg=colors.surface)
-        file_frame.pack(fill=tk.X, pady=(0, 20))
+        self.file_list = FileListWidget(allowed_exts=self.mode_config["csv_to_xlsx"]["input_exts"])
+        layout.addWidget(self.file_list, stretch=1)
 
-        select_folder_btn = tk.Button(
-            file_frame,
-            text="选择文件夹",
-            command=self.select_folder,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        select_folder_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(select_folder_btn, variant="secondary")
+        output_row = QHBoxLayout()
+        output_label = BodyLabel("输出路径")
+        self.output_note = CaptionLabel(self.mode_config["csv_to_xlsx"]["output_note"])
+        self.output_note.setTextColor("#7A8190", "#7A8190")
+        select_output_btn = PushButton("选择输出路径")
+        select_output_btn.clicked.connect(self.select_output_path)
 
-        select_file_btn = tk.Button(
-            file_frame,
-            text="选择文件",
-            command=self.select_file,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        select_file_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(select_file_btn, variant="secondary")
+        output_row.addWidget(output_label)
+        output_row.addWidget(self.output_note, stretch=1)
+        output_row.addWidget(select_output_btn)
+        layout.addLayout(output_row)
 
-        clear_list_btn = tk.Button(
-            file_frame,
-            text="清空列表",
-            command=self.clear_file_list,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        clear_list_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(clear_list_btn, variant="ghost")
+        self.progress_bar = ProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_label = CaptionLabel("")
+        self.progress_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.progress_label)
 
-        list_label = tk.Label(
-            main_frame,
-            text="待处理文件：",
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface,
-        )
-        list_label.pack(anchor="w")
+        self.convert_btn = PrimaryPushButton("开始转换")
+        self.convert_btn.clicked.connect(self.convert_files)
+        layout.addWidget(self.convert_btn, alignment=Qt.AlignLeft)
 
-        list_frame = tk.Frame(main_frame, bg=colors.surface)
-        list_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 10))
+        self.status_label = CaptionLabel("")
+        self.status_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.status_label)
 
-        self.file_listbox = tk.Listbox(
-            list_frame,
-            font=fonts["mono"],
-            selectmode=tk.EXTENDED,
-        )
-        self.file_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.theme.style_listbox(self.file_listbox)
+    def current_mode(self) -> str:
+        mode = self.mode_combo.currentData()
+        return mode or "csv_to_xlsx"
 
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.file_listbox.configure(yscrollcommand=scrollbar.set)
-
-        output_frame = tk.Frame(main_frame, bg=colors.surface)
-        output_frame.pack(fill=tk.X, pady=(0, 10))
-
-        output_label = tk.Label(
-            output_frame,
-            text="输出路径：",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-        )
-        output_label.pack(side=tk.LEFT, padx=(0, 10))
-
-        self.output_path_var = tk.StringVar(value=self.mode_config["csv_to_xlsx"]["output_note"])
-        self.output_path_label = tk.Label(
-            output_frame,
-            textvariable=self.output_path_var,
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-            anchor=tk.W,
-        )
-        self.output_path_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        select_output_btn = tk.Button(
-            output_frame,
-            text="选择输出路径",
-            command=self.select_output_path,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        select_output_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(select_output_btn, variant="secondary")
-
-        progress_frame = tk.Frame(main_frame, bg=colors.surface)
-        progress_frame.pack(fill=tk.X, pady=(10, 5))
-
-        self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(
-            progress_frame,
-            variable=self.progress_var,
-            maximum=100,
-            mode="determinate",
-        )
-        self.progress_bar.pack(fill=tk.X, pady=(0, 5))
-
-        self.progress_label = tk.Label(
-            progress_frame,
-            text="",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-        )
-        self.progress_label.pack(fill=tk.X)
-
-        self.convert_btn = tk.Button(
-            main_frame,
-            text="开始转换",
-            command=self.convert_files,
-            width=20,
-            height=2,
-            font=fonts["body_bold"],
-            relief="flat",
-            cursor="hand2",
-        )
-        self.convert_btn.pack(pady=10)
-        self.theme.style_button(self.convert_btn, variant="primary")
-
-        self.status_label = tk.Label(
-            main_frame,
-            text="",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-        )
-        self.status_label.pack(pady=(5, 0))
-
-    def _build_mode_buttons(self, parent):
-        """创建更美观的模式切换按钮组。"""
-        colors = self.colors
-        fonts = self.fonts
-        btn_frame = tk.Frame(parent, bg=colors.surface)
-        btn_frame.pack(fill=tk.X, pady=(5, 5))
-
-        for idx, (mode_key, cfg) in enumerate(self.mode_config.items()):
-            btn = tk.Button(
-                btn_frame,
-                text=cfg["label"],
-                command=lambda m=mode_key: self.change_mode(m),
-                font=fonts["body_bold"],
-                relief="flat",
-                bd=0,
-                padx=14,
-                pady=10,
-                cursor="hand2",
-            )
-            btn.grid(row=0, column=idx, padx=6, sticky="w")
-            self.mode_buttons[mode_key] = btn
-
-        self._set_mode_styles()
-
-    def on_mode_change(self):
-        mode = self.mode_var.get()
+    def on_mode_change(self) -> None:
+        mode = self.current_mode()
         cfg = self.mode_config[mode]
-        self.info_label.config(text=f"当前模式：{cfg['label']}")
+        self.info_label.setText(f"当前模式：{cfg['label']}")
         if self.output_path:
-            self.output_path_var.set(f"输出到: {self.output_path}")
+            self.output_note.setText(f"输出到: {self.output_path}")
         else:
-            self.output_path_var.set(cfg["output_note"])
-        removed = self._filter_list_by_mode()
+            self.output_note.setText(cfg["output_note"])
+        removed = self.file_list.filter_by_exts(cfg["input_exts"])
         if removed:
-            self.status_label.config(text=f"已移除 {removed} 个不符合当前模式的文件")
+            self.status_label.setText(f"已移除 {removed} 个不符合当前模式的文件")
         else:
-            self.status_label.config(text="")
-        self._set_mode_styles()
+            self.status_label.setText("")
+        self.file_list.set_allowed_exts(cfg["input_exts"])
 
-    def change_mode(self, mode_key: str):
-        """外部按钮点击切换模式。"""
-        self.mode_var.set(mode_key)
-        self.on_mode_change()
-
-    def _set_mode_styles(self):
-        """根据当前模式更新按钮样式。"""
-        current = self.mode_var.get()
-        for key, btn in self.mode_buttons.items():
-            self.theme.style_segment_button(btn, active=(key == current))
-
-    def _filter_list_by_mode(self) -> int:
-        """移除列表中与当前模式扩展名不匹配的文件。"""
-        mode = self.mode_var.get()
+    def select_file(self) -> None:
+        mode = self.current_mode()
         allowed_exts = self.mode_config[mode]["input_exts"]
-        files = list(self.file_listbox.get(0, tk.END))
-        self.file_listbox.delete(0, tk.END)
-        removed = 0
-        for file in files:
-            if self._is_allowed(file, allowed_exts):
-                self.file_listbox.insert(tk.END, file)
-            else:
-                removed += 1
-        return removed
+        file_filter = "CSV 文件 (*.csv)" if ".csv" in allowed_exts else "Excel 文件 (*.xlsx)"
+        files, _ = QFileDialog.getOpenFileNames(self, "选择文件", "", file_filter)
+        if files:
+            self.file_list.add_paths(files)
 
-    def back_to_main(self):
-        self.window.destroy()
-        self.main_window.show()
-
-    def on_closing(self):
-        self.window.destroy()
-        self.main_window.show()
-
-    def _is_allowed(self, path: str, allowed_exts) -> bool:
-        return any(path.lower().endswith(ext) for ext in allowed_exts)
-
-    def handle_drop(self, event):
-        files = self.window.tk.splitlist(event.data)
-        allowed_exts = self.mode_config[self.mode_var.get()]["input_exts"]
-        for file in files:
-            if os.path.isfile(file):
-                if self._is_allowed(file, allowed_exts) and file not in self.file_listbox.get(0, tk.END):
-                    self.file_listbox.insert(tk.END, file)
-            elif os.path.isdir(file):
-                for root, _, filenames in os.walk(file):
-                    for filename in filenames:
-                        full_path = os.path.join(root, filename)
-                        if self._is_allowed(full_path, allowed_exts) and full_path not in self.file_listbox.get(0, tk.END):
-                            self.file_listbox.insert(tk.END, full_path)
-
-    def select_file(self):
-        mode = self.mode_var.get()
-        allowed_exts = self.mode_config[mode]["input_exts"]
-        filetypes = [("CSV文件", "*.csv")] if ".csv" in allowed_exts else [("Excel文件", "*.xlsx")]
-
-        files = filedialog.askopenfilenames(
-            title="选择文件",
-            filetypes=filetypes,
-        )
-        for file in files:
-            if self._is_allowed(file, allowed_exts) and file not in self.file_listbox.get(0, tk.END):
-                self.file_listbox.insert(tk.END, file)
-
-    def select_folder(self):
-        mode = self.mode_var.get()
-        allowed_exts = self.mode_config[mode]["input_exts"]
-        folder = filedialog.askdirectory(title="选择包含文件的文件夹")
+    def select_folder(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "选择包含文件的文件夹")
         if folder:
-            for root, _, files in os.walk(folder):
-                for file in files:
-                    full_path = os.path.join(root, file)
-                    if self._is_allowed(full_path, allowed_exts) and full_path not in self.file_listbox.get(0, tk.END):
-                        self.file_listbox.insert(tk.END, full_path)
+            self.file_list.add_paths([folder])
 
-    def select_output_path(self):
-        folder = filedialog.askdirectory(title="选择输出文件夹")
+    def select_output_path(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
-            self.output_path_var.set(f"输出到: {folder}")
+            self.output_note.setText(f"输出到: {folder}")
 
-    def update_progress(self, current: int, total: int, current_file: str):
-        progress = (current / total) * 100
-        self.progress_var.set(progress)
-        self.progress_label.config(text=f"正在处理: {current_file} ({current}/{total})")
-        self.window.update()
+    def update_progress(self, current: int, total: int, current_file: str) -> None:
+        if total <= 0:
+            return
+        progress = int((current / total) * 100)
+        self.progress_bar.setValue(progress)
+        self.progress_label.setText(f"正在处理: {current_file} ({current}/{total})")
+        QApplication.processEvents()
 
     def _convert_single(self, file_path: str):
-        mode = self.mode_var.get()
+        mode = self.current_mode()
         if mode == "csv_to_xlsx":
             return self.csv_to_xlsx.convert_file(file_path, self.output_path)
         if mode == "xlsx_to_csv":
             return self.xlsx_to_csv.convert_file(file_path, self.output_path)
         return self.csv_bom.convert_file(file_path, self.output_path)
 
-    def convert_files(self):
-        files = list(self.file_listbox.get(0, tk.END))
+    def convert_files(self) -> None:
+        files = self.file_list.paths()
         if not files:
-            messagebox.showwarning("警告", "请先选择要转换的文件！")
+            show_warning(self, "警告", "请先选择要转换的文件！")
             return
 
-        self.convert_btn.config(state=tk.DISABLED)
+        self.convert_btn.setEnabled(False)
 
         try:
             total = len(files)
@@ -429,22 +208,22 @@ class FileFormatConverterWindow:
                         success_count += 1
                     else:
                         error_files.append(f"{file} (错误: {error_msg})")
-                except Exception as e:
-                    error_files.append(f"{file} (错误: {str(e)})")
+                except Exception as exc:  # pylint: disable=broad-except
+                    error_files.append(f"{file} (错误: {exc})")
 
             if error_files:
                 error_msg = "以下文件转换失败：\n\n" + "\n".join(error_files)
-                messagebox.showwarning("转换完成", f"成功转换 {success_count}/{total} 个文件\n\n{error_msg}")
+                show_warning(self, "转换完成", f"成功转换 {success_count}/{total} 个文件\n\n{error_msg}")
             else:
-                messagebox.showinfo("转换完成", f"成功转换所有 {total} 个文件！")
+                show_info(self, "转换完成", f"成功转换所有 {total} 个文件！")
 
-            self.progress_var.set(0)
-            self.progress_label.config(text="")
-        except Exception as e:
-            messagebox.showerror("错误", f"转换过程中发生错误：{str(e)}")
+            self.progress_bar.setValue(0)
+            self.progress_label.setText("")
+        except Exception as exc:  # pylint: disable=broad-except
+            show_error(self, "错误", f"转换过程中发生错误：{exc}")
         finally:
-            self.convert_btn.configure(state=tk.NORMAL)
+            self.convert_btn.setEnabled(True)
 
-    def clear_file_list(self):
-        self.file_listbox.delete(0, tk.END)
-        self.status_label.config(text="")
+    def clear_file_list(self) -> None:
+        self.file_list.clear()
+        self.status_label.setText("")

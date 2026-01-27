@@ -1,40 +1,54 @@
-import tkinter as tk
-from tkinter import messagebox, scrolledtext, simpledialog
-import pyautogui
+from __future__ import annotations
+
+import json
+import os
+import sys
+import threading
 import time
+
+import keyboard
+import pyautogui
 import pyperclip
 import win32com.client
-import os
-import keyboard
-import threading
-import json
-import sys
-from ..theme import get_theme
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+from qfluentwidgets import (
+    BodyLabel,
+    CaptionLabel,
+    PrimaryPushButton,
+    PushButton,
+    SpinBox,
+    TextEdit,
+    TitleLabel,
+)
 
-class EdcSiteAdderWindow:
-    def __init__(self, parent, main_window):
-        self.window = tk.Toplevel(parent)
-        self.window.title("EDC站点添加工具")
-        self.window.geometry("950x800")
-        self.theme = get_theme(self.window)
-        self.colors = self.theme.colors
-        self.fonts = self.theme.fonts
-        self.window.configure(bg=self.colors.bg)
-        
-        # 保存主窗口引用
+from ..qt_common import show_error, show_info, mono_font
+
+
+class EdcSiteAdderPage(QWidget):
+    log_signal = Signal(str)
+    stop_signal = Signal()
+
+    def __init__(self, main_window) -> None:
+        super().__init__()
+        self.setObjectName("edc_site_adder")
         self.main_window = main_window
-        
-        # 绑定关闭事件
-        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
-        # 设置pyautogui的安全设置
+
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.5
-        
-        # 初始化处理状态
+
         self.processing = False
-        
-        # 内置默认配置
+
         self.default_config = {
             "max_loops": 100,
             "click_positions": {
@@ -44,1633 +58,397 @@ class EdcSiteAdderWindow:
                 "搜索": {"x": 1040, "y": 406},
                 "选择": {"x": 699, "y": 471},
                 "ok": {"x": 1121, "y": 758},
-                "确认": {"x": 1038, "y": 728}
-            }
+                "确认": {"x": 1038, "y": 728},
+            },
         }
-        
-        # 初始化配置为默认值
         self.config = self.default_config.copy()
-        
-        # 尝试加载配置文件
         self.load_config()
-        
-        # 创建ESC键监听线程
+
+        self.log_signal.connect(self.append_log)
+        self.stop_signal.connect(self.stop_processing)
+
         self.esc_thread = threading.Thread(target=self.esc_listener, daemon=True)
         self.esc_thread.start()
-        
-        self._create_widgets()
-    
-    def get_config_path(self):
-        """获取配置文件路径"""
-        # 使用程序所在目录
-        if getattr(sys, 'frozen', False):
-            # 如果是打包后的程序
+
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 28, 32, 28)
+        layout.setSpacing(16)
+
+        header_layout = QHBoxLayout()
+        header_left = QVBoxLayout()
+        title = TitleLabel("EDC 站点添加工具")
+        subtitle = CaptionLabel("自动化批量添加站点信息")
+        subtitle.setTextColor("#6B7280", "#6B7280")
+        header_left.addWidget(title)
+        header_left.addWidget(subtitle)
+        header_left.addStretch(1)
+
+        back_btn = PushButton("返回主页")
+        back_btn.clicked.connect(lambda: self.main_window.switch_to(self.main_window.home_interface))
+        config_btn = PushButton("配置参数")
+        config_btn.clicked.connect(self.show_config_dialog)
+
+        header_layout.addLayout(header_left, stretch=1)
+        header_layout.addWidget(config_btn, alignment=Qt.AlignRight | Qt.AlignTop)
+        header_layout.addWidget(back_btn, alignment=Qt.AlignRight | Qt.AlignTop)
+        layout.addLayout(header_layout)
+
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(16)
+
+        instruction_box = QVBoxLayout()
+        instruction_title = BodyLabel("使用说明")
+        instruction_text = TextEdit()
+        instruction_text.setReadOnly(True)
+        instruction_text.setFont(mono_font(9))
+        instruction_text.setPlainText(self._instruction_text())
+
+        instruction_box.addWidget(instruction_title)
+        instruction_box.addWidget(instruction_text)
+
+        right_box = QVBoxLayout()
+        self.start_btn = PrimaryPushButton("开始处理")
+        self.start_btn.clicked.connect(self.start_processing)
+
+        log_label = BodyLabel("处理日志")
+        self.log_text = TextEdit()
+        self.log_text.setReadOnly(True)
+        self.log_text.setFont(mono_font(9))
+
+        right_box.addWidget(self.start_btn, alignment=Qt.AlignLeft)
+        right_box.addWidget(log_label)
+        right_box.addWidget(self.log_text, stretch=1)
+
+        content_layout.addLayout(instruction_box, stretch=1)
+        content_layout.addLayout(right_box, stretch=1)
+
+        layout.addLayout(content_layout)
+
+    def _instruction_text(self) -> str:
+        return (
+            "EDC 站点添加工具使用说明：\n\n"
+            "【前提准备】\n"
+            "1. 请确保 Excel 已打开，并包含需要添加到 EDC 系统的站点名称列表\n"
+            "2. 请确保 Chrome 浏览器已打开并登录到 EDC 系统\n"
+            "3. 在 Excel 中选中包含第一个站点名称的单元格\n\n"
+            "【操作步骤】\n"
+            "1. 点击“开始处理”按钮，系统将自动执行以下操作：\n"
+            "   - 获取当前 Excel 单元格的站点名称\n"
+            "   - 切换到 Chrome 浏览器\n"
+            "   - 按顺序点击：新建→查找→搜索框→粘贴站点名称→搜索→选择→OK→确认\n"
+            "   - 返回 Excel 并自动移动到下一行\n"
+            "   - 重复上述过程直到遇到空单元格或达到最大循环次数\n\n"
+            "【注意事项】\n"
+            "1. 处理过程中请勿移动鼠标或使用键盘，否则可能导致点击位置错误\n"
+            "2. 按 ESC 键可随时紧急终止处理（停止处理的唯一方式）\n"
+            "3. 若界面或按钮位置有变化，请点击“配置参数”重新调整坐标\n\n"
+            "【自动化流程】\n"
+            "系统将按照预设坐标依次点击 EDC 系统中的对应按钮，完成站点添加过程，\n"
+            "整个操作过程将在“处理日志”区域实时显示"
+        )
+
+    def get_config_path(self) -> str:
+        if getattr(sys, "frozen", False):
             app_dir = os.path.dirname(sys.executable)
         else:
-            # 如果是开发环境
             app_dir = os.path.dirname(os.path.abspath(__file__))
-        
         return os.path.join(app_dir, "edc_site_adder_config.json")
-    
-    def load_config(self):
-        """加载配置文件"""
+
+    def load_config(self) -> None:
         config_path = self.get_config_path()
         try:
             if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     self.config = json.load(f)
-                print(f"已加载用户配置文件: {config_path}")
             else:
-                print("未找到用户配置文件，使用默认配置")
-        except Exception as e:
-            print(f"加载配置文件失败: {str(e)}")
-            # 加载失败时使用默认配置
+                self.config = self.default_config.copy()
+        except Exception:
             self.config = self.default_config.copy()
-    
-    def save_config(self):
-        """保存配置文件"""
+
+    def save_config(self) -> bool:
         config_path = self.get_config_path()
         try:
-            with open(config_path, 'w', encoding='utf-8') as f:
+            with open(config_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)
-            print(f"已保存配置文件: {config_path}")
             return True
-        except Exception as e:
-            print(f"保存配置文件失败: {str(e)}")
+        except Exception:
             return False
-    
-    def reset_to_default_config(self):
-        """重置为默认配置"""
+
+    def reset_to_default_config(self) -> None:
         self.config = self.default_config.copy()
         if self.save_config():
-            messagebox.showinfo("成功", "已重置为默认配置")
+            show_info(self, "成功", "已重置为默认配置")
         else:
-            messagebox.showerror("错误", "重置配置失败，请检查文件权限")
-    
-    def esc_listener(self):
-        """ESC键监听线程"""
+            show_error(self, "错误", "重置配置失败，请检查文件权限")
+
+    def esc_listener(self) -> None:
         while True:
-            if keyboard.is_pressed('esc') and self.processing:
-                # 立即设置处理状态为False，确保处理立即停止
+            if keyboard.is_pressed("esc") and self.processing:
                 self.processing = False
-                # 使用after方法在主线程中执行日志记录和停止操作
-                self.window.after(0, lambda: self.log("用户按下ESC键，正在停止处理..."))
-                self.window.after(0, self.stop_processing)
-            time.sleep(0.01)  # 进一步降低检测间隔，提高响应速度
-    
-    def _create_widgets(self):
-        colors = self.colors
-        fonts = self.fonts
-        # 创建主框架
-        main_frame = tk.Frame(
-            self.window,
-            bg=colors.surface,
-            padx=24,
-            pady=22,
-            highlightbackground=colors.stroke,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
-        
-        # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg=colors.surface)
-        title_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        # 创建左侧标题框架
-        title_left_frame = tk.Frame(title_frame, bg=colors.surface)
-        title_left_frame.pack(side=tk.LEFT, fill=tk.Y)
-        
-        # 创建标题
-        title_label = tk.Label(
-            title_left_frame,
-            text="EDC站点添加工具",
-            font=fonts["title"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        title_label.pack(side=tk.LEFT)
-        
-        # 版本号
-        version_label = tk.Label(
-            title_left_frame,
-            text="v1.0",
-            font=fonts["tiny"],
-            fg=colors.text_muted,
-            bg=colors.surface
-        )
-        version_label.pack(side=tk.LEFT, padx=(5, 0), pady=(8, 0))
-        
-        # 创建右侧按钮框架
-        title_right_frame = tk.Frame(title_frame, bg=colors.surface)
-        title_right_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # 创建返回按钮
-        back_btn = tk.Button(
-            title_right_frame,
-            text="返回主界面",
-            command=self.back_to_main,
-            width=12,
-            height=1,
-            font=fonts["small"],
-            bg=colors.danger,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        back_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(back_btn, variant="secondary")
-        
-        # 创建配置按钮
-        config_btn = tk.Button(
-            title_right_frame,
-            text="配置参数",
-            command=self.show_config_dialog,
-            width=12,
-            height=1,
-            font=fonts["small"],
-            bg=colors.accent,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        config_btn.pack(side=tk.RIGHT, padx=(0, 10))
-        self.theme.style_button(config_btn, variant="secondary")
-        
-        # 创建左右分栏框架
-        content_frame = tk.Frame(main_frame, bg=colors.surface)
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
-        
-        # 左侧框架 - 说明文本区域
-        left_frame = tk.Frame(content_frame, bg=colors.surface, width=450)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 15))
-        left_frame.pack_propagate(False)  # 防止框架缩小
-        
-        # 创建说明标签
-        instruction_header = tk.Label(
-            left_frame,
-            text="使用说明",
-            font=fonts["section"],
-            fg=colors.text,
-            bg=colors.surface,
-            anchor='w'
-        )
-        instruction_header.pack(fill=tk.X, pady=(0, 5))
-        
-        # 创建说明文本 - 使用滚动文本框
-        instruction_text = """EDC站点添加工具使用说明：
+                self.log_signal.emit("用户按下 ESC 键，正在停止处理...")
+                self.stop_signal.emit()
+            time.sleep(0.05)
 
-【前提准备】
-1. 请确保Excel已打开，并包含需要添加到EDC系统的站点名称列表
-2. 请确保Chrome浏览器已打开并登录到EDC系统
-3. 在Excel中选中包含第一个站点名称的单元格
+    def append_log(self, message: str) -> None:
+        self.log_text.append(message)
+        scrollbar = self.log_text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+        QApplication.processEvents()
 
-【操作步骤】
-1. 点击"开始处理"按钮，系统将自动执行以下操作：
-   - 获取当前Excel单元格的站点名称
-   - 切换到Chrome浏览器
-   - 按顺序点击：新建→查找→搜索框→粘贴站点名称→搜索→选择→OK→确认
-   - 返回Excel并自动移动到下一行
-   - 重复上述过程直到遇到空单元格或达到最大循环次数
-   
-【注意事项】
-1. 处理过程中请勿移动鼠标或使用键盘，否则可能导致点击位置错误
-2. 按ESC键可随时紧急终止处理（这是停止处理的唯一方式）
-3. 若界面或按钮位置有变化，请点击"配置参数"按钮重新调整坐标：
-   - 点击"开始获取"使窗口半透明，便于查看底层界面
-   - 将鼠标移动到需要点击的位置
-   - 按F2锁定坐标
-   - 在相应位置输入获取到的X和Y坐标值
-   - 保存配置
-   
-【自动化流程】
-系统将按照预设坐标依次点击EDC系统中的对应按钮，完成站点添加过程，
-整个操作过程将在"处理日志"区域实时显示"""
-
-        instruction_text_box = scrolledtext.ScrolledText(
-            left_frame,
-            wrap=tk.WORD,
-            font=fonts["small"],
-            bg=colors.input_bg,
-            fg=colors.text,
-            padx=12,
-            pady=12,
-            relief=tk.FLAT,
-            borderwidth=0
-        )
-        instruction_text_box.pack(fill=tk.BOTH, expand=True)
-        instruction_text_box.insert(tk.END, instruction_text)
-        instruction_text_box.configure(state='disabled')  # 设为只读
-        self.theme.style_text(instruction_text_box)
-        
-        # 右侧框架 - 控制和日志区域
-        right_frame = tk.Frame(content_frame, bg=colors.surface)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
-        # 创建开始按钮框架（用于居中）
-        btn_frame = tk.Frame(right_frame, bg=colors.surface)
-        btn_frame.pack(fill=tk.X, pady=(5, 20))
-        
-        # 创建开始按钮
-        start_btn = tk.Button(
-            btn_frame,
-            text="开始处理",
-            command=self.start_processing,
-            width=15,
-            height=2,
-            font=fonts["section"],
-            bg=colors.success,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        start_btn.pack(side=tk.TOP, anchor=tk.CENTER)
-        self.theme.style_button(start_btn, variant="primary")
-        
-        # 创建日志标签
-        log_label = tk.Label(
-            right_frame,
-            text="处理日志",
-            font=fonts["section"],
-            fg=colors.text,
-            bg=colors.surface,
-            anchor='w'
-        )
-        log_label.pack(fill=tk.X, pady=(0, 5))
-        
-        # 创建日志文本框
-        log_frame = tk.Frame(right_frame, bg=colors.surface, highlightbackground=colors.stroke_soft, highlightthickness=1)
-        log_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame,
-            wrap=tk.WORD,
-            font=fonts["mono"],
-            bg=colors.input_bg,
-            fg=colors.text,
-            padx=10,
-            pady=10,
-            relief=tk.FLAT,
-            borderwidth=0
-        )
-        self.log_text.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
-        self.theme.style_text(self.log_text)
-    
-    def show_config_dialog(self):
-        """显示配置对话框"""
-        colors = self.colors
-        fonts = self.fonts
-        # 创建配置窗口
-        config_window = tk.Toplevel(self.window)
-        config_window.title("配置参数")
-        config_window.geometry("600x600")
-        config_window.configure(bg=colors.bg)
-        config_window.transient(self.window)  # 设置为父窗口的临时窗口
-        config_window.grab_set()  # 模态窗口
-        
-        # 创建主框架
-        main_frame = tk.Frame(
-            config_window,
-            bg=colors.surface,
-            padx=20,
-            pady=20,
-            highlightbackground=colors.stroke_soft,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
-        
-        # 创建标题
-        title_label = tk.Label(
-            main_frame,
-            text="配置参数",
-            font=fonts["section"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        title_label.pack(pady=(0, 20))
-        
-        # 创建循环次数配置
-        loop_frame = tk.Frame(main_frame, bg=colors.surface)
-        loop_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        loop_label = tk.Label(
-            loop_frame,
-            text="最大循环次数:",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-            width=15,
-            anchor='w'
-        )
-        loop_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        loop_var = tk.StringVar(value=str(self.config["max_loops"]))
-        loop_entry = tk.Entry(
-            loop_frame,
-            textvariable=loop_var,
-            font=fonts["body"],
-            width=10
-        )
-        loop_entry.pack(side=tk.LEFT)
-        self.theme.style_entry(loop_entry)
-        
-        # 创建坐标获取框架
-        coord_getter_frame = tk.Frame(main_frame, bg=colors.surface)
-        coord_getter_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 创建坐标获取标签
-        coord_getter_label = tk.Label(
-            coord_getter_frame,
-            text="坐标获取:",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-            width=15,
-            anchor='w'
-        )
-        coord_getter_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 创建坐标显示标签
-        coord_display_var = tk.StringVar(value="X: 0, Y: 0")
-        coord_display_label = tk.Label(
-            coord_getter_frame,
-            textvariable=coord_display_var,
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface,
-            width=20
-        )
-        coord_display_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 创建锁定状态标签
-        locked_var = tk.BooleanVar(value=False)
-        locked_label = tk.Label(
-            coord_getter_frame,
-            text="按F2锁定/解锁坐标",
-            font=fonts["tiny"],
-            fg=colors.text_muted,
-            bg=colors.surface
-        )
-        locked_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 创建坐标获取按钮
-        coord_getter_running = False
-        coord_getter_thread = None
-        locked_coords = None
-        
-        def toggle_coord_getter():
-            nonlocal coord_getter_running, coord_getter_thread, locked_coords
-            
-            if not coord_getter_running:
-                # 开始获取坐标
-                coord_getter_running = True
-                coord_getter_btn.configure(text="停止获取", bg=colors.danger)
-                
-                # 设置窗口半透明和置顶
-                config_window.attributes('-alpha', 0.8)
-                config_window.attributes('-topmost', True)
-                
-                # 创建新线程获取坐标
-                def coord_getter():
-                    while coord_getter_running:
-                        if locked_coords:
-                            x, y = locked_coords
-                        else:
-                            x, y = pyautogui.position()
-                        coord_display_var.set(f"X: {x}, Y: {y}")
-                        time.sleep(0.1)
-                
-                coord_getter_thread = threading.Thread(target=coord_getter, daemon=True)
-                coord_getter_thread.start()
-                
-            else:
-                # 停止获取坐标
-                coord_getter_running = False
-                coord_getter_btn.configure(text="开始获取", bg=colors.accent)
-                
-                # 恢复窗口不透明和不置顶
-                config_window.attributes('-alpha', 1.0)
-                config_window.attributes('-topmost', False)
-        
-        # 创建F2热键处理函数
-        def toggle_lock(e=None):
-            nonlocal locked_coords
-            is_locked = locked_var.get()
-            if not is_locked:
-                # 锁定当前坐标
-                x, y = pyautogui.position()
-                locked_coords = (x, y)
-                locked_var.set(True)
-                locked_label.configure(text="坐标已锁定 (F2解锁)", fg=colors.danger)
-            else:
-                # 解锁坐标
-                locked_coords = None
-                locked_var.set(False)
-                locked_label.configure(text="按F2锁定/解锁坐标", fg=colors.text_muted)
-        
-        # 绑定F2热键
-        keyboard.on_press_key('F2', toggle_lock)
-        
-        coord_getter_btn = tk.Button(
-            coord_getter_frame,
-            text="开始获取",
-            command=toggle_coord_getter,
-            width=10,
-            height=1,
-            font=fonts["body"],
-            bg=colors.accent,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        coord_getter_btn.pack(side=tk.LEFT)
-        self.theme.style_button(coord_getter_btn, variant="secondary")
-        
-        # 创建点击坐标配置
-        coords_frame = tk.Frame(main_frame, bg=colors.surface)
-        coords_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
-        
-        coords_label = tk.Label(
-            coords_frame,
-            text="点击坐标配置:",
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        coords_label.pack(anchor=tk.W, pady=(0, 10))
-        
-        # 创建坐标输入框架
-        coords_input_frame = tk.Frame(coords_frame, bg=colors.surface)
-        coords_input_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # 创建坐标输入框
-        coord_vars = {}
-        coord_names = []
-        row = 0
-        for key, coord in self.config["click_positions"].items():
-            coord_names.append(key)
-            # 创建标签
-            label = tk.Label(
-                coords_input_frame,
-                text=f"{key}:",
-                font=fonts["body"],
-                fg=colors.text,
-                bg=colors.surface,
-                width=15,
-                anchor='w'
-            )
-            label.grid(row=row, column=0, padx=(0, 10), pady=5, sticky='w')
-            
-            # 创建X坐标输入
-            x_var = tk.StringVar(value=str(coord["x"]))
-            x_entry = tk.Entry(
-                coords_input_frame,
-                textvariable=x_var,
-                width=8,
-                font=fonts["tiny"]
-            )
-            x_entry.grid(row=row, column=2, padx=5, pady=5)
-            self.theme.style_entry(x_entry)
-            
-            # 创建Y坐标输入
-            y_var = tk.StringVar(value=str(coord["y"]))
-            y_entry = tk.Entry(
-                coords_input_frame,
-                textvariable=y_var,
-                width=8,
-                font=fonts["tiny"]
-            )
-            y_entry.grid(row=row, column=3, padx=5, pady=5)
-            self.theme.style_entry(y_entry)
-            
-            # 保存变量引用
-            coord_vars[key] = {"x": x_var, "y": y_var}
-            
-            row += 1
-        
-        # 创建按钮框架
-        button_frame = tk.Frame(main_frame, bg=colors.surface)
-        button_frame.pack(fill=tk.X, pady=(20, 0))
-        
-        # 创建保存按钮
-        def save_config_values():
-            try:
-                # 更新循环次数
-                self.config["max_loops"] = int(loop_var.get())
-                
-                # 更新坐标
-                for key, vars in coord_vars.items():
-                    self.config["click_positions"][key]["x"] = int(vars["x"].get())
-                    self.config["click_positions"][key]["y"] = int(vars["y"].get())
-                
-                # 保存配置
-                if self.save_config():
-                    # 显示成功消息
-                    messagebox.showinfo("成功", "配置已保存")
-                    
-                    # 关闭窗口
-                    config_window.destroy()
-                else:
-                    messagebox.showerror("错误", "保存配置失败，请检查文件权限")
-                
-            except ValueError:
-                messagebox.showerror("错误", "请输入有效的数字")
-        
-        save_btn = tk.Button(
-            button_frame,
-            text="保存配置",
-            command=save_config_values,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            bg=colors.success,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        save_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(save_btn, variant="primary")
-        
-        # 创建重置按钮
-        reset_btn = tk.Button(
-            button_frame,
-            text="重置默认",
-            command=self.reset_to_default_config,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            bg=colors.warning,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        reset_btn.pack(side=tk.RIGHT, padx=(0, 10))
-        self.theme.style_button(reset_btn, variant="warning")
-        
-        # 创建取消按钮
-        cancel_btn = tk.Button(
-            button_frame,
-            text="取消",
-            command=config_window.destroy,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            bg=colors.danger,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        cancel_btn.pack(side=tk.RIGHT, padx=(0, 10))
-        self.theme.style_button(cancel_btn, variant="ghost")
-        
-        # 窗口关闭时停止坐标获取
-        def on_config_window_closing():
-            nonlocal coord_getter_running
-            coord_getter_running = False
-            keyboard.unhook_all()  # 移除所有热键绑定
-            config_window.destroy()
-        
-        config_window.protocol("WM_DELETE_WINDOW", on_config_window_closing)
-    
-    def log(self, message):
-        """添加日志信息"""
-        self.log_text.insert(tk.END, f"{message}\n")
-        self.log_text.see(tk.END)
-        self.window.update()
-    
-    def start_processing(self):
-        """开始处理"""
+    def start_processing(self) -> None:
         if self.processing:
-            messagebox.showinfo("提示", "处理已在进行中")
+            show_info(self, "提示", "处理已在进行中")
             return
-        
+
         self.processing = True
-        self.log("开始处理...")
-        
+        self.append_log("开始处理...")
+
         try:
-            # 获取Excel实例
-            self.log("正在连接Excel...")
+            self.append_log("正在连接 Excel...")
             xl = win32com.client.Dispatch("Excel.Application")
-            
-            # 获取当前选中的单元格
             cell = xl.Selection
             if not cell:
-                self.log("错误: 未选中Excel单元格")
+                self.append_log("错误: 未选中 Excel 单元格")
                 self.processing = False
                 return
-            
-            # 处理循环
-            for i in range(self.config["max_loops"]):  # 使用配置的最大循环次数
-                # 检查是否已停止处理
+
+            for i in range(self.config["max_loops"]):
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 获取单元格内容
+
                 cell_value = cell.Text.strip()
                 if not cell_value:
-                    self.log(f"第 {i+1} 行为空，自动终止处理")
+                    self.append_log(f"第 {i + 1} 行为空，自动终止处理")
                     break
-                
-                self.log(f"处理第 {i+1} 行: {cell_value}")
-                
-                # 复制到剪贴板
+
+                self.append_log(f"处理第 {i + 1} 行: {cell_value}")
                 pyperclip.copy(cell_value)
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+                time.sleep(0.1)
+
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 保存当前窗口句柄（Excel）
-                excel_hwnd = xl.ActiveWindow.Hwnd
-                
-                # 切换到Chrome窗口
-                self.log("切换到Chrome窗口...")
+
+                self.append_log("切换到 Chrome 窗口...")
                 chrome_window = pyautogui.getWindowsWithTitle("Chrome")
                 if not chrome_window:
-                    self.log("错误: 未找到Chrome窗口")
+                    self.append_log("错误: 未找到 Chrome 窗口")
                     self.processing = False
                     return
-                
+
                 chrome_window[0].activate()
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+                time.sleep(0.1)
+
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 执行点击操作
-                self.log("执行点击操作...")
-                
-                # 点击新建
-                pyautogui.click(
-                    self.config["click_positions"]["新建"]["x"],
-                    self.config["click_positions"]["新建"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+
+                self.append_log("执行点击操作...")
+                self._click("新建")
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 点击查找
-                pyautogui.click(
-                    self.config["click_positions"]["查找"]["x"],
-                    self.config["click_positions"]["查找"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+                self._click("查找")
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 点击搜索框
-                pyautogui.click(
-                    self.config["click_positions"]["搜索框"]["x"],
-                    self.config["click_positions"]["搜索框"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 粘贴内容
-                pyautogui.hotkey('ctrl', 'v')
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+                self._click("搜索框")
+                pyautogui.hotkey("ctrl", "v")
+                time.sleep(0.1)
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 点击搜索
-                pyautogui.click(
-                    self.config["click_positions"]["搜索"]["x"],
-                    self.config["click_positions"]["搜索"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 点击选择
-                pyautogui.click(
-                    self.config["click_positions"]["选择"]["x"],
-                    self.config["click_positions"]["选择"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+                self._click("搜索")
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 点击OK
-                pyautogui.click(
-                    self.config["click_positions"]["ok"]["x"],
-                    self.config["click_positions"]["ok"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 点击确认
-                pyautogui.click(
-                    self.config["click_positions"]["确认"]["x"],
-                    self.config["click_positions"]["确认"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
+                self._click("选择")
                 if not self.processing:
-                    self.log("处理已停止")
+                    self.append_log("处理已停止")
                     break
-                
-                # 切回Excel
-                self.log("切回Excel窗口...")
+                self._click("ok")
+                if not self.processing:
+                    self.append_log("处理已停止")
+                    break
+                self._click("确认")
+
+                if not self.processing:
+                    self.append_log("处理已停止")
+                    break
+
+                self.append_log("切回 Excel 窗口...")
                 xl.ActiveWindow.Activate()
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 移动到下一行 - 使用更直接的方法
+                time.sleep(0.1)
+
                 try:
-                    # 记录当前单元格地址和行列信息
                     current_address = cell.Address
                     current_row = cell.Row
                     current_column = cell.Column
-                    self.log(f"当前单元格: {current_address} (行: {current_row}, 列: {current_column})")
-                    
-                    # 直接选择下一行的相同列
+                    self.append_log(
+                        f"当前单元格: {current_address} (行: {current_row}, 列: {current_column})"
+                    )
+
                     next_row = current_row + 1
                     next_cell = xl.ActiveSheet.Cells(next_row, current_column)
                     next_cell.Select()
-                    
-                    # 更新cell变量为新的选中单元格
                     cell = xl.Selection
-                    self.log(f"已移动到下一行: {current_address} -> {cell.Address} (行: {cell.Row}, 列: {cell.Column})")
-                except Exception as e:
-                    self.log(f"错误: 无法移动到下一行 - {str(e)}")
+                    self.append_log(
+                        f"已移动到下一行: {current_address} -> {cell.Address}"
+                    )
+                except Exception as exc:
+                    self.append_log(f"错误: 无法移动到下一行 - {exc}")
                     break
-                
-                time.sleep(0.1)  # 进一步减少等待时间
-            
-            if self.processing:  # 只有在正常完成时才显示"处理完成"
-                self.log("处理完成")
-            
-        except Exception as e:
-            self.log(f"错误: {str(e)}")
-import tkinter as tk
-from tkinter import messagebox, scrolledtext, simpledialog
-import pyautogui
-import time
-import pyperclip
-import win32com.client
-import os
-import keyboard
-import threading
-import json
-import sys
 
-class EdcSiteAdderWindow:
-    def __init__(self, parent, main_window):
-        self.window = tk.Toplevel(parent)
-        self.window.title("EDC站点添加工具")
-        self.window.geometry("950x800")
-        self.theme = get_theme(self.window)
-        self.colors = self.theme.colors
-        self.fonts = self.theme.fonts
-        self.window.configure(bg=self.colors.bg)
-        
-        # 保存主窗口引用
-        self.main_window = main_window
-        
-        # 绑定关闭事件
-        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
-        # 设置pyautogui的安全设置
-        pyautogui.FAILSAFE = True
-        pyautogui.PAUSE = 0.5
-        
-        # 初始化处理状态
-        self.processing = False
-        
-        # 内置默认配置
-        self.default_config = {
-            "max_loops": 100,
-            "click_positions": {
-                "新建": {"x": 241, "y": 212},
-                "查找": {"x": 1137, "y": 460},
-                "搜索框": {"x": 817, "y": 409},
-                "搜索": {"x": 1040, "y": 406},
-                "选择": {"x": 699, "y": 471},
-                "ok": {"x": 1121, "y": 758},
-                "确认": {"x": 1038, "y": 728}
-            }
-        }
-        
-        # 初始化配置为默认值
-        self.config = self.default_config.copy()
-        
-        # 尝试加载配置文件
-        self.load_config()
-        
-        # 创建ESC键监听线程
-        self.esc_thread = threading.Thread(target=self.esc_listener, daemon=True)
-        self.esc_thread.start()
-        
-        self._create_widgets()
-    
-    def get_config_path(self):
-        """获取配置文件路径"""
-        # 使用程序所在目录
-        if getattr(sys, 'frozen', False):
-            # 如果是打包后的程序
-            app_dir = os.path.dirname(sys.executable)
-        else:
-            # 如果是开发环境
-            app_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        return os.path.join(app_dir, "edc_site_adder_config.json")
-    
-    def load_config(self):
-        """加载配置文件"""
-        config_path = self.get_config_path()
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    self.config = json.load(f)
-                print(f"已加载用户配置文件: {config_path}")
-            else:
-                print("未找到用户配置文件，使用默认配置")
-        except Exception as e:
-            print(f"加载配置文件失败: {str(e)}")
-            # 加载失败时使用默认配置
-            self.config = self.default_config.copy()
-    
-    def save_config(self):
-        """保存配置文件"""
-        config_path = self.get_config_path()
-        try:
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, indent=4, ensure_ascii=False)
-            print(f"已保存配置文件: {config_path}")
-            return True
-        except Exception as e:
-            print(f"保存配置文件失败: {str(e)}")
-            return False
-    
-    def reset_to_default_config(self):
-        """重置为默认配置"""
-        self.config = self.default_config.copy()
-        if self.save_config():
-            messagebox.showinfo("成功", "已重置为默认配置")
-        else:
-            messagebox.showerror("错误", "重置配置失败，请检查文件权限")
-    
-    def esc_listener(self):
-        """ESC键监听线程"""
-        while True:
-            if keyboard.is_pressed('esc') and self.processing:
-                # 立即设置处理状态为False，确保处理立即停止
-                self.processing = False
-                # 使用after方法在主线程中执行日志记录和停止操作
-                self.window.after(0, lambda: self.log("用户按下ESC键，正在停止处理..."))
-                self.window.after(0, self.stop_processing)
-            time.sleep(0.01)  # 进一步降低检测间隔，提高响应速度
-    
-    def _create_widgets(self):
-        colors = self.colors
-        fonts = self.fonts
-        # 创建主框架
-        main_frame = tk.Frame(
-            self.window,
-            bg=colors.surface,
-            padx=24,
-            pady=22,
-            highlightbackground=colors.stroke,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
-        
-        # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg=colors.surface)
-        title_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        # 创建左侧标题框架
-        title_left_frame = tk.Frame(title_frame, bg=colors.surface)
-        title_left_frame.pack(side=tk.LEFT, fill=tk.Y)
-        
-        # 创建标题
-        title_label = tk.Label(
-            title_left_frame,
-            text="EDC站点添加工具",
-            font=fonts["title"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        title_label.pack(side=tk.LEFT)
-        
-        # 版本号
-        version_label = tk.Label(
-            title_left_frame,
-            text="v1.0",
-            font=fonts["tiny"],
-            fg=colors.text_muted,
-            bg=colors.surface
-        )
-        version_label.pack(side=tk.LEFT, padx=(5, 0), pady=(8, 0))
-        
-        # 创建右侧按钮框架
-        title_right_frame = tk.Frame(title_frame, bg=colors.surface)
-        title_right_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # 创建返回按钮
-        back_btn = tk.Button(
-            title_right_frame,
-            text="返回主界面",
-            command=self.back_to_main,
-            width=12,
-            height=1,
-            font=fonts["small"],
-            bg=colors.danger,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        back_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(back_btn, variant="secondary")
-        
-        # 创建配置按钮
-        config_btn = tk.Button(
-            title_right_frame,
-            text="配置参数",
-            command=self.show_config_dialog,
-            width=12,
-            height=1,
-            font=fonts["small"],
-            bg=colors.accent,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        config_btn.pack(side=tk.RIGHT, padx=(0, 10))
-        self.theme.style_button(config_btn, variant="secondary")
-        
-        # 创建左右分栏框架
-        content_frame = tk.Frame(main_frame, bg=colors.surface)
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
-        
-        # 左侧框架 - 说明文本区域
-        left_frame = tk.Frame(content_frame, bg=colors.surface, width=450)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 15))
-        left_frame.pack_propagate(False)  # 防止框架缩小
-        
-        # 创建说明标签
-        instruction_header = tk.Label(
-            left_frame,
-            text="使用说明",
-            font=fonts["section"],
-            fg=colors.text,
-            bg=colors.surface,
-            anchor='w'
-        )
-        instruction_header.pack(fill=tk.X, pady=(0, 5))
-        
-        # 创建说明文本 - 使用滚动文本框
-        instruction_text = """EDC站点添加工具使用说明：
+                time.sleep(0.1)
 
-【前提准备】
-1. 请确保Excel已打开，并包含需要添加到EDC系统的站点名称列表
-2. 请确保Chrome浏览器已打开并登录到EDC系统
-3. 在Excel中选中包含第一个站点名称的单元格
+            if self.processing:
+                self.append_log("处理完成")
 
-【操作步骤】
-1. 点击"开始处理"按钮，系统将自动执行以下操作：
-   - 获取当前Excel单元格的站点名称
-   - 切换到Chrome浏览器
-   - 按顺序点击：新建→查找→搜索框→粘贴站点名称→搜索→选择→OK→确认
-   - 返回Excel并自动移动到下一行
-   - 重复上述过程直到遇到空单元格或达到最大循环次数
-   
-【注意事项】
-1. 处理过程中请勿移动鼠标或使用键盘，否则可能导致点击位置错误
-2. 按ESC键可随时紧急终止处理（这是停止处理的唯一方式）
-3. 若界面或按钮位置有变化，请点击"配置参数"按钮重新调整坐标：
-   - 点击"开始获取"使窗口半透明，便于查看底层界面
-   - 将鼠标移动到需要点击的位置
-   - 按F2锁定坐标
-   - 在相应位置输入获取到的X和Y坐标值
-   - 保存配置
-   
-【自动化流程】
-系统将按照预设坐标依次点击EDC系统中的对应按钮，完成站点添加过程，
-整个操作过程将在"处理日志"区域实时显示"""
-
-        instruction_text_box = scrolledtext.ScrolledText(
-            left_frame,
-            wrap=tk.WORD,
-            font=fonts["small"],
-            bg=colors.input_bg,
-            fg=colors.text,
-            padx=12,
-            pady=12,
-            relief=tk.FLAT,
-            borderwidth=0
-        )
-        instruction_text_box.pack(fill=tk.BOTH, expand=True)
-        instruction_text_box.insert(tk.END, instruction_text)
-        instruction_text_box.configure(state='disabled')  # 设为只读
-        self.theme.style_text(instruction_text_box)
-        
-        # 右侧框架 - 控制和日志区域
-        right_frame = tk.Frame(content_frame, bg=colors.surface)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
-        # 创建开始按钮框架（用于居中）
-        btn_frame = tk.Frame(right_frame, bg=colors.surface)
-        btn_frame.pack(fill=tk.X, pady=(5, 20))
-        
-        # 创建开始按钮
-        start_btn = tk.Button(
-            btn_frame,
-            text="开始处理",
-            command=self.start_processing,
-            width=15,
-            height=2,
-            font=fonts["section"],
-            bg=colors.success,
-            fg='white',
-            relief='flat',
-            borderwidth=0,
-            cursor='hand2'
-        )
-        start_btn.pack(side=tk.TOP, anchor=tk.CENTER)
-        self.theme.style_button(start_btn, variant="primary")
-        
-        # 创建日志标签
-        log_label = tk.Label(
-            right_frame,
-            text="处理日志",
-            font=fonts["section"],
-            fg=colors.text,
-            bg=colors.surface,
-            anchor='w'
-        )
-        log_label.pack(fill=tk.X, pady=(0, 5))
-        
-        # 创建日志文本框
-        log_frame = tk.Frame(right_frame, bg=colors.surface, highlightbackground=colors.stroke_soft, highlightthickness=1)
-        log_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame,
-            wrap=tk.WORD,
-            font=fonts["mono"],
-            bg=colors.input_bg,
-            fg=colors.text,
-            padx=10,
-            pady=10,
-            relief=tk.FLAT,
-            borderwidth=0
-        )
-        self.log_text.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
-        self.theme.style_text(self.log_text)
-    
-    def show_config_dialog(self):
-        """显示配置对话框"""
-        colors = self.colors
-        fonts = self.fonts
-        # 创建配置窗口
-        config_window = tk.Toplevel(self.window)
-        config_window.title("配置参数")
-        config_window.geometry("600x600")
-        config_window.configure(bg=colors.bg)
-        config_window.transient(self.window)  # 设置为父窗口的临时窗口
-        config_window.grab_set()  # 模态窗口
-        
-        # 创建主框架
-        main_frame = tk.Frame(
-            config_window,
-            bg=colors.surface,
-            padx=20,
-            pady=20,
-            highlightbackground=colors.stroke_soft,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
-        
-        # 创建标题
-        title_label = tk.Label(
-            main_frame,
-            text="配置参数",
-            font=fonts["section"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        title_label.pack(pady=(0, 20))
-        
-        # 创建循环次数配置
-        loop_frame = tk.Frame(main_frame, bg=colors.surface)
-        loop_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        loop_label = tk.Label(
-            loop_frame,
-            text="最大循环次数:",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-            width=15,
-            anchor='w'
-        )
-        loop_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        loop_var = tk.StringVar(value=str(self.config["max_loops"]))
-        loop_entry = tk.Entry(
-            loop_frame,
-            textvariable=loop_var,
-            font=fonts["body"],
-            width=10
-        )
-        loop_entry.pack(side=tk.LEFT)
-        self.theme.style_entry(loop_entry)
-        
-        # 创建坐标获取框架
-        coord_getter_frame = tk.Frame(main_frame, bg=colors.surface)
-        coord_getter_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 创建坐标获取标签
-        coord_getter_label = tk.Label(
-            coord_getter_frame,
-            text="坐标获取:",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-            width=15,
-            anchor='w'
-        )
-        coord_getter_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 创建坐标显示标签
-        coord_display_var = tk.StringVar(value="X: 0, Y: 0")
-        coord_display_label = tk.Label(
-            coord_getter_frame,
-            textvariable=coord_display_var,
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface,
-            width=20
-        )
-        coord_display_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 创建锁定状态标签
-        locked_var = tk.BooleanVar(value=False)
-        locked_label = tk.Label(
-            coord_getter_frame,
-            text="按F2锁定/解锁坐标",
-            font=fonts["tiny"],
-            fg=colors.text_muted,
-            bg=colors.surface
-        )
-        locked_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 创建坐标获取按钮
-        coord_getter_running = False
-        coord_getter_thread = None
-        locked_coords = None
-        
-        def toggle_coord_getter():
-            nonlocal coord_getter_running, coord_getter_thread, locked_coords
-            
-            if not coord_getter_running:
-                # 开始获取坐标
-                coord_getter_running = True
-                coord_getter_btn.configure(text="停止获取", bg=colors.danger)
-                
-                # 设置窗口半透明和置顶
-                config_window.attributes('-alpha', 0.8)
-                config_window.attributes('-topmost', True)
-                
-                # 创建新线程获取坐标
-                def coord_getter():
-                    while coord_getter_running:
-                        if locked_coords:
-                            x, y = locked_coords
-                        else:
-                            x, y = pyautogui.position()
-                        coord_display_var.set(f"X: {x}, Y: {y}")
-                        time.sleep(0.1)
-                
-                coord_getter_thread = threading.Thread(target=coord_getter, daemon=True)
-                coord_getter_thread.start()
-                
-            else:
-                # 停止获取坐标
-                coord_getter_running = False
-                coord_getter_btn.configure(text="开始获取", bg=colors.accent)
-                
-                # 恢复窗口不透明和不置顶
-                config_window.attributes('-alpha', 1.0)
-                config_window.attributes('-topmost', False)
-        
-        # 创建F2热键处理函数
-        def toggle_lock(e=None):
-            nonlocal locked_coords
-            is_locked = locked_var.get()
-            if not is_locked:
-                # 锁定当前坐标
-                x, y = pyautogui.position()
-                locked_coords = (x, y)
-                locked_var.set(True)
-                locked_label.configure(text="坐标已锁定 (F2解锁)", fg=colors.danger)
-            else:
-                # 解锁坐标
-                locked_coords = None
-                locked_var.set(False)
-                locked_label.configure(text="按F2锁定/解锁坐标", fg=colors.text_muted)
-        
-        # 绑定F2热键
-        keyboard.on_press_key('F2', toggle_lock)
-        
-        coord_getter_btn = tk.Button(
-            coord_getter_frame,
-            text="开始获取",
-            command=toggle_coord_getter,
-            width=10,
-            height=1,
-            font=fonts["body"],
-            bg=colors.accent,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        coord_getter_btn.pack(side=tk.LEFT)
-        self.theme.style_button(coord_getter_btn, variant="secondary")
-        
-        # 创建点击坐标配置
-        coords_frame = tk.Frame(main_frame, bg=colors.surface)
-        coords_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
-        
-        coords_label = tk.Label(
-            coords_frame,
-            text="点击坐标配置:",
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        coords_label.pack(anchor=tk.W, pady=(0, 10))
-        
-        # 创建坐标输入框架
-        coords_input_frame = tk.Frame(coords_frame, bg=colors.surface)
-        coords_input_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # 创建坐标输入框
-        coord_vars = {}
-        coord_names = []
-        row = 0
-        for key, coord in self.config["click_positions"].items():
-            coord_names.append(key)
-            # 创建标签
-            label = tk.Label(
-                coords_input_frame,
-                text=f"{key}:",
-                font=fonts["body"],
-                fg=colors.text,
-                bg=colors.surface,
-                width=15,
-                anchor='w'
-            )
-            label.grid(row=row, column=0, padx=(0, 10), pady=5, sticky='w')
-            
-            # 创建X坐标输入
-            x_var = tk.StringVar(value=str(coord["x"]))
-            x_entry = tk.Entry(
-                coords_input_frame,
-                textvariable=x_var,
-                width=8,
-                font=fonts["tiny"]
-            )
-            x_entry.grid(row=row, column=2, padx=5, pady=5)
-            self.theme.style_entry(x_entry)
-            
-            # 创建Y坐标输入
-            y_var = tk.StringVar(value=str(coord["y"]))
-            y_entry = tk.Entry(
-                coords_input_frame,
-                textvariable=y_var,
-                width=8,
-                font=fonts["tiny"]
-            )
-            y_entry.grid(row=row, column=3, padx=5, pady=5)
-            self.theme.style_entry(y_entry)
-            
-            # 保存变量引用
-            coord_vars[key] = {"x": x_var, "y": y_var}
-            
-            row += 1
-        
-        # 创建按钮框架
-        button_frame = tk.Frame(main_frame, bg=colors.surface)
-        button_frame.pack(fill=tk.X, pady=(20, 0))
-        
-        # 创建保存按钮
-        def save_config_values():
-            try:
-                # 更新循环次数
-                self.config["max_loops"] = int(loop_var.get())
-                
-                # 更新坐标
-                for key, vars in coord_vars.items():
-                    self.config["click_positions"][key]["x"] = int(vars["x"].get())
-                    self.config["click_positions"][key]["y"] = int(vars["y"].get())
-                
-                # 保存配置
-                if self.save_config():
-                    # 显示成功消息
-                    messagebox.showinfo("成功", "配置已保存")
-                    
-                    # 关闭窗口
-                    config_window.destroy()
-                else:
-                    messagebox.showerror("错误", "保存配置失败，请检查文件权限")
-                
-            except ValueError:
-                messagebox.showerror("错误", "请输入有效的数字")
-        
-        save_btn = tk.Button(
-            button_frame,
-            text="保存配置",
-            command=save_config_values,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            bg=colors.success,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        save_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(save_btn, variant="primary")
-        
-        # 创建重置按钮
-        reset_btn = tk.Button(
-            button_frame,
-            text="重置默认",
-            command=self.reset_to_default_config,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            bg=colors.warning,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        reset_btn.pack(side=tk.RIGHT, padx=(0, 10))
-        self.theme.style_button(reset_btn, variant="warning")
-        
-        # 创建取消按钮
-        cancel_btn = tk.Button(
-            button_frame,
-            text="取消",
-            command=config_window.destroy,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            bg=colors.danger,
-            fg='white',
-            relief='flat',
-            cursor='hand2'
-        )
-        cancel_btn.pack(side=tk.RIGHT, padx=(0, 10))
-        self.theme.style_button(cancel_btn, variant="ghost")
-        
-        # 窗口关闭时停止坐标获取
-        def on_config_window_closing():
-            nonlocal coord_getter_running
-            coord_getter_running = False
-            keyboard.unhook_all()  # 移除所有热键绑定
-            config_window.destroy()
-        
-        config_window.protocol("WM_DELETE_WINDOW", on_config_window_closing)
-    
-    def log(self, message):
-        """添加日志信息"""
-        self.log_text.insert(tk.END, f"{message}\n")
-        self.log_text.see(tk.END)
-        self.window.update()
-    
-    def start_processing(self):
-        """开始处理"""
-        if self.processing:
-            messagebox.showinfo("提示", "处理已在进行中")
-            return
-        
-        self.processing = True
-        self.log("开始处理...")
-        
-        try:
-            # 获取Excel实例
-            self.log("正在连接Excel...")
-            xl = win32com.client.Dispatch("Excel.Application")
-            
-            # 获取当前选中的单元格
-            cell = xl.Selection
-            if not cell:
-                self.log("错误: 未选中Excel单元格")
-                self.processing = False
-                return
-            
-            # 处理循环
-            for i in range(self.config["max_loops"]):  # 使用配置的最大循环次数
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 获取单元格内容
-                cell_value = cell.Text.strip()
-                if not cell_value:
-                    self.log(f"第 {i+1} 行为空，自动终止处理")
-                    break
-                
-                self.log(f"处理第 {i+1} 行: {cell_value}")
-                
-                # 复制到剪贴板
-                pyperclip.copy(cell_value)
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 保存当前窗口句柄（Excel）
-                excel_hwnd = xl.ActiveWindow.Hwnd
-                
-                # 切换到Chrome窗口
-                self.log("切换到Chrome窗口...")
-                chrome_window = pyautogui.getWindowsWithTitle("Chrome")
-                if not chrome_window:
-                    self.log("错误: 未找到Chrome窗口")
-                    self.processing = False
-                    return
-                
-                chrome_window[0].activate()
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 执行点击操作
-                self.log("执行点击操作...")
-                
-                # 点击新建
-                pyautogui.click(
-                    self.config["click_positions"]["新建"]["x"],
-                    self.config["click_positions"]["新建"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 点击查找
-                pyautogui.click(
-                    self.config["click_positions"]["查找"]["x"],
-                    self.config["click_positions"]["查找"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 点击搜索框
-                pyautogui.click(
-                    self.config["click_positions"]["搜索框"]["x"],
-                    self.config["click_positions"]["搜索框"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 粘贴内容
-                pyautogui.hotkey('ctrl', 'v')
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 点击搜索
-                pyautogui.click(
-                    self.config["click_positions"]["搜索"]["x"],
-                    self.config["click_positions"]["搜索"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 点击选择
-                pyautogui.click(
-                    self.config["click_positions"]["选择"]["x"],
-                    self.config["click_positions"]["选择"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 点击OK
-                pyautogui.click(
-                    self.config["click_positions"]["ok"]["x"],
-                    self.config["click_positions"]["ok"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 点击确认
-                pyautogui.click(
-                    self.config["click_positions"]["确认"]["x"],
-                    self.config["click_positions"]["确认"]["y"]
-                )
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 检查是否已停止处理
-                if not self.processing:
-                    self.log("处理已停止")
-                    break
-                
-                # 切回Excel
-                self.log("切回Excel窗口...")
-                xl.ActiveWindow.Activate()
-                time.sleep(0.1)  # 进一步减少等待时间
-                
-                # 移动到下一行 - 使用更直接的方法
-                try:
-                    # 记录当前单元格地址和行列信息
-                    current_address = cell.Address
-                    current_row = cell.Row
-                    current_column = cell.Column
-                    self.log(f"当前单元格: {current_address} (行: {current_row}, 列: {current_column})")
-                    
-                    # 直接选择下一行的相同列
-                    next_row = current_row + 1
-                    next_cell = xl.ActiveSheet.Cells(next_row, current_column)
-                    next_cell.Select()
-                    
-                    # 更新cell变量为新的选中单元格
-                    cell = xl.Selection
-                    self.log(f"已移动到下一行: {current_address} -> {cell.Address} (行: {cell.Row}, 列: {cell.Column})")
-                except Exception as e:
-                    self.log(f"错误: 无法移动到下一行 - {str(e)}")
-                    break
-                
-                time.sleep(0.1)  # 进一步减少等待时间
-            
-            if self.processing:  # 只有在正常完成时才显示"处理完成"
-                self.log("处理完成")
-            
-        except Exception as e:
-            self.log(f"错误: {str(e)}")
-        
+        except Exception as exc:
+            self.append_log(f"错误: {exc}")
         finally:
             self.processing = False
-    
-    def stop_processing(self):
-        """停止处理"""
+
+    def _click(self, key: str) -> None:
         if not self.processing:
-            messagebox.showinfo("提示", "当前没有正在进行的处理")
             return
-        
-        # 确保窗口处于活动状态
-        self.window.lift()
-        self.window.focus_force()
-        
-        # 显示停止处理的消息
-        messagebox.showinfo("提示", "处理已停止")
-    
-    def back_to_main(self):
-        """返回主界面"""
-        self.window.destroy()
-        self.main_window.show()
-    
-    def on_closing(self):
-        """处理窗口关闭事件"""
-        if self.processing:
-            if messagebox.askyesno("确认", "处理正在进行中，确定要关闭吗?"):
-                self.processing = False
-                # 等待处理线程结束
-                time.sleep(0.5)
-                self.window.destroy()
-                self.main_window.show()
-        else:
-            self.window.destroy()
-            self.main_window.show() 
+        pos = self.config["click_positions"][key]
+        pyautogui.click(pos["x"], pos["y"])
+        time.sleep(0.1)
+
+    def stop_processing(self) -> None:
+        if not self.processing:
+            show_info(self, "提示", "当前没有正在进行的处理")
+            return
+        show_info(self, "提示", "处理已停止")
+
+    def show_config_dialog(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("配置参数")
+        dialog.resize(680, 620)
+
+        dialog_layout = QVBoxLayout(dialog)
+        dialog_layout.setContentsMargins(24, 24, 24, 24)
+        dialog_layout.setSpacing(16)
+
+        loop_row = QHBoxLayout()
+        loop_label = BodyLabel("最大循环次数")
+        loop_spin = SpinBox()
+        loop_spin.setRange(1, 9999)
+        loop_spin.setValue(int(self.config.get("max_loops", 100)))
+        loop_row.addWidget(loop_label)
+        loop_row.addWidget(loop_spin)
+        loop_row.addStretch(1)
+        dialog_layout.addLayout(loop_row)
+
+        coord_row = QHBoxLayout()
+        coord_label = BodyLabel("坐标获取")
+        coord_display = CaptionLabel("X: 0, Y: 0")
+        coord_display.setTextColor("#7A8190", "#7A8190")
+        lock_label = CaptionLabel("按 F2 锁定/解锁坐标")
+        lock_label.setTextColor("#7A8190", "#7A8190")
+        coord_btn = PushButton("开始获取")
+        coord_row.addWidget(coord_label)
+        coord_row.addWidget(coord_display)
+        coord_row.addWidget(lock_label)
+        coord_row.addWidget(coord_btn)
+        coord_row.addStretch(1)
+        dialog_layout.addLayout(coord_row)
+
+        table = QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(["按钮", "X", "Y"])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+
+        positions = list(self.config["click_positions"].items())
+        table.setRowCount(len(positions))
+        for row, (key, coord) in enumerate(positions):
+            table.setItem(row, 0, QTableWidgetItem(key))
+            table.setItem(row, 1, QTableWidgetItem(str(coord["x"])))
+            table.setItem(row, 2, QTableWidgetItem(str(coord["y"])))
+
+        dialog_layout.addWidget(table, stretch=1)
+
+        button_row = QHBoxLayout()
+        save_btn = PrimaryPushButton("保存配置")
+        reset_btn = PushButton("重置默认")
+        cancel_btn = PushButton("取消")
+        button_row.addStretch(1)
+        button_row.addWidget(reset_btn)
+        button_row.addWidget(cancel_btn)
+        button_row.addWidget(save_btn)
+        dialog_layout.addLayout(button_row)
+
+        timer = QTimer(dialog)
+        locked_coords: tuple[int, int] | None = None
+
+        def update_coords():
+            nonlocal locked_coords
+            if locked_coords is not None:
+                x, y = locked_coords
+            else:
+                x, y = pyautogui.position()
+            coord_display.setText(f"X: {x}, Y: {y}")
+
+        def toggle_capture():
+            if timer.isActive():
+                timer.stop()
+                coord_btn.setText("开始获取")
+            else:
+                timer.start(100)
+                coord_btn.setText("停止获取")
+
+        def toggle_lock():
+            nonlocal locked_coords
+            if locked_coords is None:
+                locked_coords = pyautogui.position()
+                lock_label.setText("坐标已锁定 (F2 解锁)")
+                lock_label.setTextColor("#D14343", "#D14343")
+            else:
+                locked_coords = None
+                lock_label.setText("按 F2 锁定/解锁坐标")
+                lock_label.setTextColor("#7A8190", "#7A8190")
+
+        coord_btn.clicked.connect(toggle_capture)
+        timer.timeout.connect(update_coords)
+
+        # Use a local QShortcut to handle F2
+        from PySide6.QtGui import QShortcut
+
+        lock_shortcut = QShortcut(QKeySequence("F2"), dialog)
+        lock_shortcut.activated.connect(toggle_lock)
+
+        def save_config_values() -> None:
+            try:
+                self.config["max_loops"] = int(loop_spin.value())
+                for row, (key, _coord) in enumerate(positions):
+                    x_item = table.item(row, 1)
+                    y_item = table.item(row, 2)
+                    if not x_item or not y_item:
+                        continue
+                    self.config["click_positions"][key]["x"] = int(x_item.text())
+                    self.config["click_positions"][key]["y"] = int(y_item.text())
+
+                if self.save_config():
+                    show_info(self, "成功", "配置已保存")
+                    dialog.accept()
+                else:
+                    show_error(self, "错误", "保存配置失败，请检查文件权限")
+            except ValueError:
+                show_error(self, "错误", "请输入有效的数字")
+
+        def reset_config() -> None:
+            self.reset_to_default_config()
+            dialog.accept()
+
+        save_btn.clicked.connect(save_config_values)
+        reset_btn.clicked.connect(reset_config)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        dialog.exec()

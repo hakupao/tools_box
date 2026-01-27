@@ -1,281 +1,129 @@
-import os
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from __future__ import annotations
 
-from tkinterdnd2 import DND_FILES
+import os
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from qfluentwidgets import BodyLabel, CaptionLabel, LineEdit, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
 from ...utils.xlsx_sheet_splitter import XlsxSheetSplitter
-from ..theme import get_theme
+from ..qt_common import show_error, show_info, show_warning
 
 
-class XlsxSheetSplitterWindow:
-    """Excel 工作表拆分工具窗口。"""
-
-    def __init__(self, parent, main_window):
-        self.window = tk.Toplevel(parent)
-        self.window.title("工作表拆分工具")
-        self.window.geometry("850x600")
-        self.theme = get_theme(self.window)
-        self.colors = self.theme.colors
-        self.fonts = self.theme.fonts
-        self.window.configure(bg=self.colors.bg)
-
+class XlsxSheetSplitterPage(QWidget):
+    def __init__(self, main_window) -> None:
+        super().__init__()
+        self.setObjectName("xlsx_sheet_splitter")
         self.main_window = main_window
-        self.output_path = None
 
+        self.output_path: str | None = None
         self.sheet_splitter = XlsxSheetSplitter()
 
-        self.input_file_var = tk.StringVar()
-        self.output_path_var = tk.StringVar(value="默认输出到原文件所在目录")
-        self.progress_var = tk.DoubleVar()
+        self._build_ui()
+        self.setAcceptDrops(True)
 
-        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.window.drop_target_register(DND_FILES)
-        self.window.dnd_bind("<<Drop>>", self.handle_drop)
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 28, 32, 28)
+        layout.setSpacing(16)
 
-        self._create_widgets()
-        self.window.update()
-        self.window.minsize(850, 600)
+        header_layout = QHBoxLayout()
+        header_left = QVBoxLayout()
+        title = TitleLabel("工作表拆分工具")
+        subtitle = BodyLabel("每次只支持处理一个 Excel 文件")
+        subtitle.setTextColor("#6B7280", "#6B7280")
+        header_left.addWidget(title)
+        header_left.addWidget(subtitle)
+        header_left.addStretch(1)
 
-    def _create_widgets(self):
-        colors = self.colors
-        fonts = self.fonts
+        back_btn = PushButton("返回主页")
+        back_btn.clicked.connect(lambda: self.main_window.switch_to(self.main_window.home_interface))
 
-        main_frame = tk.Frame(
-            self.window,
-            bg=colors.surface,
-            padx=24,
-            pady=22,
-            highlightbackground=colors.stroke,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
+        header_layout.addLayout(header_left, stretch=1)
+        header_layout.addWidget(back_btn, alignment=Qt.AlignRight | Qt.AlignTop)
+        layout.addLayout(header_layout)
 
-        title_frame = tk.Frame(main_frame, bg=colors.surface)
-        title_frame.pack(fill=tk.X, pady=(0, 20))
+        file_row = QHBoxLayout()
+        file_label = BodyLabel("Excel 文件")
+        self.file_input = LineEdit()
+        self.file_input.setReadOnly(True)
+        select_btn = PushButton("选择文件")
+        select_btn.clicked.connect(self.select_file)
+        clear_btn = PushButton("清空")
+        clear_btn.clicked.connect(self.clear_file)
 
-        title_label = tk.Label(
-            title_frame,
-            text="工作表拆分工具",
-            font=fonts["title"],
-            fg=colors.text,
-            bg=colors.surface,
-        )
-        title_label.pack(side=tk.LEFT)
+        file_row.addWidget(file_label)
+        file_row.addWidget(self.file_input, stretch=1)
+        file_row.addWidget(select_btn)
+        file_row.addWidget(clear_btn)
+        layout.addLayout(file_row)
 
-        back_btn = tk.Button(
-            title_frame,
-            text="返回主界面",
-            command=self.back_to_main,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        back_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(back_btn, variant="secondary")
+        output_row = QHBoxLayout()
+        output_label = BodyLabel("输出路径")
+        self.output_note = CaptionLabel("默认输出到原文件所在目录")
+        self.output_note.setTextColor("#7A8190", "#7A8190")
+        select_output_btn = PushButton("选择输出路径")
+        select_output_btn.clicked.connect(self.select_output_path)
 
-        info_label = tk.Label(
-            main_frame,
-            text="提示：每次只支持处理一个 Excel 文件",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-            anchor="w",
-        )
-        info_label.pack(fill=tk.X, pady=(0, 10))
+        output_row.addWidget(output_label)
+        output_row.addWidget(self.output_note, stretch=1)
+        output_row.addWidget(select_output_btn)
+        layout.addLayout(output_row)
 
-        file_frame = tk.Frame(main_frame, bg=colors.surface)
-        file_frame.pack(fill=tk.X, pady=(0, 15))
+        self.progress_bar = ProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_label = CaptionLabel("")
+        self.progress_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.progress_label)
 
-        file_label = tk.Label(
-            file_frame,
-            text="Excel 文件：",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-        )
-        file_label.pack(side=tk.LEFT, padx=(0, 10))
+        self.split_btn = PrimaryPushButton("开始拆分")
+        self.split_btn.clicked.connect(self.split_file)
+        layout.addWidget(self.split_btn, alignment=Qt.AlignLeft)
 
-        file_entry = tk.Entry(
-            file_frame,
-            textvariable=self.input_file_var,
-            font=fonts["small"],
-            state="readonly",
-        )
-        file_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-        self.theme.style_entry(file_entry)
+        self.status_label = CaptionLabel("")
+        self.status_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.status_label)
 
-        select_file_btn = tk.Button(
-            file_frame,
-            text="选择文件",
-            command=self.select_file,
-            width=12,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        select_file_btn.pack(side=tk.LEFT, padx=(0, 5))
-        self.theme.style_button(select_file_btn, variant="secondary")
-
-        clear_btn = tk.Button(
-            file_frame,
-            text="清空",
-            command=self.clear_file,
-            width=8,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        clear_btn.pack(side=tk.LEFT)
-        self.theme.style_button(clear_btn, variant="ghost")
-
-        output_frame = tk.Frame(main_frame, bg=colors.surface)
-        output_frame.pack(fill=tk.X, pady=(0, 10))
-
-        output_label = tk.Label(
-            output_frame,
-            text="输出路径：",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface,
-        )
-        output_label.pack(side=tk.LEFT, padx=(0, 10))
-
-        output_path_label = tk.Label(
-            output_frame,
-            textvariable=self.output_path_var,
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-            anchor=tk.W,
-        )
-        output_path_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        select_output_btn = tk.Button(
-            output_frame,
-            text="选择输出路径",
-            command=self.select_output_path,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief="flat",
-            cursor="hand2",
-        )
-        select_output_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(select_output_btn, variant="secondary")
-
-        progress_frame = tk.Frame(main_frame, bg=colors.surface)
-        progress_frame.pack(fill=tk.X, pady=(10, 5))
-
-        self.progress_bar = ttk.Progressbar(
-            progress_frame,
-            variable=self.progress_var,
-            maximum=100,
-            mode="determinate",
-        )
-        self.progress_bar.pack(fill=tk.X, pady=(0, 5))
-
-        self.progress_label = tk.Label(
-            progress_frame,
-            text="",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-        )
-        self.progress_label.pack(fill=tk.X)
-
-        self.split_btn = tk.Button(
-            main_frame,
-            text="开始拆分",
-            command=self.split_file,
-            width=20,
-            height=2,
-            font=fonts["body_bold"],
-            relief="flat",
-            cursor="hand2",
-        )
-        self.split_btn.pack(pady=10)
-        self.theme.style_button(self.split_btn, variant="primary")
-
-        self.status_label = tk.Label(
-            main_frame,
-            text="",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-        )
-        self.status_label.pack(pady=(5, 0))
-
-    def back_to_main(self):
-        self.window.destroy()
-        self.main_window.show()
-
-    def on_closing(self):
-        self.window.destroy()
-        self.main_window.show()
-
-    def select_file(self):
-        file_path = filedialog.askopenfilename(
-            title="选择Excel文件",
-            filetypes=[("Excel文件", "*.xlsx")],
-        )
+    def select_file(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择 Excel 文件", "", "Excel 文件 (*.xlsx)")
         if file_path:
             self._set_file(file_path)
 
-    def clear_file(self):
-        self.input_file_var.set("")
-        self.status_label.config(text="")
-        self.progress_var.set(0)
-        self.progress_label.config(text="")
+    def clear_file(self) -> None:
+        self.file_input.clear()
+        self.status_label.setText("")
+        self.progress_bar.setValue(0)
+        self.progress_label.setText("")
 
-    def select_output_path(self):
-        folder = filedialog.askdirectory(title="选择输出文件夹")
+    def select_output_path(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
-            self.output_path_var.set(f"输出到: {folder}")
+            self.output_note.setText(f"输出到: {folder}")
 
-    def handle_drop(self, event):
-        files = self.window.tk.splitlist(event.data)
-        xlsx_files = [
-            path
-            for path in files
-            if os.path.isfile(path) and path.lower().endswith(".xlsx")
-        ]
-        if not xlsx_files:
-            return
+    def _set_file(self, file_path: str) -> None:
+        self.file_input.setText(file_path)
+        self.status_label.setText(f"已选择: {os.path.basename(file_path)}")
 
-        if len(xlsx_files) > 1:
-            messagebox.showwarning("提示", "仅支持一次处理一个Excel文件，已选择第一个文件。")
-
-        self._set_file(xlsx_files[0])
-
-    def _set_file(self, file_path: str):
-        self.input_file_var.set(file_path)
-        self.status_label.config(text=f"已选择: {os.path.basename(file_path)}")
-
-    def update_progress(self, current: int, total: int, sheet_name: str):
+    def update_progress(self, current: int, total: int, sheet_name: str) -> None:
         if total <= 0:
             return
-        progress = (current / total) * 100
-        self.progress_var.set(progress)
-        self.progress_label.config(text=f"正在处理: {sheet_name} ({current}/{total})")
-        self.window.update_idletasks()
+        progress = int((current / total) * 100)
+        self.progress_bar.setValue(progress)
+        self.progress_label.setText(f"正在处理: {sheet_name} ({current}/{total}) | {progress}%")
+        QApplication.processEvents()
 
-    def split_file(self):
-        input_file = self.input_file_var.get().strip()
+    def split_file(self) -> None:
+        input_file = self.file_input.text().strip()
         if not input_file:
-            messagebox.showwarning("提示", "请先选择要处理的 Excel 文件。")
+            show_warning(self, "提示", "请先选择要处理的 Excel 文件。")
             return
 
-        self.split_btn.configure(state=tk.DISABLED)
+        self.split_btn.setEnabled(False)
         try:
-            self.progress_var.set(0)
-            self.progress_label.config(text="")
+            self.progress_bar.setValue(0)
+            self.progress_label.setText("")
 
             result = self.sheet_splitter.split_file(
                 input_file,
@@ -290,21 +138,34 @@ class XlsxSheetSplitterWindow:
 
             if errors:
                 error_msg = "\n".join(errors)
-                messagebox.showwarning(
+                show_warning(
+                    self,
                     "处理完成",
                     f"已生成 {len(output_files)}/{total} 个 CSV 文件。\n\n"
                     f"输出目录：{output_dir}\n\n错误详情：\n{error_msg}",
                 )
             else:
-                messagebox.showinfo(
-                    "处理完成",
-                    f"成功拆分 {total} 个工作表！\n\n输出目录：{output_dir}",
-                )
+                show_info(self, "处理完成", f"成功拆分 {total} 个工作表！\n\n输出目录：{output_dir}")
 
-            self.status_label.config(text=f"输出目录: {output_dir}")
+            self.status_label.setText(f"输出目录: {output_dir}")
         except Exception as exc:  # pylint: disable=broad-except
-            messagebox.showerror("错误", f"拆分过程中发生错误：{exc}")
+            show_error(self, "错误", f"拆分过程中发生错误：{exc}")
         finally:
-            self.split_btn.configure(state=tk.NORMAL)
-            self.progress_var.set(0)
-            self.progress_label.config(text="")
+            self.split_btn.setEnabled(True)
+            self.progress_bar.setValue(0)
+            self.progress_label.setText("")
+
+    def dragEnterEvent(self, event):  # noqa: N802
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):  # noqa: N802
+        if not event.mimeData().hasUrls():
+            return
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if path and path.lower().endswith(".xlsx") and os.path.isfile(path):
+                self._set_file(path)
+                return

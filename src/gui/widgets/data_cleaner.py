@@ -1,394 +1,167 @@
-﻿import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from tkinterdnd2 import DND_FILES, TkinterDnD
-import os
-from ...utils.data_cleaning import DataCleaner
-from ..theme import get_theme
+from __future__ import annotations
 
-class DataCleanerWindow:
-    """数据清理窗口"""
-    def __init__(self, parent, main_window):
-        self.window = tk.Toplevel(parent)
-        self.window.title("数据清理工具")
-        self.window.geometry("800x600")
-        self.theme = get_theme(self.window)
-        self.colors = self.theme.colors
-        self.fonts = self.theme.fonts
-        self.window.configure(bg=self.colors.bg)
-        
-        # 保存主窗口引用
+import os
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from qfluentwidgets import BodyLabel, CaptionLabel, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
+
+from ...utils.data_cleaning import DataCleaner
+from ..qt_common import FileListWidget, show_error, show_info, show_warning
+
+
+class DataCleanerPage(QWidget):
+    def __init__(self, main_window) -> None:
+        super().__init__()
+        self.setObjectName("data_cleaner")
         self.main_window = main_window
-        
-        # 绑定关闭事件
-        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
-        # 设置拖放
-        self.window.drop_target_register(DND_FILES)
-        self.window.dnd_bind('<<Drop>>', self.handle_drop)
-        
-        # 初始化输出路径
-        self.output_path = None
-        
-        # 初始化转换器
+
+        self.output_path: str | None = None
         self.converter = DataCleaner()
-        
-        self._create_widgets()
-        
-        # 设置窗口最小尺寸
-        self.window.update()
-        self.window.minsize(800, 600)
-    
-    def _create_widgets(self):
-        colors = self.colors
-        fonts = self.fonts
-        # 创建主框架
-        main_frame = tk.Frame(
-            self.window,
-            bg=colors.surface,
-            padx=24,
-            pady=22,
-            highlightbackground=colors.stroke,
-            highlightthickness=1,
-            bd=0,
-        )
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
-        
-        # 创建标题框架
-        title_frame = tk.Frame(main_frame, bg=colors.surface)
-        title_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        # 创建标题
-        title_label = tk.Label(
-            title_frame,
-            text="数据清理工具",
-            font=fonts["title"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        title_label.pack(side=tk.LEFT)
-        
-        # 创建返回按钮
-        back_btn = tk.Button(
-            title_frame,
-            text="返回主界面",
-            command=self.back_to_main,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief='flat',
-            cursor='hand2'
-        )
-        back_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(back_btn, variant="secondary")
-        
-        # 创建文件选择区域
-        file_frame = tk.Frame(main_frame, bg=colors.surface)
-        file_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        upload_rule_btn = tk.Button(
-            file_frame,
-            text="上传仕样书",
-            command=self.select_rule_file,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief='flat',
-            cursor='hand2'
-        )
-        upload_rule_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(upload_rule_btn, variant="warning")
-        
-        
-        # 文件选择按钮
-        select_file_btn = tk.Button(
-            file_frame,
-            text="选择文件",
-            command=self.select_file,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief='flat',
-            cursor='hand2'
-        )
-        select_file_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(select_file_btn, variant="secondary")
-        
-        select_folder_btn = tk.Button(
-            file_frame,
-            text="选择文件夹",
-            command=self.select_folder,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief='flat',
-            cursor='hand2'
-        )
-        select_folder_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(select_folder_btn, variant="secondary")
-        
-        # 添加清空列表按钮
-        clear_list_btn = tk.Button(
-            file_frame,
-            text="清空列表",
-            command=self.clear_file_list,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief='flat',
-            cursor='hand2'
-        )
-        clear_list_btn.pack(side=tk.LEFT, padx=5)
-        self.theme.style_button(clear_list_btn, variant="ghost")
-        
-        # 文件列表标签
-        list_label = tk.Label(
-            main_frame,
-            text="待处理文件：",
-            font=fonts["body_bold"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        list_label.pack(anchor='w')
-        
-        # 创建列表框架
-        list_frame = tk.Frame(main_frame, bg=colors.surface)
-        list_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 10))
-        
-        # 文件列表
-        self.file_listbox = tk.Listbox(
-            list_frame,
-            font=fonts["mono"],
-            selectmode=tk.EXTENDED
-        )
-        self.file_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.theme.style_listbox(self.file_listbox)
-        
-        # 添加滚动条
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.file_listbox.configure(yscrollcommand=scrollbar.set)
-        
-        # 输出路径选择区域
-        output_frame = tk.Frame(main_frame, bg=colors.surface)
-        output_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 输出路径标签
-        output_label = tk.Label(
-            output_frame,
-            text="输出路径：",
-            font=fonts["body"],
-            fg=colors.text,
-            bg=colors.surface
-        )
-        output_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 输出路径显示
-        self.output_path_var = tk.StringVar(value="默认输出到原文件所在目录")
-        self.output_path_label = tk.Label(
-            output_frame,
-            textvariable=self.output_path_var,
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface,
-            anchor=tk.W
-        )
-        self.output_path_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # 选择输出路径按钮
-        select_output_btn = tk.Button(
-            output_frame,
-            text="选择输出路径",
-            command=self.select_output_path,
-            width=15,
-            height=1,
-            font=fonts["body"],
-            relief='flat',
-            cursor='hand2'
-        )
-        select_output_btn.pack(side=tk.RIGHT)
-        self.theme.style_button(select_output_btn, variant="secondary")
-        
-        # 进度显示区域
-        progress_frame = tk.Frame(main_frame, bg=colors.surface)
-        progress_frame.pack(fill=tk.X, pady=(10, 5))
-        
-        # 进度条
-        self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(
-            progress_frame,
-            variable=self.progress_var,
-            maximum=100,
-            mode='determinate'
-        )
-        self.progress_bar.pack(fill=tk.X, pady=(0, 5))
-        
-        # 进度详情标签
-        self.progress_label = tk.Label(
-            progress_frame,
-            text="",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface
-        )
-        self.progress_label.pack(fill=tk.X)
-        
-        # 转换按钮
-        self.convert_btn = tk.Button(
-            main_frame,
-            text="开始转换",
-            command=self.convert_files,
-            width=20,
-            height=2,
-            font=fonts["body_bold"],
-            relief='flat',
-            cursor='hand2'
-        )
-        self.convert_btn.pack(pady=10)
-        self.theme.style_button(self.convert_btn, variant="primary")
-        
-        # 状态标签
-        self.status_label = tk.Label(
-            main_frame,
-            text="",
-            font=fonts["small"],
-            fg=colors.text_muted,
-            bg=colors.surface
-        )
-        self.status_label.pack(pady=(5, 0))
-    
-    def back_to_main(self):
-        """返回主界面"""
-        self.window.destroy()
-        self.main_window.show()
-    
-    def on_closing(self):
-        """处理窗口关闭事件"""
-        self.window.destroy()
-        self.main_window.show()
-    
-    def update_progress(self, current: int, total: int, current_file: str):
-        """更新进度显示"""
-        progress = (current / total) * 100
-        self.progress_var.set(progress)
-        self.progress_label.config(text=f"正在处理: {current_file} ({current}/{total})")
-        self.window.update()
-    
-    def handle_drop(self, event):
-        """处理文件拖放"""
-        files = self.window.tk.splitlist(event.data)
-        for file in files:
-            if os.path.isfile(file) and file.lower().endswith('.csv'):
-                if file not in self.file_listbox.get(0, tk.END):
-                    self.file_listbox.insert(tk.END, file)
-            elif os.path.isdir(file):
-                # 如果是文件夹，添加所有CSV文件
-                for root, _, filenames in os.walk(file):
-                    for filename in filenames:
-                        if filename.lower().endswith('.csv'):
-                            full_path = os.path.join(root, filename)
-                            if full_path not in self.file_listbox.get(0, tk.END):
-                                self.file_listbox.insert(tk.END, full_path)
-    
-    def select_file(self):
-        """选择单个或多个文件"""
-        files = filedialog.askopenfilenames(
-            title="选择CSV文件",
-            filetypes=[("CSV文件", "*.csv")]
-        )
-        for file in files:
-            if file not in self.file_listbox.get(0, tk.END):
-                self.file_listbox.insert(tk.END, file)
-                
-    def select_rule_file(self):
-        """选择EXCEL仕样书文件"""
-        file_path = filedialog.askopenfilename(
-            title="选择仕样书文件",
-            filetypes=[("Excel files", "*.xlsx")]
-            )
+
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 28, 32, 28)
+        layout.setSpacing(16)
+
+        header_layout = QHBoxLayout()
+        header_left = QVBoxLayout()
+        title = TitleLabel("数据清洗工具")
+        subtitle = BodyLabel("基于仕样书规则进行数据清洗")
+        subtitle.setTextColor("#6B7280", "#6B7280")
+        header_left.addWidget(title)
+        header_left.addWidget(subtitle)
+        header_left.addStretch(1)
+
+        back_btn = PushButton("返回主页")
+        back_btn.clicked.connect(lambda: self.main_window.switch_to(self.main_window.home_interface))
+
+        header_layout.addLayout(header_left, stretch=1)
+        header_layout.addWidget(back_btn, alignment=Qt.AlignRight | Qt.AlignTop)
+        layout.addLayout(header_layout)
+
+        action_row = QHBoxLayout()
+        upload_rule_btn = PushButton("上传仕样书")
+        upload_rule_btn.clicked.connect(self.select_rule_file)
+        select_file_btn = PushButton("选择文件")
+        select_file_btn.clicked.connect(self.select_file)
+        select_folder_btn = PushButton("选择文件夹")
+        select_folder_btn.clicked.connect(self.select_folder)
+        clear_btn = PushButton("清空列表")
+        clear_btn.clicked.connect(self.clear_file_list)
+
+        action_row.addWidget(upload_rule_btn)
+        action_row.addWidget(select_file_btn)
+        action_row.addWidget(select_folder_btn)
+        action_row.addWidget(clear_btn)
+        action_row.addStretch(1)
+        layout.addLayout(action_row)
+
+        self.file_list = FileListWidget(allowed_exts=[".csv"])
+        layout.addWidget(self.file_list, stretch=1)
+
+        output_row = QHBoxLayout()
+        output_label = BodyLabel("输出路径")
+        self.output_note = CaptionLabel("默认输出到原文件所在目录")
+        self.output_note.setTextColor("#7A8190", "#7A8190")
+        select_output_btn = PushButton("选择输出路径")
+        select_output_btn.clicked.connect(self.select_output_path)
+
+        output_row.addWidget(output_label)
+        output_row.addWidget(self.output_note, stretch=1)
+        output_row.addWidget(select_output_btn)
+        layout.addLayout(output_row)
+
+        self.progress_bar = ProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_label = CaptionLabel("")
+        self.progress_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.progress_bar)
+
+        self.convert_btn = PrimaryPushButton("开始转换")
+        self.convert_btn.clicked.connect(self.convert_files)
+        layout.addWidget(self.convert_btn, alignment=Qt.AlignLeft)
+        layout.addWidget(self.progress_label)
+
+        self.status_label = CaptionLabel("")
+        self.status_label.setTextColor("#7A8190", "#7A8190")
+        layout.addWidget(self.status_label)
+
+    def select_rule_file(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择仕样书文件", "", "Excel 文件 (*.xlsx)")
         if file_path:
             try:
-                # 调用DataCleaner的select_rule_file方法处理仕样书文件
                 self.converter.select_rule_file(file_path)
-                self.rule_file = file_path
-                self.status_label.config(text=f"已加载仕样书: {os.path.basename(file_path)}")
-            except Exception as e:
-                messagebox.showerror("错误", f"加载仕样书时发生错误: {str(e)}")
+                self.status_label.setText(f"已加载仕样书: {os.path.basename(file_path)}")
+            except Exception as exc:  # pylint: disable=broad-except
+                show_error(self, "错误", f"加载仕样书时发生错误: {exc}")
 
-    def select_folder(self):
-        """选择文件夹"""
-        folder = filedialog.askdirectory(title="选择包含CSV文件的文件夹")
+    def select_file(self) -> None:
+        files, _ = QFileDialog.getOpenFileNames(self, "选择 CSV 文件", "", "CSV 文件 (*.csv)")
+        if files:
+            self.file_list.add_paths(files)
+
+    def select_folder(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "选择包含 CSV 文件的文件夹")
         if folder:
-            for root, _, files in os.walk(folder):
-                for file in files:
-                    if file.lower().endswith('.csv'):
-                        full_path = os.path.join(root, file)
-                        if full_path not in self.file_listbox.get(0, tk.END):
-                            self.file_listbox.insert(tk.END, full_path)
-    
-    def select_output_path(self):
-        """选择输出路径"""
-        folder = filedialog.askdirectory(title="选择输出文件夹")
+            self.file_list.add_paths([folder])
+
+    def select_output_path(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
-            self.output_path_var.set(f"输出到: {folder}")
-    
-    def convert_files(self):
-        """转换文件"""
-        files = list(self.file_listbox.get(0, tk.END))
+            self.output_note.setText(f"输出到: {folder}")
+
+    def update_progress(self, current: int, total: int, current_file: str) -> None:
+        if total <= 0:
+            return
+        progress = int((current / total) * 100)
+        self.progress_bar.setValue(progress)
+        self.progress_label.setText(f"正在处理: {current_file} ({current}/{total}) | {progress}%")
+        QApplication.processEvents()
+
+    def convert_files(self) -> None:
+        files = self.file_list.paths()
         if not files:
-            messagebox.showwarning("警告", "请先选择要转换的CSV文件！")
+            show_warning(self, "警告", "请先选择要转换的 CSV 文件！")
             return
-        
-        # 检查是否已加载仕样书
-        if not hasattr(self.converter, 'rule_file') or self.converter.rule_file is None:
-            messagebox.showwarning("警告", "请先上传仕样书！")
+
+        if not getattr(self.converter, "rule_file", None):
+            show_warning(self, "警告", "请先上传仕样书！")
             return
-        
-        # 禁用转换按钮
-        self.convert_btn.config(state=tk.DISABLED)
-        
+
+        self.convert_btn.setEnabled(False)
         try:
-            # 开始转换
             total = len(files)
             success_count = 0
             error_files = []
-            
+
             for i, file in enumerate(files, 1):
                 try:
-                    # 更新进度
-                    filename = os.path.basename(file)
-                    self.update_progress(i, total, filename)
-                    
-                    # 转换文件
+                    self.update_progress(i, total, os.path.basename(file))
                     success = self.converter.clean_csv_file(file, self.output_path)
                     if success:
                         success_count += 1
                     else:
                         error_files.append(file)
-                    
-                except Exception as e:
-                    error_files.append(f"{file} (错误: {str(e)})")
-            
-            # 显示结果
+                except Exception as exc:  # pylint: disable=broad-except
+                    error_files.append(f"{file} (错误: {exc})")
+
             if error_files:
                 error_msg = "以下文件转换失败：\n\n" + "\n".join(error_files)
-                messagebox.showwarning("转换完成", f"成功转换 {success_count}/{total} 个文件\n\n{error_msg}")
+                show_warning(self, "转换完成", f"成功转换 {success_count}/{total} 个文件\n\n{error_msg}")
             else:
-                messagebox.showinfo("转换完成", f"成功转换所有 {total} 个文件！")
-            
-            # 清空进度显示
-            self.progress_var.set(0)
-            self.progress_label.config(text="")
-            
-        except Exception as e:
-            messagebox.showerror("错误", f"转换过程中发生错误：{str(e)}")
-        
+                show_info(self, "转换完成", f"成功转换所有 {total} 个文件！")
+
+            self.progress_bar.setValue(0)
+            self.progress_label.setText("")
+        except Exception as exc:  # pylint: disable=broad-except
+            show_error(self, "错误", f"转换过程中发生错误：{exc}")
         finally:
-            # 恢复按钮
-            self.convert_btn.configure(state=tk.NORMAL) 
-    
-    def clear_file_list(self):
-        """清空文件列表"""
-        self.file_listbox.delete(0, tk.END)
-        self.status_label.config(text="") 
-        
+            self.convert_btn.setEnabled(True)
+
+    def clear_file_list(self) -> None:
+        self.file_list.clear()
+        self.status_label.setText("")
