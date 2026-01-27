@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QCursor, QGuiApplication
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -243,6 +243,7 @@ class MainWindow(FluentWindow):
         self.setWindowTitle("工具箱")
         self.resize(1280, 860)
         self.setMinimumSize(1160, 760)
+        self._did_center = False
         try:
             self.setMicaEffectEnabled(False)
         except Exception:
@@ -270,6 +271,29 @@ class MainWindow(FluentWindow):
         self._register_tool_page("xlsx_sheet_splitter", XlsxSheetSplitterPage(self), FIF.CLIPPING_TOOL, "工作表拆分")
 
         self.switch_to(self.home_interface)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if self._did_center:
+            return
+        self._did_center = True
+        self._center_on_screen()
+
+    def _center_on_screen(self) -> None:
+        screen = None
+        handle = self.windowHandle()
+        if handle is not None:
+            screen = handle.screen()
+        if screen is None:
+            screen = QGuiApplication.screenAt(QCursor.pos())
+        if screen is None:
+            screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        frame = self.frameGeometry()
+        frame.moveCenter(available.center())
+        self.move(frame.topLeft())
 
     def _register_tool_page(self, tool_id: str, page: QWidget, icon, title: str) -> None:
         self.tool_pages[tool_id] = page

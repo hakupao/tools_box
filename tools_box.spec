@@ -92,7 +92,15 @@ a = Analysis(
         'tkinter', 
         'tkinterdnd2', 
         'tkinterdnd2.TkinterDnD',
+        'PySide6',
+        'PySide6.QtCore',
+        'PySide6.QtGui',
+        'PySide6.QtWidgets',
+        'PySide6.QtSvg',
+        'PySide6.QtSvgWidgets',
+        'qfluentwidgets',
         'pandas',
+        'numpy',
         'openpyxl',
         'pyautogui',
         'pygetwindow',
@@ -100,19 +108,26 @@ a = Analysis(
         'pythoncom',   # 替代 pywin32
         'win32api',    # Windows API
         'win32con',    # Windows 常量
+        'win32com',
+        'win32com.client',
+        'win32gui',
         'mouse',
         'keyboard',
+        'requests',
+        'bs4',
         'json',        # 确保 JSON 支持
         'pathlib',     # 路径处理
         'shutil',      # 文件操作
         'backports.tarfile',  # 解决 backports 命名空间下缺失 tarfile 的问题
         'pkg_resources',      # 让 PyInstaller 正确收集 pkg_resources 依赖
+        'jaraco.text',        # pkg_resources 运行时依赖
+        'platformdirs',       # pkg_resources 运行时依赖
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'PyQt5', 'PyQt6', 'PySide6', 'PySide2',  # 排除不需要的GUI框架
+        'PyQt5', 'PyQt6', 'PySide2',  # 排除不需要的GUI框架
         'IPython', 'jedi',  # 排除开发工具
         'matplotlib', 'numpy.distutils',  # 排除不需要的科学计算库
         'PIL.ImageTk',  # 如果不使用图像处理

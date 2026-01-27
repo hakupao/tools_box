@@ -1,4 +1,5 @@
 pandas==2.1.4
+numpy==1.26.4
 openpyxl==3.1.2
 pyinstaller==6.3.0
 pyautogui==0.9.54
@@ -7,7 +8,10 @@ pywin32==306
 mouse
 keyboard==0.13.5
 pyperclip>=1.8.2
+tkinterdnd2
 backports.tarfile>=1.2.0
+jaraco.text>=3.7
+platformdirs>=4.2.2
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 PySide6>=6.5.0
