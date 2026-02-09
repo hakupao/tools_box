@@ -1,11 +1,9 @@
 import os
 import pandas as pd
-from typing import Tuple, Optional, Dict, Any
-import random
-import string
-from datetime import datetime, timedelta
+from typing import Optional
+from datetime import datetime
 
-class DataMaskingProcessor:
+class DataMaskingService:
     """SDTM数据集模糊化处理器"""
     
     def __init__(self):
@@ -288,4 +286,4 @@ class DataMaskingProcessor:
     def clear_baseline(self):
         """清空基准USUBJID列表"""
         self.baseline_usubjid.clear()
-        print("已清空基准USUBJID列表") 
+        print("已清空基准USUBJID列表")

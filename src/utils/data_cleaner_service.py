@@ -1,7 +1,7 @@
 ﻿import pandas as pd
 import os
 
-class DataCleaner:
+class DataCleanerService:
     # 常量数组
     NEED_KEY = ['○','〇','◯']  # 根据实际情况填写
 

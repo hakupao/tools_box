@@ -7,7 +7,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set
 from openpyxl import load_workbook
 
 
-class XlsxSheetSplitter:
+class XlsxSheetSplitterService:
     """Excel 工作表拆分处理器。"""
 
     INVALID_CHARS_PATTERN = re.compile(r'[<>:"/\\|?*]')
@@ -140,7 +140,7 @@ class XlsxSheetSplitter:
         max_nonempty_col = -1
 
         for row in rows:
-            string_row = [XlsxSheetSplitter._cell_to_string(cell) for cell in row]
+            string_row = [XlsxSheetSplitterService._cell_to_string(cell) for cell in row]
             for idx in range(len(string_row) - 1, -1, -1):
                 if string_row[idx] != "":
                     if idx > max_nonempty_col:
@@ -172,7 +172,7 @@ class XlsxSheetSplitter:
 
         if getattr(cell, "is_date", False) and isinstance(value, (datetime, date)):
             number_format = getattr(cell, "number_format", "")
-            return XlsxSheetSplitter._format_excel_date(value, number_format)
+            return XlsxSheetSplitterService._format_excel_date(value, number_format)
 
         return str(value)
 
@@ -189,15 +189,15 @@ class XlsxSheetSplitter:
         else:
             date_part, time_part = fmt, ""
 
-        date_tokens = XlsxSheetSplitter._extract_date_tokens(date_part)
-        sep = XlsxSheetSplitter._detect_date_separator(date_part)
-        date_str = XlsxSheetSplitter._render_date_tokens(value, date_tokens, sep)
+        date_tokens = XlsxSheetSplitterService._extract_date_tokens(date_part)
+        sep = XlsxSheetSplitterService._detect_date_separator(date_part)
+        date_str = XlsxSheetSplitterService._render_date_tokens(value, date_tokens, sep)
 
-        include_time = XlsxSheetSplitter._should_include_time(value, time_part)
+        include_time = XlsxSheetSplitterService._should_include_time(value, time_part)
         if not include_time:
             return date_str
 
-        time_str = XlsxSheetSplitter._render_time(value, time_part)
+        time_str = XlsxSheetSplitterService._render_time(value, time_part)
         return f"{date_str} {time_str}"
 
     @staticmethod

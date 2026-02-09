@@ -5,7 +5,7 @@ from typing import Callable, Dict, Iterable, List, Optional
 import pandas as pd
 
 
-class FileFieldExtractor:
+class FileFieldExtractorService:
     """Extract field names from supported flat files and spreadsheets."""
 
     SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xlsm"}

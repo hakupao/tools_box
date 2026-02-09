@@ -6,18 +6,18 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
-from ...utils.data_masking_processor import DataMaskingProcessor
+from ...utils.codelist_service import CodelistService
 from ..qt_common import FileListWidget, show_error, show_info, show_warning
 
 
-class DataMaskingPage(QWidget):
+class CodelistProcessorPage(QWidget):
     def __init__(self, main_window) -> None:
         super().__init__()
-        self.setObjectName("data_masking")
+        self.setObjectName("codelist_processor")
         self.main_window = main_window
 
         self.output_path: str | None = None
-        self.processor = DataMaskingProcessor()
+        self.processor = CodelistService()
 
         self._build_ui()
 
@@ -28,8 +28,8 @@ class DataMaskingPage(QWidget):
 
         header_layout = QHBoxLayout()
         header_left = QVBoxLayout()
-        title = TitleLabel("数据模糊化工具")
-        subtitle = BodyLabel("对敏感数据进行脱敏处理")
+        title = TitleLabel("Codelist 处理工具")
+        subtitle = BodyLabel("根据 Codelist 规则处理 CSV")
         subtitle.setTextColor("#6B7280", "#6B7280")
         header_left.addWidget(title)
         header_left.addWidget(subtitle)
@@ -43,6 +43,8 @@ class DataMaskingPage(QWidget):
         layout.addLayout(header_layout)
 
         action_row = QHBoxLayout()
+        upload_codelist_btn = PushButton("上传 Codelist")
+        upload_codelist_btn.clicked.connect(self.select_codelist_file)
         select_file_btn = PushButton("选择文件")
         select_file_btn.clicked.connect(self.select_file)
         select_folder_btn = PushButton("选择文件夹")
@@ -50,6 +52,7 @@ class DataMaskingPage(QWidget):
         clear_btn = PushButton("清空列表")
         clear_btn.clicked.connect(self.clear_file_list)
 
+        action_row.addWidget(upload_codelist_btn)
         action_row.addWidget(select_file_btn)
         action_row.addWidget(select_folder_btn)
         action_row.addWidget(clear_btn)
@@ -86,6 +89,15 @@ class DataMaskingPage(QWidget):
         self.status_label.setTextColor("#7A8190", "#7A8190")
         layout.addWidget(self.status_label)
 
+    def select_codelist_file(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择 Codelist 文件", "", "Excel 文件 (*.xlsx)")
+        if file_path:
+            try:
+                self.processor.select_codelist_file(file_path)
+                self.status_label.setText(f"已加载 Codelist: {os.path.basename(file_path)}")
+            except Exception as exc:  # pylint: disable=broad-except
+                show_error(self, "错误", f"加载 Codelist 时发生错误: {exc}")
+
     def select_file(self) -> None:
         files, _ = QFileDialog.getOpenFileNames(self, "选择 CSV 文件", "", "CSV 文件 (*.csv)")
         if files:
@@ -116,30 +128,20 @@ class DataMaskingPage(QWidget):
             show_warning(self, "警告", "请先选择要处理的 CSV 文件！")
             return
 
+        if not getattr(self.processor, "codelist_file", None):
+            show_warning(self, "警告", "请先上传 Codelist 文件！")
+            return
+
         self.process_btn.setEnabled(False)
         try:
             total = len(files)
             success_count = 0
             error_files = []
 
-            dm_file = None
-            for file in files:
-                if os.path.basename(file).upper() == "DM.CSV":
-                    dm_file = file
-                    break
-
-            if dm_file:
-                self.update_progress(0, total, "正在设置基准数据...")
-                baseline_success = self.processor.set_baseline_from_dm(dm_file)
-                if not baseline_success:
-                    show_warning(self, "警告", "无法从 DM.csv 设置基准 USUBJID，将处理所有数据")
-            else:
-                show_info(self, "提示", "未找到 DM.csv 文件，将处理所有数据")
-
             for i, file in enumerate(files, 1):
                 try:
                     self.update_progress(i, total, os.path.basename(file))
-                    success = self.processor.process_file(file, self.output_path)
+                    success = self.processor.process_csv_file(file, self.output_path)
                     if success:
                         success_count += 1
                     else:
@@ -155,7 +157,6 @@ class DataMaskingPage(QWidget):
 
             self.progress_bar.setValue(0)
             self.progress_label.setText("")
-            self.processor.clear_baseline()
         except Exception as exc:  # pylint: disable=broad-except
             show_error(self, "错误", f"处理过程中发生错误：{exc}")
         finally:

@@ -15,7 +15,7 @@ from qfluentwidgets import (
     TitleLabel,
 )
 
-from ...utils.file_field_extractor import FileFieldExtractor
+from ...utils.file_field_extractor_service import FileFieldExtractorService
 from ..qt_common import show_error, show_info, show_warning, mono_font
 
 
@@ -25,7 +25,7 @@ class FileFieldExtractorPage(QWidget):
         self.setObjectName("file_field_extractor")
         self.main_window = main_window
 
-        self.extractor = FileFieldExtractor()
+        self.extractor = FileFieldExtractorService()
         self.output_file: str | None = None
 
         self._build_ui()

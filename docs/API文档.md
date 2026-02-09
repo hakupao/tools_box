@@ -1,6 +1,6 @@
 # Tools Box API 文档
 
-本文档详细说明了工具箱中各个处理器类的接口和使用方法。
+本文档详细说明了工具箱中各个服务类的接口和使用方法。
 
 ## 目录
 
@@ -52,7 +52,7 @@ print(result)  # "2024-12-19"
 
 ## CSV转换器 API
 
-### `CsvToXlsxConverter`
+### `CsvToXlsxConverterService`
 
 将 CSV 文件转换为 XLSX 格式。
 
@@ -71,9 +71,9 @@ print(result)  # "2024-12-19"
 
 #### 示例
 ```python
-from src.utils.csv_to_xlsx_converter import CsvToXlsxConverter
+from src.utils.csv_to_xlsx_converter_service import CsvToXlsxConverterService
 
-converter = CsvToXlsxConverter()
+converter = CsvToXlsxConverterService()
 success, error = converter.convert_file("data.csv", "output/")
 if success:
     print("转换成功")
@@ -85,7 +85,7 @@ else:
 
 ## CSV编码转换器 API
 
-### `CsvEncodingConverter`
+### `CsvEncodingConverterService`
 
 将 CSV 文件重新保存为目标编码（默认 UTF-8 BOM）。
 
@@ -104,9 +104,9 @@ else:
 
 #### 示例
 ```python
-from src.utils.csv_encoding_converter import CsvEncodingConverter
+from src.utils.csv_encoding_converter_service import CsvEncodingConverterService
 
-converter = CsvEncodingConverter()
+converter = CsvEncodingConverterService()
 success, error = converter.convert_file("data.csv")
 ```
 
@@ -114,7 +114,7 @@ success, error = converter.convert_file("data.csv")
 
 ## XLSX转换器 API
 
-### `XlsxToCsvConverter`
+### `XlsxToCsvConverterService`
 
 将 XLSX 文件转换为 CSV 格式。
 
@@ -138,9 +138,9 @@ success, error = converter.convert_file("data.csv")
 
 #### 示例
 ```python
-from src.utils.xlsx_to_csv_converter import XlsxToCsvConverter
+from src.utils.xlsx_to_csv_converter_service import XlsxToCsvConverterService
 
-converter = XlsxToCsvConverter()
+converter = XlsxToCsvConverterService()
 success, error = converter.convert_file("data.xlsx")
 ```
 
@@ -148,7 +148,7 @@ success, error = converter.convert_file("data.xlsx")
 
 ## 工作表拆分器 API
 
-### `XlsxSheetSplitter`
+### `XlsxSheetSplitterService`
 
 将 Excel 文件按工作表拆分为 CSV 文件。
 
@@ -174,9 +174,9 @@ success, error = converter.convert_file("data.xlsx")
 
 #### 示例
 ```python
-from src.utils.xlsx_sheet_splitter import XlsxSheetSplitter
+from src.utils.xlsx_sheet_splitter_service import XlsxSheetSplitterService
 
-splitter = XlsxSheetSplitter()
+splitter = XlsxSheetSplitterService()
 result = splitter.split_file("data.xlsx", "output/")
 print(result["output_files"])
 ```
@@ -185,7 +185,7 @@ print(result["output_files"])
 
 ## 全角转半角转换器 API
 
-### `FullwidthToHalfwidthConverter`
+### `FullwidthHalfwidthService`
 
 将文本中的全角字符转换为半角字符。
 
@@ -228,9 +228,9 @@ print(result["output_files"])
 
 #### 示例
 ```python
-from src.utils.fullwidth_to_halfwidth_converter import FullwidthToHalfwidthConverter
+from src.utils.fullwidth_halfwidth_service import FullwidthHalfwidthService
 
-converter = FullwidthToHalfwidthConverter()
+converter = FullwidthHalfwidthService()
 result = converter.convert_text("１２３ＡＢＣ")
 print(result)  # "123ABC"
 ```
@@ -239,7 +239,7 @@ print(result)  # "123ABC"
 
 ## 数据清洗器 API
 
-### `DataCleaner`
+### `DataCleanerService`
 
 基于仕样书规则进行数据清洗。
 
@@ -283,9 +283,9 @@ print(result)  # "123ABC"
 
 #### 示例
 ```python
-from src.utils.data_cleaning import DataCleaner
+from src.utils.data_cleaner_service import DataCleanerService
 
-cleaner = DataCleaner()
+cleaner = DataCleanerService()
 cleaner.select_rule_file("rules.xlsx")
 success = cleaner.clean_csv_file("data.csv", "output/")
 ```
@@ -294,7 +294,7 @@ success = cleaner.clean_csv_file("data.csv", "output/")
 
 ## Codelist处理器 API
 
-### `CodelistProcessor`
+### `CodelistService`
 
 根据 Codelist 文件进行编码映射。
 
@@ -339,9 +339,9 @@ success = cleaner.clean_csv_file("data.csv", "output/")
 
 #### 示例
 ```python
-from src.utils.codelist_process import CodelistProcessor
+from src.utils.codelist_service import CodelistService
 
-processor = CodelistProcessor()
+processor = CodelistService()
 processor.select_codelist_file("codelist.xlsx")
 success = processor.process_csv_file("data.csv")
 ```
@@ -350,7 +350,7 @@ success = processor.process_csv_file("data.csv")
 
 ## 数据模糊化处理器 API
 
-### `DataMaskingProcessor`
+### `DataMaskingService`
 
 SDTM 数据集模糊化处理器。
 
@@ -396,9 +396,9 @@ SDTM 数据集模糊化处理器。
 
 #### 示例
 ```python
-from src.utils.data_masking_processor import DataMaskingProcessor
+from src.utils.data_masking_service import DataMaskingService
 
-processor = DataMaskingProcessor()
+processor = DataMaskingService()
 processor.set_baseline_from_dm("DM.csv")
 success = processor.process_file("AE.csv")
 ```
@@ -407,7 +407,7 @@ success = processor.process_file("AE.csv")
 
 ## CSV引号去除处理器 API
 
-### `CsvQuoteRemoverProcessor`
+### `CsvQuoteRemoverService`
 
 CSV 文件引号清理处理器。
 
@@ -442,9 +442,9 @@ CSV 文件引号清理处理器。
 
 #### 示例
 ```python
-from src.utils.csv_quote_remover_processor import CsvQuoteRemoverProcessor
+from src.utils.csv_quote_remover_service import CsvQuoteRemoverService
 
-processor = CsvQuoteRemoverProcessor()
+processor = CsvQuoteRemoverService()
 success, error = processor.process_file("data.csv")
 if success:
     print("处理成功")
@@ -454,23 +454,24 @@ if success:
 
 ## XLSX重构处理器 API
 
-### `FileRestructure`
+### `XlsxRestructureService`
 
 XLSX 文件重构为标准 CDISC SDTM 格式。
 
 #### 方法
 
-##### `restructure_file(input_file, output_path=None, study_id="CIRCULATE")`
+##### `file_restructure(input_file, output_path=None, studyid="CIRCULATE", patients_mapping=None)`
 
 重构 XLSX 文件为标准格式。
 
 **参数:**
 - `input_file` (str): 输入 XLSX 文件路径
 - `output_path` (str, optional): 输出路径
-- `study_id` (str): 研究ID
+- `studyid` (str): 研究ID
+- `patients_mapping` (dict, optional): SUBJID 到 USUBJID 的映射字典
 
 **返回值:**
-- `bool`: 重构是否成功
+- `Tuple[bool, str]`: (是否成功, 错误信息)
 
 #### 支持的域类型
 
@@ -494,17 +495,18 @@ XLSX 文件重构为标准 CDISC SDTM 格式。
 
 #### 示例
 ```python
-from src.utils.restructure_xlsx_file import FileRestructure
+from src.utils.xlsx_restructure_service import XlsxRestructureService
 
-restructure = FileRestructure()
-success = restructure.restructure_file("AB.xlsx", "output/")
+success, error = XlsxRestructureService.file_restructure("AB.xlsx", "output/")
+if not success:
+    print(error)
 ```
 
 ---
 
 ## 文件字段提取器 API
 
-### `FileFieldExtractor`
+### `FileFieldExtractorService`
 
 批量提取 CSV / Excel 文件的字段名称并输出汇总结果。
 
@@ -525,9 +527,9 @@ success = restructure.restructure_file("AB.xlsx", "output/")
 
 #### 示例
 ```python
-from src.utils.file_field_extractor import FileFieldExtractor
+from src.utils.file_field_extractor_service import FileFieldExtractorService
 
-extractor = FileFieldExtractor()
+extractor = FileFieldExtractorService()
 result = extractor.extract_fields("data/", include_subfolders=True)
 print(result["output_file"])
 ```
@@ -536,7 +538,7 @@ print(result["output_file"])
 
 ## 死链检测器 API
 
-### `DeadLinkChecker`
+### `DeadLinkCheckerService`
 
 检测 HTML 文件中的链接有效性。
 
@@ -577,9 +579,9 @@ print(result["output_file"])
 
 #### 示例
 ```python
-from src.utils.dead_link_checker import DeadLinkChecker
+from src.utils.dead_link_checker_service import DeadLinkCheckerService
 
-checker = DeadLinkChecker(timeout=10)
+checker = DeadLinkCheckerService(timeout=10)
 results = checker.check_html_file("index.html")
 checker.generate_report(results, "dead_link_report.txt")
 ```
@@ -590,7 +592,7 @@ checker.generate_report(results, "dead_link_report.txt")
 
 ### 错误处理
 
-所有处理器都遵循统一的错误处理模式：
+所有服务都遵循统一的错误处理模式：
 
 ```python
 try:
@@ -620,13 +622,14 @@ except Exception as e:
 
 ### 进度回调
 
-部分处理器支持进度回调：
+部分服务支持进度回调：
 
 ```python
 def progress_callback(current, total, message):
     print(f"进度: {current}/{total} - {message}")
 
-processor.process_files(files, callback=progress_callback)
+extractor = FileFieldExtractorService()
+extractor.extract_fields("data/", include_subfolders=True, progress_callback=progress_callback)
 ```
 
 ---
@@ -636,22 +639,22 @@ processor.process_files(files, callback=progress_callback)
 ### 完整的数据处理流程
 
 ```python
-from src.utils.data_cleaning import DataCleaner
-from src.utils.codelist_process import CodelistProcessor
-from src.utils.data_masking_processor import DataMaskingProcessor
+from src.utils.data_cleaner_service import DataCleanerService
+from src.utils.codelist_service import CodelistService
+from src.utils.data_masking_service import DataMaskingService
 
 # 1. 数据清洗
-cleaner = DataCleaner()
+cleaner = DataCleanerService()
 cleaner.select_rule_file("rules.xlsx")
 cleaner.clean_csv_file("raw_data.csv", "cleaned/")
 
 # 2. Codelist 处理
-codelist_processor = CodelistProcessor()
+codelist_processor = CodelistService()
 codelist_processor.select_codelist_file("codelist.xlsx")
 codelist_processor.process_csv_file("cleaned/C-raw_data.csv", "processed/")
 
 # 3. 数据模糊化
-masking_processor = DataMaskingProcessor()
+masking_processor = DataMaskingService()
 masking_processor.set_baseline_from_dm("DM.csv")
 masking_processor.process_file("processed/F-raw_data.csv", "final/")
 ```
@@ -660,11 +663,11 @@ masking_processor.process_file("processed/F-raw_data.csv", "final/")
 
 ```python
 import os
-from src.utils.csv_to_xlsx_converter import CsvToXlsxConverter
+from src.utils.csv_to_xlsx_converter_service import CsvToXlsxConverterService
 
 def batch_convert_csv_to_xlsx(input_dir, output_dir):
     """批量转换CSV文件"""
-    converter = CsvToXlsxConverter()
+    converter = CsvToXlsxConverterService()
     
     for filename in os.listdir(input_dir):
         if filename.endswith('.csv'):
@@ -684,13 +687,11 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：1.7.0
+当前 API 版本：1.8.0
 
 ### 向后兼容性
-- 1.5.x 版本的 API 完全兼容
-- 1.4.x 版本的 API 完全兼容
-- 1.3.x 版本需要注意参数变化
-- 1.2.x 及以下版本建议升级
+- 1.7.x 版本的核心处理逻辑兼容，但导入路径已统一为 `*_service` 模块
+- 1.6.x 及以下版本建议按本文档示例更新导入与类名
 
 ### 废弃通知
 - 无当前废弃的 API
@@ -711,3 +712,4 @@ batch_convert_csv_to_xlsx("input/", "output/")
 4. 联系开发团队
 
 **联系方式**: [待添加]
+

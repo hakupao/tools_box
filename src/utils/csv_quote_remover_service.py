@@ -1,9 +1,8 @@
 import os
 import csv
-import pandas as pd
 from typing import Tuple, Optional
 
-class CsvQuoteRemoverProcessor:
+class CsvQuoteRemoverService:
     """CSV引号去除处理器
     
     用于处理CSV文件，移除字段中不必要的引号，输出为清理后的CSV文件。
@@ -83,5 +82,5 @@ class CsvQuoteRemoverProcessor:
                 sample = file.read(1024)
                 csv.Sniffer().sniff(sample)
             return True
-        except:
+        except Exception:
             return False 

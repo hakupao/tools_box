@@ -6,11 +6,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, ComboBox, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
-from ...utils.restructure_xlsx_file import FileRestructure
+from ...utils.xlsx_restructure_service import XlsxRestructureService
 from ..qt_common import FileListWidget, show_error, show_info, show_warning
 
 
-class FileRestructurePage(QWidget):
+class XlsxRestructurePage(QWidget):
     def __init__(self, main_window) -> None:
         super().__init__()
         self.setObjectName("file_restructure")
@@ -124,7 +124,7 @@ class FileRestructurePage(QWidget):
         file_path, _ = QFileDialog.getOpenFileName(self, "选择仕样书（症例关系）Excel 文件", "", "Excel 文件 (*.xlsx)")
         if file_path:
             try:
-                self.patients_mapping = FileRestructure.read_patients_mapping(file_path)
+                self.patients_mapping = XlsxRestructureService.read_patients_mapping(file_path)
                 self.status_label.setText(f"已加载仕样书: {os.path.basename(file_path)}")
             except Exception as exc:  # pylint: disable=broad-except
                 show_error(self, "错误", f"加载仕样书时发生错误: {exc}")
@@ -152,7 +152,7 @@ class FileRestructurePage(QWidget):
             for i, file in enumerate(files, 1):
                 try:
                     self.update_progress(i, total, os.path.basename(file))
-                    success, error_msg = FileRestructure.file_restructure(
+                    success, error_msg = XlsxRestructureService.file_restructure(
                         file,
                         self.output_path,
                         self.study_id,

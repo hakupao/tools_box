@@ -2,7 +2,7 @@ import os
 from typing import Iterable, Optional, Tuple
 
 
-class CsvEncodingConverter:
+class CsvEncodingConverterService:
     """将CSV重新保存为指定编码（默认UTF-8 BOM）的转换器。"""
 
     def __init__(

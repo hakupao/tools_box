@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, LineEdit, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
-from ...utils.xlsx_sheet_splitter import XlsxSheetSplitter
+from ...utils.xlsx_sheet_splitter_service import XlsxSheetSplitterService
 from ..qt_common import show_error, show_info, show_warning
 
 
@@ -17,7 +17,7 @@ class XlsxSheetSplitterPage(QWidget):
         self.main_window = main_window
 
         self.output_path: str | None = None
-        self.sheet_splitter = XlsxSheetSplitter()
+        self.sheet_splitter = XlsxSheetSplitterService()
 
         self._build_ui()
         self.setAcceptDrops(True)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Iterable
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMessageBox
 

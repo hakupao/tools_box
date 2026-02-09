@@ -5,8 +5,6 @@ This module provides functionality to check for dead links in HTML files.
 It extracts all links from HTML files and validates them by sending HTTP requests.
 """
 
-import os
-import re
 from pathlib import Path
 from typing import Callable
 from urllib.parse import urljoin, urlparse
@@ -15,12 +13,12 @@ import requests
 from bs4 import BeautifulSoup
 
 
-class DeadLinkChecker:
+class DeadLinkCheckerService:
     """Class for checking dead links in HTML files."""
 
     def __init__(self, timeout: int = 10):
         """
-        Initialize the DeadLinkChecker.
+        Initialize the DeadLinkCheckerService.
 
         Args:
             timeout: Request timeout in seconds (default: 10)

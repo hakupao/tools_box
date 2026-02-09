@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import sys
 import threading
@@ -8,8 +7,6 @@ import time
 
 import keyboard
 import pyautogui
-import pyperclip
-import win32com.client
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
@@ -32,7 +29,8 @@ from qfluentwidgets import (
     TitleLabel,
 )
 
-from ..qt_common import show_error, show_info, mono_font
+from ...utils.edc_site_adder_service import EdcSiteAdderService
+from ..qt_common import mono_font, show_error, show_info
 
 
 class EdcSiteAdderPage(QWidget):
@@ -44,25 +42,12 @@ class EdcSiteAdderPage(QWidget):
         self.setObjectName("edc_site_adder")
         self.main_window = main_window
 
-        pyautogui.FAILSAFE = True
-        pyautogui.PAUSE = 0.5
-
-        self.processing = False
-
-        self.default_config = {
-            "max_loops": 100,
-            "click_positions": {
-                "新建": {"x": 241, "y": 212},
-                "查找": {"x": 1137, "y": 460},
-                "搜索框": {"x": 817, "y": 409},
-                "搜索": {"x": 1040, "y": 406},
-                "选择": {"x": 699, "y": 471},
-                "ok": {"x": 1121, "y": 758},
-                "确认": {"x": 1038, "y": 728},
-            },
-        }
-        self.config = self.default_config.copy()
-        self.load_config()
+        if getattr(sys, "frozen", False):
+            config_dir = os.path.dirname(sys.executable)
+        else:
+            config_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(config_dir, "edc_site_adder_config.json")
+        self.service = EdcSiteAdderService(config_path=config_path)
 
         self.log_signal.connect(self.append_log)
         self.stop_signal.connect(self.stop_processing)
@@ -150,44 +135,9 @@ class EdcSiteAdderPage(QWidget):
             "整个操作过程将在“处理日志”区域实时显示"
         )
 
-    def get_config_path(self) -> str:
-        if getattr(sys, "frozen", False):
-            app_dir = os.path.dirname(sys.executable)
-        else:
-            app_dir = os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(app_dir, "edc_site_adder_config.json")
-
-    def load_config(self) -> None:
-        config_path = self.get_config_path()
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf-8") as f:
-                    self.config = json.load(f)
-            else:
-                self.config = self.default_config.copy()
-        except Exception:
-            self.config = self.default_config.copy()
-
-    def save_config(self) -> bool:
-        config_path = self.get_config_path()
-        try:
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4, ensure_ascii=False)
-            return True
-        except Exception:
-            return False
-
-    def reset_to_default_config(self) -> None:
-        self.config = self.default_config.copy()
-        if self.save_config():
-            show_info(self, "成功", "已重置为默认配置")
-        else:
-            show_error(self, "错误", "重置配置失败，请检查文件权限")
-
     def esc_listener(self) -> None:
         while True:
-            if keyboard.is_pressed("esc") and self.processing:
-                self.processing = False
+            if keyboard.is_pressed("esc") and self.service.processing:
                 self.log_signal.emit("用户按下 ESC 键，正在停止处理...")
                 self.stop_signal.emit()
             time.sleep(0.05)
@@ -199,132 +149,18 @@ class EdcSiteAdderPage(QWidget):
         QApplication.processEvents()
 
     def start_processing(self) -> None:
-        if self.processing:
+        if self.service.processing:
             show_info(self, "提示", "处理已在进行中")
             return
-
-        self.processing = True
-        self.append_log("开始处理...")
-
-        try:
-            self.append_log("正在连接 Excel...")
-            xl = win32com.client.Dispatch("Excel.Application")
-            cell = xl.Selection
-            if not cell:
-                self.append_log("错误: 未选中 Excel 单元格")
-                self.processing = False
-                return
-
-            for i in range(self.config["max_loops"]):
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-
-                cell_value = cell.Text.strip()
-                if not cell_value:
-                    self.append_log(f"第 {i + 1} 行为空，自动终止处理")
-                    break
-
-                self.append_log(f"处理第 {i + 1} 行: {cell_value}")
-                pyperclip.copy(cell_value)
-                time.sleep(0.1)
-
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-
-                self.append_log("切换到 Chrome 窗口...")
-                chrome_window = pyautogui.getWindowsWithTitle("Chrome")
-                if not chrome_window:
-                    self.append_log("错误: 未找到 Chrome 窗口")
-                    self.processing = False
-                    return
-
-                chrome_window[0].activate()
-                time.sleep(0.1)
-
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-
-                self.append_log("执行点击操作...")
-                self._click("新建")
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-                self._click("查找")
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-                self._click("搜索框")
-                pyautogui.hotkey("ctrl", "v")
-                time.sleep(0.1)
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-                self._click("搜索")
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-                self._click("选择")
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-                self._click("ok")
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-                self._click("确认")
-
-                if not self.processing:
-                    self.append_log("处理已停止")
-                    break
-
-                self.append_log("切回 Excel 窗口...")
-                xl.ActiveWindow.Activate()
-                time.sleep(0.1)
-
-                try:
-                    current_address = cell.Address
-                    current_row = cell.Row
-                    current_column = cell.Column
-                    self.append_log(
-                        f"当前单元格: {current_address} (行: {current_row}, 列: {current_column})"
-                    )
-
-                    next_row = current_row + 1
-                    next_cell = xl.ActiveSheet.Cells(next_row, current_column)
-                    next_cell.Select()
-                    cell = xl.Selection
-                    self.append_log(
-                        f"已移动到下一行: {current_address} -> {cell.Address}"
-                    )
-                except Exception as exc:
-                    self.append_log(f"错误: 无法移动到下一行 - {exc}")
-                    break
-
-                time.sleep(0.1)
-
-            if self.processing:
-                self.append_log("处理完成")
-
-        except Exception as exc:
-            self.append_log(f"错误: {exc}")
-        finally:
-            self.processing = False
-
-    def _click(self, key: str) -> None:
-        if not self.processing:
-            return
-        pos = self.config["click_positions"][key]
-        pyautogui.click(pos["x"], pos["y"])
-        time.sleep(0.1)
+        self.service.start_processing(self.append_log)
 
     def stop_processing(self) -> None:
-        if not self.processing:
+        was_processing = self.service.processing
+        self.service.stop_processing()
+        if was_processing:
+            show_info(self, "提示", "处理已停止")
+        else:
             show_info(self, "提示", "当前没有正在进行的处理")
-            return
-        show_info(self, "提示", "处理已停止")
 
     def show_config_dialog(self) -> None:
         dialog = QDialog(self)
@@ -339,7 +175,7 @@ class EdcSiteAdderPage(QWidget):
         loop_label = BodyLabel("最大循环次数")
         loop_spin = SpinBox()
         loop_spin.setRange(1, 9999)
-        loop_spin.setValue(int(self.config.get("max_loops", 100)))
+        loop_spin.setValue(int(self.service.config.get("max_loops", 100)))
         loop_row.addWidget(loop_label)
         loop_row.addWidget(loop_spin)
         loop_row.addStretch(1)
@@ -366,7 +202,7 @@ class EdcSiteAdderPage(QWidget):
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
-        positions = list(self.config["click_positions"].items())
+        positions = list(self.service.config["click_positions"].items())
         table.setRowCount(len(positions))
         for row, (key, coord) in enumerate(positions):
             table.setItem(row, 0, QTableWidgetItem(key))
@@ -418,7 +254,6 @@ class EdcSiteAdderPage(QWidget):
         coord_btn.clicked.connect(toggle_capture)
         timer.timeout.connect(update_coords)
 
-        # Use a local QShortcut to handle F2
         from PySide6.QtGui import QShortcut
 
         lock_shortcut = QShortcut(QKeySequence("F2"), dialog)
@@ -426,16 +261,16 @@ class EdcSiteAdderPage(QWidget):
 
         def save_config_values() -> None:
             try:
-                self.config["max_loops"] = int(loop_spin.value())
+                self.service.config["max_loops"] = int(loop_spin.value())
                 for row, (key, _coord) in enumerate(positions):
                     x_item = table.item(row, 1)
                     y_item = table.item(row, 2)
                     if not x_item or not y_item:
                         continue
-                    self.config["click_positions"][key]["x"] = int(x_item.text())
-                    self.config["click_positions"][key]["y"] = int(y_item.text())
+                    self.service.config["click_positions"][key]["x"] = int(x_item.text())
+                    self.service.config["click_positions"][key]["y"] = int(y_item.text())
 
-                if self.save_config():
+                if self.service.save_config():
                     show_info(self, "成功", "配置已保存")
                     dialog.accept()
                 else:
@@ -444,7 +279,10 @@ class EdcSiteAdderPage(QWidget):
                 show_error(self, "错误", "请输入有效的数字")
 
         def reset_config() -> None:
-            self.reset_to_default_config()
+            if self.service.reset_to_default_config():
+                show_info(self, "成功", "已重置为默认配置")
+            else:
+                show_error(self, "错误", "重置配置失败，请检查文件权限")
             dialog.accept()
 
         save_btn.clicked.connect(save_config_values)

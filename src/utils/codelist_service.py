@@ -1,9 +1,8 @@
 import pandas as pd
 import os
-import numpy as np
 import re
 
-class CodelistProcessor:
+class CodelistService:
     """Codelist数据处理器"""
     
     def __init__(self):
@@ -277,3 +276,4 @@ class CodelistProcessor:
             
         except Exception as e:
             raise Exception(f"处理文件失败: {str(e)}")
+

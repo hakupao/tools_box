@@ -1,8 +1,8 @@
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 APP_NAME = "工具箱"
 AUTHOR = "Tools Box"
 DESCRIPTION = """
-多功能工具箱 v1.7.0
+多功能工具箱 v1.8.0
 功能列表：
 1. 日期转换工具 - 支持多种日期格式转换
 2. 文件格式转换工具 - 单窗口切换CSV转XLSX、XLSX转CSV(UTF-8 BOM)、CSV转UTF-8(BOM)

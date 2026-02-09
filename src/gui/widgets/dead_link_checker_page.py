@@ -22,7 +22,7 @@ from qfluentwidgets import (
     TitleLabel,
 )
 
-from ...utils.dead_link_checker import DeadLinkChecker
+from ...utils.dead_link_checker_service import DeadLinkCheckerService
 from ..qt_common import show_error, show_info, show_warning, mono_font
 
 
@@ -32,7 +32,7 @@ class DeadLinkCheckerPage(QWidget):
         self.setObjectName("dead_link_checker")
         self.main_window = main_window
 
-        self.checker = DeadLinkChecker(timeout=10)
+        self.checker = DeadLinkCheckerService(timeout=10)
         self.last_output_file: str | None = None
         self.is_checking = False
 

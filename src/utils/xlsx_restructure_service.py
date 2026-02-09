@@ -75,7 +75,7 @@ SORTKEY = {
     "CM": ["USUBJID", "SUPPSEQ", "EPOCH", "CMCAT", "CMSCAT", "CMSTDTC"]
 }
 
-class FileRestructure:
+class XlsxRestructureService:
     
     @staticmethod
     def read_patients_mapping(patients_file: str):

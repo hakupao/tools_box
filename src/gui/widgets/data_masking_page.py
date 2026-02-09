@@ -6,18 +6,18 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
-from ...utils.csv_quote_remover_processor import CsvQuoteRemoverProcessor
+from ...utils.data_masking_service import DataMaskingService
 from ..qt_common import FileListWidget, show_error, show_info, show_warning
 
 
-class CsvQuoteRemoverPage(QWidget):
+class DataMaskingPage(QWidget):
     def __init__(self, main_window) -> None:
         super().__init__()
-        self.setObjectName("csv_quote_remover")
+        self.setObjectName("data_masking")
         self.main_window = main_window
 
         self.output_path: str | None = None
-        self.processor = CsvQuoteRemoverProcessor()
+        self.processor = DataMaskingService()
 
         self._build_ui()
 
@@ -28,8 +28,8 @@ class CsvQuoteRemoverPage(QWidget):
 
         header_layout = QHBoxLayout()
         header_left = QVBoxLayout()
-        title = TitleLabel("CSV 引号去除工具")
-        subtitle = BodyLabel("清理 CSV 字段中的多余引号")
+        title = TitleLabel("数据模糊化工具")
+        subtitle = BodyLabel("对敏感数据进行脱敏处理")
         subtitle.setTextColor("#6B7280", "#6B7280")
         header_left.addWidget(title)
         header_left.addWidget(subtitle)
@@ -61,7 +61,7 @@ class CsvQuoteRemoverPage(QWidget):
 
         output_row = QHBoxLayout()
         output_label = BodyLabel("输出路径")
-        self.output_note = CaptionLabel("默认直接覆盖原文件")
+        self.output_note = CaptionLabel("默认输出到原文件所在目录")
         self.output_note.setTextColor("#7A8190", "#7A8190")
         select_output_btn = PushButton("选择输出路径")
         select_output_btn.clicked.connect(self.select_output_path)
@@ -122,14 +122,28 @@ class CsvQuoteRemoverPage(QWidget):
             success_count = 0
             error_files = []
 
+            dm_file = None
+            for file in files:
+                if os.path.basename(file).upper() == "DM.CSV":
+                    dm_file = file
+                    break
+
+            if dm_file:
+                self.update_progress(0, total, "正在设置基准数据...")
+                baseline_success = self.processor.set_baseline_from_dm(dm_file)
+                if not baseline_success:
+                    show_warning(self, "警告", "无法从 DM.csv 设置基准 USUBJID，将处理所有数据")
+            else:
+                show_info(self, "提示", "未找到 DM.csv 文件，将处理所有数据")
+
             for i, file in enumerate(files, 1):
                 try:
                     self.update_progress(i, total, os.path.basename(file))
-                    success, error_msg = self.processor.process_file(file, self.output_path)
+                    success = self.processor.process_file(file, self.output_path)
                     if success:
                         success_count += 1
                     else:
-                        error_files.append(f"{file} (错误: {error_msg})")
+                        error_files.append(file)
                 except Exception as exc:  # pylint: disable=broad-except
                     error_files.append(f"{file} (错误: {exc})")
 
@@ -137,10 +151,11 @@ class CsvQuoteRemoverPage(QWidget):
                 error_msg = "以下文件处理失败：\n\n" + "\n".join(error_files)
                 show_warning(self, "处理完成", f"成功处理 {success_count}/{total} 个文件\n\n{error_msg}")
             else:
-                show_info(self, "处理完成", f"成功处理所有 {total} 个文件！\n\n已去除 CSV 中不必要的引号")
+                show_info(self, "处理完成", f"成功处理所有 {total} 个文件！")
 
             self.progress_bar.setValue(0)
             self.progress_label.setText("")
+            self.processor.clear_baseline()
         except Exception as exc:  # pylint: disable=broad-except
             show_error(self, "错误", f"处理过程中发生错误：{exc}")
         finally:

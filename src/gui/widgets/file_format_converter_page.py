@@ -14,9 +14,9 @@ from qfluentwidgets import (
     TitleLabel,
 )
 
-from ...utils.csv_encoding_converter import CsvEncodingConverter
-from ...utils.csv_to_xlsx_converter import CsvToXlsxConverter
-from ...utils.xlsx_to_csv_converter import XlsxToCsvConverter
+from ...utils.csv_encoding_converter_service import CsvEncodingConverterService
+from ...utils.csv_to_xlsx_converter_service import CsvToXlsxConverterService
+from ...utils.xlsx_to_csv_converter_service import XlsxToCsvConverterService
 from ..qt_common import FileListWidget, show_error, show_info, show_warning
 
 
@@ -29,9 +29,9 @@ class FileFormatConverterPage(QWidget):
         self.main_window = main_window
 
         self.output_path: str | None = None
-        self.csv_to_xlsx = CsvToXlsxConverter()
-        self.xlsx_to_csv = XlsxToCsvConverter()
-        self.csv_bom = CsvEncodingConverter()
+        self.csv_to_xlsx = CsvToXlsxConverterService()
+        self.xlsx_to_csv = XlsxToCsvConverterService()
+        self.csv_bom = CsvEncodingConverterService()
 
         self.mode_config = {
             "csv_to_xlsx": {

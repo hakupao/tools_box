@@ -1,9 +1,8 @@
 import pandas as pd
 import os
-import re
 
 
-class FullwidthToHalfwidthConverter:
+class FullwidthHalfwidthService:
     """
     全角符号转半角符号转换器
     用于将Excel文件中的全角符号转换为半角符号
@@ -125,4 +124,4 @@ class FullwidthToHalfwidthConverter:
         return {
             "fullwidth_count": fullwidth_count,
             "converted_count": converted_count
-        } 
+        }

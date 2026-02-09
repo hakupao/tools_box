@@ -2,7 +2,7 @@
 import pandas as pd
 from typing import Tuple, Optional
 
-class XlsxToCsvConverter:
+class XlsxToCsvConverterService:
     @staticmethod
     def convert_file(input_file: str, output_path: Optional[str] = None) -> Tuple[bool, str]:
         try:

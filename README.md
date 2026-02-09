@@ -80,41 +80,45 @@ python src/main.py
 
 ```
 tools_box/
-├── src/                    # 源代码目录
-│   ├── gui/               # 图形界面相关代码
-│   │   ├── main_window.py # 主窗口
-│   │   └── widgets/       # 各工具窗口组件
-│   │       ├── date_converter.py           # 日期转换窗口
-│   │       ├── file_format_converter.py    # 文件格式转换窗口（CSV/XLSX/BOM）
-│   │       ├── xlsx_sheet_splitter.py      # 工作表拆分窗口
-│   │       ├── file_field_extractor.py     # 获取文件字段窗口
-│   │       ├── dead_link_checker.py        # 死链检测窗口
-│   │       ├── fullwidth_halfwidth_converter.py # 全角转半角窗口
-│   │       ├── data_cleaner.py             # 数据清洗窗口
-│   │       ├── codelist_processor.py       # Codelist处理窗口
-│   │       ├── data_masking.py             # 数据模糊化窗口
-│   │       ├── csv_quote_remover.py        # CSV引号去除窗口
-│   │       ├── edc_site_adder.py           # EDC站点添加窗口
-│   │       └── xlsx_file_restructuring.py  # XLSX重构窗口
-│   └── utils/             # 工具函数和处理器
-│       ├── date_utils.py                   # 日期处理工具
-│       ├── csv_to_xlsx_converter.py        # CSV转XLSX处理器
-│       ├── xlsx_to_csv_converter.py        # XLSX转CSV处理器
-│       ├── xlsx_sheet_splitter.py          # 工作表拆分处理器
-│       ├── csv_encoding_converter.py       # CSV转UTF-8(BOM)处理器
-│       ├── file_field_extractor.py         # 获取文件字段处理器
-│       ├── dead_link_checker.py            # 死链检测处理器
-│       ├── fullwidth_to_halfwidth_converter.py # 全角转半角处理器
-│       ├── data_cleaning.py                # 数据清洗处理器
-│       ├── codelist_process.py             # Codelist处理器
-│       ├── data_masking_processor.py       # 数据模糊化处理器
-│       ├── csv_quote_remover_processor.py  # CSV引号去除处理器
-│       └── restructure_xlsx_file.py        # XLSX重构处理器
-├── docs/                  # 项目文档
-├── requirements.txt       # 项目依赖
-├── tools_box.spec        # PyInstaller 打包配置
-├── CHANGELOG.md          # 更新日志
-└── README.md            # 项目说明
+├── src/                                 # 源代码目录
+│   ├── main.py                          # 程序入口
+│   ├── version.py                       # 版本信息
+│   ├── gui/                             # 图形界面相关代码
+│   │   ├── main_window.py               # 主窗口
+│   │   ├── qt_common.py                 # 通用 GUI 组件与弹窗
+│   │   └── widgets/                     # 各工具页面
+│   │       ├── date_converter_page.py
+│   │       ├── file_format_converter_page.py
+│   │       ├── xlsx_sheet_splitter_page.py
+│   │       ├── file_field_extractor_page.py
+│   │       ├── dead_link_checker_page.py
+│   │       ├── fullwidth_halfwidth_converter_page.py
+│   │       ├── data_cleaner_page.py
+│   │       ├── codelist_processor_page.py
+│   │       ├── data_masking_page.py
+│   │       ├── csv_quote_remover_page.py
+│   │       ├── edc_site_adder_page.py
+│   │       └── xlsx_restructure_page.py
+│   └── utils/                           # 业务服务与工具函数
+│       ├── date_utils.py
+│       ├── csv_to_xlsx_converter_service.py
+│       ├── xlsx_to_csv_converter_service.py
+│       ├── xlsx_sheet_splitter_service.py
+│       ├── csv_encoding_converter_service.py
+│       ├── file_field_extractor_service.py
+│       ├── dead_link_checker_service.py
+│       ├── fullwidth_halfwidth_service.py
+│       ├── data_cleaner_service.py
+│       ├── codelist_service.py
+│       ├── data_masking_service.py
+│       ├── csv_quote_remover_service.py
+│       ├── xlsx_restructure_service.py
+│       └── edc_site_adder_service.py
+├── docs/                                # 项目文档
+├── requirements.txt                     # 项目依赖
+├── tools_box.spec                       # PyInstaller 打包配置
+├── CHANGELOG.md                         # 更新日志
+└── README.md                            # 项目说明
 ```
 
 ## 主要依赖项
