@@ -51,8 +51,8 @@ class EdcSiteAdderPage(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(16)
+        layout.setContentsMargins(32, 20, 32, 24)
+        layout.setSpacing(12)
 
         header_layout = QHBoxLayout()
         header_left = QVBoxLayout()
@@ -61,7 +61,6 @@ class EdcSiteAdderPage(QWidget):
         subtitle.setTextColor("#6B7280", "#6B7280")
         header_left.addWidget(title)
         header_left.addWidget(subtitle)
-        header_left.addStretch(1)
 
         back_btn = PushButton("返回主页")
         back_btn.clicked.connect(lambda: self.main_window.switch_to(self.main_window.home_interface))
@@ -71,7 +70,7 @@ class EdcSiteAdderPage(QWidget):
         header_layout.addLayout(header_left, stretch=1)
         header_layout.addWidget(config_btn, alignment=Qt.AlignRight | Qt.AlignTop)
         header_layout.addWidget(back_btn, alignment=Qt.AlignRight | Qt.AlignTop)
-        layout.addLayout(header_layout)
+        layout.addLayout(header_layout, stretch=0)
 
         content_layout = QHBoxLayout()
         content_layout.setSpacing(16)
@@ -84,7 +83,7 @@ class EdcSiteAdderPage(QWidget):
         instruction_text.setPlainText(self._instruction_text())
 
         instruction_box.addWidget(instruction_title)
-        instruction_box.addWidget(instruction_text)
+        instruction_box.addWidget(instruction_text, stretch=1)
 
         right_box = QVBoxLayout()
         self.start_btn = PrimaryPushButton("开始处理")
@@ -99,10 +98,10 @@ class EdcSiteAdderPage(QWidget):
         right_box.addWidget(log_label)
         right_box.addWidget(self.log_text, stretch=1)
 
-        content_layout.addLayout(instruction_box, stretch=1)
+        content_layout.addLayout(instruction_box, stretch=3)
         content_layout.addLayout(right_box, stretch=1)
 
-        layout.addLayout(content_layout)
+        layout.addLayout(content_layout, stretch=1)
 
     def _instruction_text(self) -> str:
         return (
@@ -156,8 +155,70 @@ class EdcSiteAdderPage(QWidget):
 
     def show_config_dialog(self) -> None:
         dialog = QDialog(self)
+        dialog.setObjectName("edcConfigDialog")
         dialog.setWindowTitle("配置参数")
         dialog.resize(680, 620)
+        dialog.setStyleSheet(
+            """
+            QDialog#edcConfigDialog {
+                background: #F5F6F8;
+            }
+            QDialog#edcConfigDialog QLabel {
+                color: #1F2937;
+            }
+            QDialog#edcConfigDialog QAbstractSpinBox,
+            QDialog#edcConfigDialog QLineEdit {
+                background: #FFFFFF;
+                color: #1F2937;
+                border: 1px solid #DCE3ED;
+                border-radius: 8px;
+                padding: 4px 8px;
+            }
+            QDialog#edcConfigDialog QTableWidget {
+                background: #FFFFFF;
+                color: #1F2937;
+                border: 1px solid #DCE3ED;
+                border-radius: 10px;
+                gridline-color: #E8EDF4;
+                alternate-background-color: #F8FAFC;
+            }
+            QDialog#edcConfigDialog QTableWidget::item {
+                background: #FFFFFF;
+                color: #1F2937;
+                padding: 4px 6px;
+                border: none;
+                border-bottom: 1px solid #EEF2F7;
+            }
+            QDialog#edcConfigDialog QTableWidget::item:alternate {
+                background: #F8FAFC;
+            }
+            QDialog#edcConfigDialog QTableWidget::item:selected {
+                background: #DDEBFF;
+                color: #0F172A;
+            }
+            QDialog#edcConfigDialog QHeaderView {
+                background: #EEF3F9;
+            }
+            QDialog#edcConfigDialog QHeaderView::section {
+                background: #EEF3F9;
+                color: #334155;
+                border: none;
+                border-bottom: 1px solid #DCE3ED;
+                padding: 6px;
+                font-weight: 600;
+            }
+            QDialog#edcConfigDialog QHeaderView::section:vertical {
+                color: #475569;
+                border-right: 1px solid #DCE3ED;
+                border-bottom: 1px solid #DCE3ED;
+            }
+            QDialog#edcConfigDialog QTableCornerButton::section {
+                background: #EEF3F9;
+                border: none;
+                border-bottom: 1px solid #DCE3ED;
+            }
+            """
+        )
 
         dialog_layout = QVBoxLayout(dialog)
         dialog_layout.setContentsMargins(24, 24, 24, 24)
@@ -193,6 +254,7 @@ class EdcSiteAdderPage(QWidget):
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        table.setAlternatingRowColors(True)
 
         positions = list(self.service.config["click_positions"].items())
         table.setRowCount(len(positions))
