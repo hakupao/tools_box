@@ -1,0 +1,42 @@
+{
+  "studyid_value": "SAKIULEITE",
+  "subject_limit": 150,
+  "subject_sort": "string_asc",
+  "usubjid_mode": "rule_chain",
+  "rule_chain_steps": [
+    {
+      "op": "remove_prefix",
+      "value": 6
+    },
+    {
+      "op": "remove_suffix",
+      "value": 0
+    },
+    {
+      "op": "prepend",
+      "value": "BOBO"
+    },
+    {
+      "op": "append",
+      "value": ""
+    }
+  ],
+  "sequential_prefix": "TEST",
+  "sequential_width": 4,
+  "sequential_start": 1,
+  "date_shift_years": 2,
+  "age_shift_years": 2,
+  "date_detect_sample_size": 20,
+  "date_detect_min_non_empty": 1,
+  "date_detect_success_ratio": 0.2,
+  "date_output_format": "yyyy-mm-dd",
+  "partial_date_policy": "auto_fill_first_day",
+  "doctor_fields": [
+    "INVNAM"
+  ],
+  "doctor_value": "テスト医師",
+  "site_field": "SITEID",
+  "site_value": "テスト施設",
+  "age_field": "AGE",
+  "include_subjid": true
+}
