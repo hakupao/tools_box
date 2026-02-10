@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 from typing import Iterable
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QFontDatabase
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMessageBox
+from PySide6.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem, QMessageBox
 
 
 def pick_font(candidates: list[str], fallback: str) -> str:
@@ -50,6 +50,12 @@ class FileListWidget(QListWidget):
     ) -> None:
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setDragEnabled(False)
+        self.setDragDropMode(QAbstractItemView.DropOnly)
+        self.setDropIndicatorShown(True)
+        self.setDefaultDropAction(Qt.CopyAction)
+        self.viewport().setAcceptDrops(True)
+        self.viewport().installEventFilter(self)
         self.setSelectionMode(QListWidget.ExtendedSelection)
         self.setStyleSheet(
             """
@@ -77,6 +83,14 @@ class FileListWidget(QListWidget):
 
     def dragEnterEvent(self, event):  # noqa: N802
         if event.mimeData().hasUrls():
+            event.setDropAction(Qt.CopyAction)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):  # noqa: N802
+        if event.mimeData().hasUrls():
+            event.setDropAction(Qt.CopyAction)
             event.acceptProposedAction()
         else:
             event.ignore()
@@ -89,6 +103,24 @@ class FileListWidget(QListWidget):
         added = self.add_paths(paths)
         if added:
             self.filesAdded.emit(added)
+        event.acceptProposedAction()
+
+    def eventFilter(self, watched, event):  # noqa: N802
+        if watched is self.viewport():
+            if event.type() in (QEvent.DragEnter, QEvent.DragMove):
+                if event.mimeData().hasUrls():
+                    event.setDropAction(Qt.CopyAction)
+                    event.acceptProposedAction()
+                    return True
+            if event.type() == QEvent.Drop:
+                if event.mimeData().hasUrls():
+                    paths = [url.toLocalFile() for url in event.mimeData().urls()]
+                    added = self.add_paths(paths)
+                    if added:
+                        self.filesAdded.emit(added)
+                    event.acceptProposedAction()
+                    return True
+        return super().eventFilter(watched, event)
 
     def add_paths(self, paths: Iterable[str]) -> list[str]:
         files: list[str] = []

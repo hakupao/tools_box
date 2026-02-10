@@ -11,6 +11,14 @@
 
 ### 改进
 
+## [1.8.1] - 2026-02-10
+
+### 改进
+- 数据模糊化页面与服务层完成一轮代码精简：删除冗余分支，统一 USUBJID 预览与执行阶段的转换逻辑，降低规则漂移风险。
+- `DataMaskingService` 移除未被调用的 legacy 兼容 API（`set_baseline_from_dm`、`process_file` 及其相关方法），对外保留 `scan_pattern1` / `run_pattern1` 作为主流程接口。
+- 步骤一文件导入路径统一：按钮选择与拖拽导入共用同一入列逻辑，减少重复失效处理代码。
+- 数据模糊化相关文档（`README.md`、`docs/API文档.md`、`docs/开发文档.md`、`docs/用户手册.md`、`docs/XLSX文件制作规范.md`）同步更新到 v1.8.1。
+
 ## [1.8.0] - 2026-02-09
 
 ### 新增

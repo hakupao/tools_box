@@ -352,55 +352,97 @@ success = processor.process_csv_file("data.csv")
 
 ### `DataMaskingService`
 
-SDTM 数据集模糊化处理器。
+SDTM Pattern1 数据模糊化处理器（扫描 + 执行两阶段）。
 
 #### 方法
 
-##### `__init__()`
+##### `__init__(config_path=None)`
 
-初始化模糊化处理器。
-
-##### `set_baseline_from_dm(dm_file_path)`
-
-从 DM.csv 文件设置基准 USUBJID 列表。
+初始化处理器并加载 Pattern1 配置。
 
 **参数:**
-- `dm_file_path` (str): DM.csv 文件路径
+- `config_path` (str, optional): 配置文件路径，默认使用 `src/utils/data_masking_pattern1_config.json`
+
+##### `load_profile()`
+
+读取并返回 `Pattern1Profile`。
+
+##### `save_profile(profile=None)`
+
+保存配置到 JSON 文件。
+
+**参数:**
+- `profile` (`Pattern1Profile`, optional): 可选，传入后覆盖当前配置
 
 **返回值:**
-- `bool`: 设置是否成功
+- `bool`: 保存是否成功
 
-##### `process_file(input_file, output_path=None)`
+##### `reset_profile()`
 
-处理单个 CSV 文件进行模糊化。
-
-**参数:**
-- `input_file` (str): 输入文件路径
-- `output_path` (str, optional): 输出路径
+重置为默认配置并持久化。
 
 **返回值:**
-- `bool`: 处理是否成功
+- `Pattern1Profile`: 重置后的配置对象
 
-##### `add_masking_rule(column_name, masking_function)`
+##### `scan_pattern1(file_paths, profile=None)`
 
-添加自定义模糊化规则。
+扫描 CSV 文件集，输出结构信息、字段有值/空值分布、USUBJID 统计和日期字段识别结果。
 
 **参数:**
-- `column_name` (str): 列名
-- `masking_function`: 模糊化函数
+- `file_paths` (list[str]): 待处理文件路径集合
+- `profile` (`Pattern1Profile`, optional): 扫描参数（日期识别抽样阈值等）
 
-#### 内置模糊化规则
-- 年龄减值：AGE 相关字段减 2（DM.csv）
-- DTC 字段日期提前两年
-- USUBJID 过滤：基于基准列表过滤数据
+**返回值:**
+- `Pattern1ScanReport`: 扫描报告对象（含 `files_summary`、`errors`、`selected_subjects` 等）
+
+##### `run_pattern1(file_paths, output_dir=None, profile=None, scan_report=None, progress_callback=None)`
+
+按扫描结果执行 Pattern1 脱敏，输出脱敏后的 CSV、映射表和扫描报告。
+
+**参数:**
+- `file_paths` (list[str]): 待处理文件路径集合
+- `output_dir` (str, optional): 输出目录
+- `profile` (`Pattern1Profile`, optional): 执行配置
+- `scan_report` (`Pattern1ScanReport`, optional): 已有扫描结果
+- `progress_callback` (callable, optional): 进度回调 `(current, total, filename)`
+
+**返回值:**
+- `Pattern1RunResult`: 执行结果对象（输出目录、文件列表、映射文件、日期统计等）
+
+##### `export_scan_report(report, target_path)`
+
+导出扫描报告为 JSON 或 CSV。
+
+**参数:**
+- `report` (`Pattern1ScanReport`): 扫描报告对象
+- `target_path` (str): 目标路径（`.json` / `.csv`）
+
+##### `format_scan_report(report)`
+
+将扫描报告格式化为可读文本，用于 UI 预览。
+
+##### `transform_subject_id(subject, profile, index=0)`
+
+根据当前配置计算单个 `USUBJID` 的脱敏结果（用于规则预览与映射构建）。
 
 #### 示例
 ```python
-from src.utils.data_masking_service import DataMaskingService
+from src.utils.data_masking_service import DataMaskingService, Pattern1Profile
 
 processor = DataMaskingService()
-processor.set_baseline_from_dm("DM.csv")
-success = processor.process_file("AE.csv")
+profile = Pattern1Profile(subject_limit=100)
+
+report = processor.scan_pattern1(["DM.csv", "AE.csv"], profile)
+if report.errors:
+    raise ValueError(report.errors)
+
+result = processor.run_pattern1(
+    ["DM.csv", "AE.csv"],
+    output_dir="final/",
+    profile=profile,
+    scan_report=report,
+)
+print(result.mapping_file)
 ```
 
 ---
@@ -655,8 +697,19 @@ codelist_processor.process_csv_file("cleaned/C-raw_data.csv", "processed/")
 
 # 3. 数据模糊化
 masking_processor = DataMaskingService()
-masking_processor.set_baseline_from_dm("DM.csv")
-masking_processor.process_file("processed/F-raw_data.csv", "final/")
+masking_profile = masking_processor.load_profile()
+scan_report = masking_processor.scan_pattern1(
+    ["DM.csv", "processed/F-raw_data.csv"],
+    masking_profile,
+)
+if scan_report.errors:
+    raise ValueError(scan_report.errors)
+masking_processor.run_pattern1(
+    ["DM.csv", "processed/F-raw_data.csv"],
+    output_dir="final/",
+    profile=masking_profile,
+    scan_report=scan_report,
+)
 ```
 
 ### 批量文件处理
@@ -687,14 +740,15 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：1.8.0
+当前 API 版本：1.8.1
 
 ### 向后兼容性
 - 1.7.x 版本的核心处理逻辑兼容，但导入路径已统一为 `*_service` 模块
 - 1.6.x 及以下版本建议按本文档示例更新导入与类名
 
 ### 废弃通知
-- 无当前废弃的 API
+- `DataMaskingService` 旧版兼容接口已移除：`set_baseline_from_dm`、`process_file`、`add_masking_rule`
+- 数据模糊化请统一使用 `scan_pattern1` + `run_pattern1` 两阶段流程
 
 ### 计划变更
 - 2.0.0 版本将支持异步处理
