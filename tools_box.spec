@@ -1,5 +1,4 @@
 # -*- mode: python ; coding: utf-8 -*-
-import os
 import shutil
 from pathlib import Path
 import tkinterdnd2
@@ -66,16 +65,7 @@ def collect_data_files():
     data_files = [
         ('temp_tkdnd/tkdnd', 'tkdnd'),  # tkdnd文件
     ]
-    
-    # 添加配置文件
-    config_files = [
-        'src/gui/widgets/edc_site_adder_config.json'
-    ]
-    
-    for config_file in config_files:
-        if os.path.exists(config_file):
-            data_files.append((config_file, os.path.dirname(config_file)))
-    
+
     return data_files
 
 # 设置 tkdnd

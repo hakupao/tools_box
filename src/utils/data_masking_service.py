@@ -6,9 +6,12 @@ import re
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import pandas as pd
+
+from .app_config import get_app_config_path, load_app_config, save_app_config
 
 
 ProgressCallback = Optional[Callable[[int, int, str], None]]
@@ -175,28 +178,56 @@ class Pattern1RunResult:
 class DataMaskingService:
     """SDTM Pattern1 数据脱敏处理器。"""
 
+    CONFIG_SECTION = "data_masking_pattern1"
+    LEGACY_PROFILE_KEYS = {
+        "studyid_value",
+        "subject_limit",
+        "subject_sort",
+        "usubjid_mode",
+        "rule_chain_steps",
+        "sequential_prefix",
+        "sequential_width",
+        "sequential_start",
+        "date_shift_years",
+        "age_shift_years",
+        "date_detect_sample_size",
+        "date_detect_min_non_empty",
+        "date_detect_success_ratio",
+        "date_output_format",
+        "partial_date_policy",
+        "doctor_fields",
+        "doctor_value",
+        "site_field",
+        "site_value",
+        "age_field",
+        "include_subjid",
+    }
+
     def __init__(self, config_path: str | None = None):
+        self._using_default_config_path = config_path is None
         self.config_path = config_path or self._default_config_path()
         self.profile = self.load_profile()
 
     def _default_config_path(self) -> str:
-        if getattr(sys, "frozen", False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(base_dir, "data_masking_pattern1_config.json")
+        return str(get_app_config_path())
 
     def load_profile(self) -> Pattern1Profile:
-        if not os.path.exists(self.config_path):
-            return Pattern1Profile()
+        root_config = load_app_config(self.config_path)
 
-        try:
-            with open(self.config_path, "r", encoding="utf-8") as fp:
-                raw = json.load(fp)
-            if isinstance(raw, dict):
-                return Pattern1Profile.from_dict(raw)
-        except Exception:
-            pass
+        section_profile = root_config.get(self.CONFIG_SECTION)
+        if isinstance(section_profile, dict):
+            return Pattern1Profile.from_dict(section_profile)
+
+        if self._looks_like_legacy_profile(root_config):
+            return Pattern1Profile.from_dict(root_config)
+
+        if self._using_default_config_path:
+            legacy_profile = self._load_legacy_profile()
+            if legacy_profile is not None:
+                migrated = Pattern1Profile.from_dict(legacy_profile)
+                self.profile = migrated
+                self.save_profile(migrated)
+                return migrated
 
         return Pattern1Profile()
 
@@ -204,20 +235,56 @@ class DataMaskingService:
         if profile is not None:
             self.profile = profile
 
-        try:
-            parent_dir = os.path.dirname(self.config_path)
-            if parent_dir:
-                os.makedirs(parent_dir, exist_ok=True)
-            with open(self.config_path, "w", encoding="utf-8") as fp:
-                json.dump(self.profile.to_dict(), fp, ensure_ascii=False, indent=2)
-            return True
-        except Exception:
-            return False
+        root_config = load_app_config(self.config_path)
+        root_config[self.CONFIG_SECTION] = self.profile.to_dict()
+        return save_app_config(root_config, self.config_path)
 
     def reset_profile(self) -> Pattern1Profile:
         self.profile = Pattern1Profile()
         self.save_profile(self.profile)
         return self.profile
+
+    @classmethod
+    def _looks_like_legacy_profile(cls, raw: object) -> bool:
+        if not isinstance(raw, dict):
+            return False
+        return any(key in raw for key in cls.LEGACY_PROFILE_KEYS)
+
+    def _load_legacy_profile(self) -> dict[str, Any] | None:
+        for path in self._legacy_config_paths():
+            loaded = self._load_json_dict(path)
+            if loaded is not None and self._looks_like_legacy_profile(loaded):
+                return loaded
+        return None
+
+    @staticmethod
+    def _load_json_dict(path: Path) -> dict[str, Any] | None:
+        if not path.exists():
+            return None
+        try:
+            with path.open("r", encoding="utf-8") as fp:
+                loaded = json.load(fp)
+            if isinstance(loaded, dict):
+                return loaded
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _legacy_config_paths() -> list[Path]:
+        candidates: list[Path] = []
+        if getattr(sys, "frozen", False):
+            candidates.append(Path(sys.executable).resolve().with_name("data_masking_pattern1_config.json"))
+        candidates.append(Path(__file__).resolve().with_name("data_masking_pattern1_config.json"))
+
+        deduped: list[Path] = []
+        seen: set[Path] = set()
+        for path in candidates:
+            if path in seen:
+                continue
+            seen.add(path)
+            deduped.append(path)
+        return deduped
 
     def scan_pattern1(self, file_paths: list[str], profile: Pattern1Profile | None = None) -> Pattern1ScanReport:
         active_profile = profile or self.profile

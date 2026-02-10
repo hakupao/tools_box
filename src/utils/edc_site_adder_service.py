@@ -2,19 +2,24 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 import time
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import pyautogui
 import pyperclip
 import win32com.client
+
+from .app_config import get_app_config_path, load_app_config, save_app_config
 
 
 LogCallback = Callable[[str], None]
 
 
 class EdcSiteAdderService:
+    CONFIG_SECTION = "edc_site_adder"
+
     DEFAULT_CONFIG = {
         "max_loops": 100,
         "click_positions": {
@@ -34,33 +39,40 @@ class EdcSiteAdderService:
 
         self.processing = False
         self.default_config = copy.deepcopy(self.DEFAULT_CONFIG)
+        self._using_default_config_path = config_path is None
         self.config_path = Path(config_path) if config_path else self._default_config_path()
         self.config = copy.deepcopy(self.default_config)
         self.load_config()
 
     @staticmethod
     def _default_config_path() -> Path:
-        return Path(__file__).resolve().with_name("edc_site_adder_config.json")
+        return get_app_config_path()
 
     def load_config(self) -> None:
-        try:
-            if self.config_path.exists():
-                with self.config_path.open("r", encoding="utf-8") as file:
-                    loaded_config = json.load(file)
-                self.config = self._merge_with_defaults(loaded_config)
+        root_config = load_app_config(self.config_path)
+
+        section_config = root_config.get(self.CONFIG_SECTION)
+        if isinstance(section_config, dict):
+            self.config = self._merge_with_defaults(section_config)
+            return
+
+        if self._looks_like_legacy_payload(root_config):
+            self.config = self._merge_with_defaults(root_config)
+            return
+
+        if self._using_default_config_path:
+            legacy_config = self._load_legacy_config()
+            if legacy_config is not None:
+                self.config = self._merge_with_defaults(legacy_config)
+                self.save_config()
                 return
-        except Exception:
-            pass
+
         self.config = copy.deepcopy(self.default_config)
 
     def save_config(self) -> bool:
-        try:
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with self.config_path.open("w", encoding="utf-8") as file:
-                json.dump(self.config, file, indent=4, ensure_ascii=False)
-            return True
-        except Exception:
-            return False
+        root_config = load_app_config(self.config_path)
+        root_config[self.CONFIG_SECTION] = copy.deepcopy(self.config)
+        return save_app_config(root_config, self.config_path)
 
     def reset_to_default_config(self) -> bool:
         self.config = copy.deepcopy(self.default_config)
@@ -199,3 +211,48 @@ class EdcSiteAdderService:
                 merged_config["click_positions"][key]["y"] = y
 
         return merged_config
+
+    @staticmethod
+    def _looks_like_legacy_payload(raw: object) -> bool:
+        if not isinstance(raw, dict):
+            return False
+        return "max_loops" in raw or "click_positions" in raw
+
+    def _load_legacy_config(self) -> dict[str, Any] | None:
+        for path in self._legacy_config_paths():
+            loaded = self._load_json_dict(path)
+            if loaded is not None and self._looks_like_legacy_payload(loaded):
+                return loaded
+        return None
+
+    @staticmethod
+    def _load_json_dict(path: Path) -> dict[str, Any] | None:
+        if not path.exists():
+            return None
+        try:
+            with path.open("r", encoding="utf-8") as file:
+                loaded = json.load(file)
+            if isinstance(loaded, dict):
+                return loaded
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _legacy_config_paths() -> list[Path]:
+        candidates: list[Path] = []
+        if getattr(sys, "frozen", False):
+            candidates.append(Path(sys.executable).resolve().with_name("edc_site_adder_config.json"))
+
+        module_dir = Path(__file__).resolve().parent
+        candidates.append(module_dir / "edc_site_adder_config.json")
+        candidates.append(module_dir.parent / "gui" / "widgets" / "edc_site_adder_config.json")
+
+        deduped: list[Path] = []
+        seen: set[Path] = set()
+        for path in candidates:
+            if path in seen:
+                continue
+            seen.add(path)
+            deduped.append(path)
+        return deduped

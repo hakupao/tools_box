@@ -361,7 +361,7 @@ SDTM Pattern1 数据模糊化处理器（扫描 + 执行两阶段）。
 初始化处理器并加载 Pattern1 配置。
 
 **参数:**
-- `config_path` (str, optional): 配置文件路径，默认使用 `src/utils/data_masking_pattern1_config.json`
+- `config_path` (str, optional): 配置文件路径，默认使用系统用户配置目录下的 `tools_box_config.json`（`data_masking_pattern1` section）
 
 ##### `load_profile()`
 

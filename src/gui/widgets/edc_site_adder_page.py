@@ -1,7 +1,4 @@
 from __future__ import annotations
-
-import os
-import sys
 import threading
 import time
 
@@ -42,12 +39,7 @@ class EdcSiteAdderPage(QWidget):
         self.setObjectName("edc_site_adder")
         self.main_window = main_window
 
-        if getattr(sys, "frozen", False):
-            config_dir = os.path.dirname(sys.executable)
-        else:
-            config_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(config_dir, "edc_site_adder_config.json")
-        self.service = EdcSiteAdderService(config_path=config_path)
+        self.service = EdcSiteAdderService()
 
         self.log_signal.connect(self.append_log)
         self.stop_signal.connect(self.stop_processing)
