@@ -32,6 +32,22 @@
   - 选中背景 `#DDEBFF`
 - 支持拖拽文件/文件夹，支持按后缀过滤（`allowed_exts`）
 
+### 1.4 滚动条样式规范（已落地）
+- 适用页面：
+  - 主界面：`src/gui/main_window.py` 中 `QWidget#home QScrollBar*`
+  - 数据模糊化：`src/gui/widgets/data_masking_page.py` 中 `QWidget#data_masking QScrollBar*`
+- 视觉规则（两页面共用）：
+  - 轨道背景：`transparent`
+  - 滚动条厚度：纵向 `10px`、横向 `10px`
+  - 滑块圆角：`5px`
+  - 滑块颜色：默认 `#C7D3E3`、悬停 `#A9BCD6`、按下 `#92ABC9`
+  - 隐藏箭头按钮：`add-line/sub-line` 尺寸设为 `0`
+  - 分页区：`add-page/sub-page` 使用 `transparent`
+- 页面差异（保持现状）：
+  - 主界面滑块最小尺寸：`56`；纵向边距 `8 4 8 0`，横向边距 `0 8 4 8`
+  - 数据模糊化滑块最小尺寸：`52`；纵向边距 `6 3 6 0`，横向边距 `0 6 3 6`
+- 实现原则：滚动条 QSS 必须使用页面对象名作用域（如 `QWidget#home` / `QWidget#data_masking`），避免全局污染其它工具页
+
 ## 2. 页面布局规则（通用型页面）
 
 以下模式适用于绝大多数工具页（如 `data_cleaner`、`codelist_processor`、`file_format`、`xlsx_restructure` 等）：
@@ -113,6 +129,7 @@
 
 ### 5.2 样式命名与对象命名规则
 - 页面级样式挂在根组件：`QWidget#data_masking`
+- 滚动条样式同样使用页面作用域：`QWidget#data_masking QScrollBar*`
 - 卡片命名：
   - 主卡片：`dmCard`
   - 子卡片：`dmSubCard`
@@ -183,6 +200,7 @@
 8. 需要拖拽时实现 `setAcceptDrops + dragEnterEvent + dropEvent`  
 9. 注册到 `src/gui/main_window.py` 的 `TOOL_PAGE_REGISTRY`  
 10. 如页面复杂度接近 `data_masking`，按“卡片 + 子卡片 + 固定表单宽度 + 步骤状态机”实现
+11. 页面存在滚动区域时，按“1.4 滚动条样式规范”添加作用域化滚动条 QSS
 
 ## 8. 推荐模板（简版骨架）
 

@@ -93,6 +93,58 @@ class DataMaskingPage(QWidget):
                 background: #F5F6F8;
                 border: none;
             }
+            QWidget#data_masking QScrollBar:vertical {
+                background: transparent;
+                width: 10px;
+                margin: 6px 3px 6px 0;
+            }
+            QWidget#data_masking QScrollBar::handle:vertical {
+                background: #C7D3E3;
+                min-height: 52px;
+                border-radius: 5px;
+            }
+            QWidget#data_masking QScrollBar::handle:vertical:hover {
+                background: #A9BCD6;
+            }
+            QWidget#data_masking QScrollBar::handle:vertical:pressed {
+                background: #92ABC9;
+            }
+            QWidget#data_masking QScrollBar::add-line:vertical,
+            QWidget#data_masking QScrollBar::sub-line:vertical {
+                height: 0px;
+                border: none;
+                background: transparent;
+            }
+            QWidget#data_masking QScrollBar::add-page:vertical,
+            QWidget#data_masking QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
+            QWidget#data_masking QScrollBar:horizontal {
+                background: transparent;
+                height: 10px;
+                margin: 0 6px 3px 6px;
+            }
+            QWidget#data_masking QScrollBar::handle:horizontal {
+                background: #C7D3E3;
+                min-width: 52px;
+                border-radius: 5px;
+            }
+            QWidget#data_masking QScrollBar::handle:horizontal:hover {
+                background: #A9BCD6;
+            }
+            QWidget#data_masking QScrollBar::handle:horizontal:pressed {
+                background: #92ABC9;
+            }
+            QWidget#data_masking QScrollBar::add-line:horizontal,
+            QWidget#data_masking QScrollBar::sub-line:horizontal {
+                width: 0px;
+                border: none;
+                background: transparent;
+            }
+            QWidget#data_masking QScrollBar::add-page:horizontal,
+            QWidget#data_masking QScrollBar::sub-page:horizontal {
+                background: transparent;
+            }
             QFrame#dmCard {
                 background: #FFFFFF;
                 border: 1px solid #E3E8EF;

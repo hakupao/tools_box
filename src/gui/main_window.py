@@ -196,6 +196,58 @@ class HomePage(QWidget):
             QWidget#home { background: #F5F6F8; }
             QScrollArea { background: transparent; }
             QScrollArea > QWidget > QWidget { background: #F5F6F8; }
+            QWidget#home QScrollBar:vertical {
+                background: transparent;
+                width: 10px;
+                margin: 8px 4px 8px 0;
+            }
+            QWidget#home QScrollBar::handle:vertical {
+                background: #C7D3E3;
+                min-height: 56px;
+                border-radius: 5px;
+            }
+            QWidget#home QScrollBar::handle:vertical:hover {
+                background: #A9BCD6;
+            }
+            QWidget#home QScrollBar::handle:vertical:pressed {
+                background: #92ABC9;
+            }
+            QWidget#home QScrollBar::add-line:vertical,
+            QWidget#home QScrollBar::sub-line:vertical {
+                height: 0px;
+                border: none;
+                background: transparent;
+            }
+            QWidget#home QScrollBar::add-page:vertical,
+            QWidget#home QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
+            QWidget#home QScrollBar:horizontal {
+                background: transparent;
+                height: 10px;
+                margin: 0 8px 4px 8px;
+            }
+            QWidget#home QScrollBar::handle:horizontal {
+                background: #C7D3E3;
+                min-width: 56px;
+                border-radius: 5px;
+            }
+            QWidget#home QScrollBar::handle:horizontal:hover {
+                background: #A9BCD6;
+            }
+            QWidget#home QScrollBar::handle:horizontal:pressed {
+                background: #92ABC9;
+            }
+            QWidget#home QScrollBar::add-line:horizontal,
+            QWidget#home QScrollBar::sub-line:horizontal {
+                width: 0px;
+                border: none;
+                background: transparent;
+            }
+            QWidget#home QScrollBar::add-page:horizontal,
+            QWidget#home QScrollBar::sub-page:horizontal {
+                background: transparent;
+            }
             """
         )
 
