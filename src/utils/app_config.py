@@ -8,12 +8,14 @@ from typing import Any
 from platformdirs import user_config_dir
 
 
-APP_NAME = "tools_box"
-APP_CONFIG_FILENAME = "tools_box_config.json"
+LEGACY_APP_NAME = "tools_box"
+LEGACY_APP_CONFIG_FILENAME = "tools_box_config.json"
+APP_NAME = "dataforge_studio"
+APP_CONFIG_FILENAME = "dataforge_studio_config.json"
 
 
 def get_app_config_path() -> Path:
-    env_path = os.getenv("TOOLS_BOX_CONFIG_PATH")
+    env_path = os.getenv("DATAFORGE_STUDIO_CONFIG_PATH") or os.getenv("TOOLS_BOX_CONFIG_PATH")
     if env_path:
         return Path(env_path).expanduser()
 
@@ -23,6 +25,11 @@ def get_app_config_path() -> Path:
 
 def load_app_config(path: str | Path | None = None) -> dict[str, Any]:
     config_path = Path(path) if path is not None else get_app_config_path()
+    if not config_path.exists() and path is None:
+        legacy_path = Path(user_config_dir(LEGACY_APP_NAME, appauthor=False, roaming=False)) / LEGACY_APP_CONFIG_FILENAME
+        if legacy_path.exists():
+            config_path = legacy_path
+
     if not config_path.exists():
         return {}
 

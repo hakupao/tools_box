@@ -112,6 +112,19 @@ a = Analysis(
         'pkg_resources',      # 让 PyInstaller 正确收集 pkg_resources 依赖
         'jaraco.text',        # pkg_resources 运行时依赖
         'platformdirs',       # pkg_resources 运行时依赖
+        # 懒加载页面模块（importlib 动态导入，需显式声明）
+        'src.gui.widgets.date_converter_page',
+        'src.gui.widgets.file_format_converter_page',
+        'src.gui.widgets.xlsx_restructure_page',
+        'src.gui.widgets.file_field_extractor_page',
+        'src.gui.widgets.dead_link_checker_page',
+        'src.gui.widgets.data_cleaner_page',
+        'src.gui.widgets.codelist_processor_page',
+        'src.gui.widgets.data_masking_page',
+        'src.gui.widgets.edc_site_adder_page',
+        'src.gui.widgets.fullwidth_halfwidth_converter_page',
+        'src.gui.widgets.csv_quote_remover_page',
+        'src.gui.widgets.xlsx_sheet_splitter_page',
     ],
     hookspath=[],
     hooksconfig={},
@@ -171,7 +184,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='工具箱',
+    name='DataForgeStudio',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,  # 在 Windows 上禁用符号剥离（避免 strip 工具缺失错误）
@@ -183,6 +196,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # 如果有图标文件，可以在这里指定
+    icon='assets/icons/favicon.ico',
     version_file=None,  # 如果有版本信息文件，可以在这里指定
 ) 

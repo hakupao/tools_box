@@ -54,3 +54,6 @@ logs/
 
 # Project specific
 temp_tkdnd/
+
+# Installer & Packaging
+dist_installer/

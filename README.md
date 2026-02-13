@@ -1,4 +1,4 @@
-# Tools Box
+# DataForge Studio
 
 一个基于 Python + PySide6 + QFluentWidgets 开发的多功能数据处理工具集合，提供 Win11 Fluent 风格界面。
 
@@ -71,7 +71,8 @@ pip install -r requirements.txt
 
 ### 使用打包版本
 
-项目提供了打包好的可执行文件（`工具箱.exe`），可以直接运行，无需安装 Python 环境。
+推荐使用安装包版本（`onedir + Inno Setup`），安装后启动更快。
+仍保留单文件 `DataForgeStudio.exe` 作为兼容构建方式。
 
 ## 使用方法
 
@@ -81,7 +82,8 @@ python src/main.py
 ```
 
 ### 打包版本
-直接双击运行 `工具箱.exe` 文件。
+- 安装包模式：安装后从开始菜单或桌面快捷方式启动。
+- 兼容模式：直接双击 `DataForgeStudio.exe` 文件。
 
 ## 项目结构
 
@@ -122,6 +124,16 @@ tools_box/
 │       ├── xlsx_restructure_service.py
 │       └── edc_site_adder_service.py
 ├── docs/                                # 项目文档
+├── packaging/                           # 打包与安装脚本
+│   ├── pyinstaller/
+│   │   └── tools_box_onedir.spec        # onedir 打包配置
+│   ├── installer/
+│   │   └── tools_box.iss                # Inno Setup 安装脚本
+│   ├── scripts/
+│   │   ├── build_onedir.ps1             # 生成 dist/DataForgeStudio/DataForgeStudio.exe
+│   │   ├── build_installer.ps1          # 生成安装包
+│   │   └── measure_startup.ps1          # 启动耗时基准对比
+│   └── README.md                        # 打包链路说明
 ├── requirements.txt                     # 项目依赖
 ├── tools_box.spec                       # PyInstaller 打包配置
 ├── CHANGELOG.md                         # 更新日志
@@ -167,13 +179,24 @@ tools_box/
 
 ### 打包发布
 
-1. 清理临时文件：
+1. 推荐链路：构建 onedir 版本（首选）
 ```powershell
-Remove-Item -Path build,dist,temp_tkdnd -Recurse -Force -ErrorAction SilentlyContinue
+powershell -ExecutionPolicy Bypass -File .\packaging\scripts\build_onedir.ps1 -Clean
 ```
 
-2. 重新打包：
-```bash
+2. 推荐链路：构建安装包（需要 Inno Setup 6）
+```powershell
+powershell -ExecutionPolicy Bypass -File .\packaging\scripts\build_installer.ps1 -Clean
+```
+
+3. 性能对比：测量 one-file 与 onedir 启动时间
+```powershell
+powershell -ExecutionPolicy Bypass -File .\packaging\scripts\measure_startup.ps1
+```
+
+4. 兼容链路（回滚）：单文件构建
+```powershell
+Remove-Item -Path build,dist,temp_tkdnd -Recurse -Force -ErrorAction SilentlyContinue
 python -m PyInstaller tools_box.spec --clean
 ```
 
@@ -201,7 +224,7 @@ python -m PyInstaller tools_box.spec --clean
 
 ## 联系方式
 
-- 项目维护者: Tools Box Team
+- 项目维护者: DataForge Studio Team
 - 邮箱: [待添加]
 - 项目主页: [待添加]
 
