@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
@@ -16,7 +16,7 @@ from qfluentwidgets import (
 )
 
 from ...utils.file_field_extractor_service import FileFieldExtractorService
-from ..qt_common import show_error, show_info, show_warning, mono_font
+from ..qt_common import mono_font, select_existing_directory, show_error, show_info, show_warning
 
 
 class FileFieldExtractorPage(QWidget):
@@ -98,7 +98,7 @@ class FileFieldExtractorPage(QWidget):
         layout.addWidget(self.log_text, stretch=1)
 
     def select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择包含数据文件的文件夹")
+        folder = select_existing_directory(self, "选择包含数据文件的文件夹")
         if folder:
             self.path_input.setText(folder)
 
@@ -196,3 +196,4 @@ class FileFieldExtractorPage(QWidget):
             if path and os.path.isdir(path):
                 self.path_input.setText(path)
                 return
+

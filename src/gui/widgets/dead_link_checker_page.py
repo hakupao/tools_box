@@ -8,7 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
@@ -23,7 +23,7 @@ from qfluentwidgets import (
 )
 
 from ...utils.dead_link_checker_service import DeadLinkCheckerService
-from ..qt_common import show_error, show_info, show_warning, mono_font
+from ..qt_common import mono_font, select_existing_directory, select_open_file, show_error, show_info, show_warning
 
 
 class DeadLinkCheckerPage(QWidget):
@@ -129,7 +129,7 @@ class DeadLinkCheckerPage(QWidget):
         layout.addWidget(self.log_text, stretch=1)
 
     def select_file(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
+        file_path, _ = select_open_file(
             self,
             "选择 HTML 文件",
             "",
@@ -139,7 +139,7 @@ class DeadLinkCheckerPage(QWidget):
             self.path_input.setText(file_path)
 
     def select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择包含 HTML 文件的文件夹")
+        folder = select_existing_directory(self, "选择包含 HTML 文件的文件夹")
         if folder:
             self.path_input.setText(folder)
 
@@ -364,3 +364,4 @@ class DeadLinkCheckerPage(QWidget):
             if os.path.isdir(path) or path.lower().endswith((".html", ".htm")):
                 self.path_input.setText(path)
                 return
+

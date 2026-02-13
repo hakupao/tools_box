@@ -3,11 +3,19 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
 from ...utils.data_cleaner_service import DataCleanerService
-from ..qt_common import FileListWidget, show_error, show_info, show_warning
+from ..qt_common import (
+    FileListWidget,
+    select_existing_directory,
+    select_open_file,
+    select_open_files,
+    show_error,
+    show_info,
+    show_warning,
+)
 
 
 class DataCleanerPage(QWidget):
@@ -90,7 +98,7 @@ class DataCleanerPage(QWidget):
         layout.addWidget(self.status_label)
 
     def select_rule_file(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择仕样书文件", "", "Excel 文件 (*.xlsx)")
+        file_path, _ = select_open_file(self, "选择仕样书文件", "", "Excel 文件 (*.xlsx)")
         if file_path:
             try:
                 self.converter.select_rule_file(file_path)
@@ -99,17 +107,17 @@ class DataCleanerPage(QWidget):
                 show_error(self, "错误", f"加载仕样书时发生错误: {exc}")
 
     def select_file(self) -> None:
-        files, _ = QFileDialog.getOpenFileNames(self, "选择 CSV 文件", "", "CSV 文件 (*.csv)")
+        files, _ = select_open_files(self, "选择 CSV 文件", "", "CSV 文件 (*.csv)")
         if files:
             self.file_list.add_paths(files)
 
     def select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择包含 CSV 文件的文件夹")
+        folder = select_existing_directory(self, "选择包含 CSV 文件的文件夹")
         if folder:
             self.file_list.add_paths([folder])
 
     def select_output_path(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
+        folder = select_existing_directory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
             self.output_note.setText(f"输出到: {folder}")
@@ -165,3 +173,4 @@ class DataCleanerPage(QWidget):
     def clear_file_list(self) -> None:
         self.file_list.clear()
         self.status_label.setText("")
+

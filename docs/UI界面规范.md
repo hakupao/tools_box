@@ -1,4 +1,4 @@
-# Tools Box UI 界面规范（Qt / QFluentWidgets）
+# DataForge Studio UI 界面规范（Qt / QFluentWidgets）
 
 本文档基于当前仓库已实现页面总结，可作为后续新增页面的直接参考模板。  
 覆盖范围：`src/gui/main_window.py`、`src/gui/qt_common.py`、`src/gui/widgets/*_page.py`。
@@ -7,6 +7,7 @@
 
 ### 1.1 主题与字体
 - 全局固定浅色主题：`setTheme(Theme.LIGHT)`（`src/main.py`）
+- 全局禁用原生文件对话框：`QApplication.setAttribute(Qt.AA_DontUseNativeDialogs, True)`（`src/main.py`）
 - 全局字体：`app.setFont(QFont(font_family, 10))`（`src/main.py`）
 - 优先字体顺序：`Segoe UI Variable Text` -> `Segoe UI Variable Display` -> `Segoe UI` -> `Microsoft YaHei UI`
 - 等宽字体（日志/大文本）：统一用 `mono_font()`（`src/gui/qt_common.py`）
@@ -48,6 +49,27 @@
   - 数据模糊化滑块最小尺寸：`52`；纵向边距 `6 3 6 0`，横向边距 `0 6 3 6`
 - 实现原则：滚动条 QSS 必须使用页面对象名作用域（如 `QWidget#home` / `QWidget#data_masking`），避免全局污染其它工具页
 
+### 1.5 弹窗与文件对话框规范（本轮修正重点）
+- 统一入口：
+  - 普通提示弹窗只允许使用 `show_info/show_warning/show_error/ask_yes_no`（`src/gui/qt_common.py`）
+  - 文件选择弹窗只允许使用 `select_open_file/select_open_files/select_existing_directory/select_save_file`（`src/gui/qt_common.py`）
+- 禁止项：
+  - 页面代码中直接调用 `QMessageBox.*`
+  - 页面代码中直接调用 `QFileDialog.getOpenFileName/getOpenFileNames/getExistingDirectory/getSaveFileName`
+- 弹窗统一浅色策略：
+  - 所有弹窗创建后必须执行 `_apply_light_dialog_style(...)`
+  - 同时调用 `ensure_light_title_bar(...)` 强制 Windows 标题栏浅色
+  - 全局安装 `LightTitleBarEventFilter` 作为兜底（`QEvent.Show/WinIdChange`）
+- 文件对话框样式最低要求：
+  - 项目树/列表/表格必须有可见选中态：选中背景 `#DDEBFF`、文字 `#0F172A`
+  - 分割条（`QSplitter::handle`）必须是浅色，避免深色竖条
+  - 滚动条分页区（`add-page/sub-page`）必须透明，避免深色块
+  - 角落区（`QTableCornerButton::section`）必须与表头同色
+- 图标可用性规则：
+  - `QFileDialog` 顶部导航按钮（后退/前进/上一级/新建/视图切换）必须显示图标
+  - 不要为弹窗强制切换全局样式引擎（如强制 `Fusion`），否则可能导致工具按钮图标丢失
+  - 若需美化工具按钮，仅对 `QFileDialog QToolButton` 做局部 QSS，不覆盖图标来源
+
 ## 2. 页面布局规则（通用型页面）
 
 以下模式适用于绝大多数工具页（如 `data_cleaner`、`codelist_processor`、`file_format`、`xlsx_restructure` 等）：
@@ -58,6 +80,9 @@
   - 现有特例：`data_masking` 用 `(32, 24, 32, 24)`，`edc_site_adder` 用 `(32, 20, 32, 24)`
 - 推荐间距：`16`  
   - 现有特例：`data_masking` 用 `14`，`edc_site_adder` 用 `12`
+- 首屏留白控制：
+  - Header 区不应挤占中上部大量空白
+  - 推荐结构：`header stretch=0`，主内容区 `stretch=1`
 
 ### 2.2 Header 区（页面头）
 - 结构：`QHBoxLayout`
@@ -182,7 +207,8 @@
 
 - 页面布局：
   - 顶部更紧凑边距 `(32, 20, 32, 24)`
-  - 主内容左右比例 `3:1`（使用说明 : 处理日志）
+  - 主内容左右比例 `3:1`（即 75% : 25%，使用说明 : 处理日志）
+  - 降低顶部留白，优先保证“使用说明”主体尽早进入可视区域
 - 配置弹窗：
   - 使用浅色风格（`QDialog#edcConfigDialog`）
   - 表格、表头、选中态、行号区统一浅色
@@ -201,8 +227,19 @@
 9. 注册到 `src/gui/main_window.py` 的 `TOOL_PAGE_REGISTRY`  
 10. 如页面复杂度接近 `data_masking`，按“卡片 + 子卡片 + 固定表单宽度 + 步骤状态机”实现
 11. 页面存在滚动区域时，按“1.4 滚动条样式规范”添加作用域化滚动条 QSS
+12. 涉及弹窗/文件选择时，严格按“1.5 弹窗与文件对话框规范”走 `qt_common` 封装
 
-## 8. 推荐模板（简版骨架）
+## 8. 回归检查清单（弹窗/对话框）
+
+每次修改弹窗或文件对话框样式后，至少手工验证以下场景：
+1. 数据模糊化页点击“保存配置”，弹窗标题栏浅色、文字对齐正常、无卡死
+2. 数据模糊化页点击“选择文件/选择文件夹/选择输出路径”，文件对话框为浅色
+3. 文件对话框中选中一行时，高亮明显（`#DDEBFF`）且文字可读
+4. 文件对话框顶部导航按钮图标可见，不出现“只有按钮轮廓无图标”
+5. 文件对话框滚动条、分割条、角落区无深色块
+6. Windows 深色系统主题下运行时，以上表现保持一致
+
+## 9. 推荐模板（简版骨架）
 
 ```python
 class NewToolPage(QWidget):

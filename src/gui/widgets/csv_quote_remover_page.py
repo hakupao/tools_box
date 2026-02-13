@@ -3,11 +3,11 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
 from ...utils.csv_quote_remover_service import CsvQuoteRemoverService
-from ..qt_common import FileListWidget, show_error, show_info, show_warning
+from ..qt_common import FileListWidget, select_existing_directory, select_open_files, show_error, show_info, show_warning
 
 
 class CsvQuoteRemoverPage(QWidget):
@@ -87,17 +87,17 @@ class CsvQuoteRemoverPage(QWidget):
         layout.addWidget(self.status_label)
 
     def select_file(self) -> None:
-        files, _ = QFileDialog.getOpenFileNames(self, "选择 CSV 文件", "", "CSV 文件 (*.csv)")
+        files, _ = select_open_files(self, "选择 CSV 文件", "", "CSV 文件 (*.csv)")
         if files:
             self.file_list.add_paths(files)
 
     def select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择包含 CSV 文件的文件夹")
+        folder = select_existing_directory(self, "选择包含 CSV 文件的文件夹")
         if folder:
             self.file_list.add_paths([folder])
 
     def select_output_path(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
+        folder = select_existing_directory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
             self.output_note.setText(f"输出到: {folder}")
@@ -149,3 +149,4 @@ class CsvQuoteRemoverPage(QWidget):
     def clear_file_list(self) -> None:
         self.file_list.clear()
         self.status_label.setText("")
+

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from typing import Callable
 
 from PySide6.QtCore import Qt
@@ -8,6 +9,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QLabel,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -25,18 +27,6 @@ from qfluentwidgets import (
 )
 
 from src.version import VERSION
-from .widgets.codelist_processor_page import CodelistProcessorPage
-from .widgets.csv_quote_remover_page import CsvQuoteRemoverPage
-from .widgets.data_cleaner_page import DataCleanerPage
-from .widgets.data_masking_page import DataMaskingPage
-from .widgets.date_converter_page import DateConverterPage
-from .widgets.dead_link_checker_page import DeadLinkCheckerPage
-from .widgets.edc_site_adder_page import EdcSiteAdderPage
-from .widgets.file_field_extractor_page import FileFieldExtractorPage
-from .widgets.file_format_converter_page import FileFormatConverterPage
-from .widgets.fullwidth_halfwidth_converter_page import FullwidthHalfwidthConverterPage
-from .widgets.xlsx_restructure_page import XlsxRestructurePage
-from .widgets.xlsx_sheet_splitter_page import XlsxSheetSplitterPage
 
 
 TOOL_CATEGORIES = [
@@ -133,18 +123,48 @@ TOOL_CATEGORIES = [
 ]
 
 TOOL_PAGE_REGISTRY = [
-    ("date_converter", DateConverterPage, FIF.CALENDAR, "日期转换"),
-    ("file_format", FileFormatConverterPage, FIF.SYNC, "文件格式转换"),
-    ("file_restructure", XlsxRestructurePage, FIF.DOCUMENT, "生成 Data Set"),
-    ("file_field_extractor", FileFieldExtractorPage, FIF.LIBRARY, "获取文件字段"),
-    ("dead_link_checker", DeadLinkCheckerPage, FIF.LINK, "死链检测"),
-    ("data_cleaner", DataCleanerPage, FIF.BROOM, "数据清洗"),
-    ("codelist_processor", CodelistProcessorPage, FIF.DICTIONARY, "Codelist 处理"),
-    ("data_masking", DataMaskingPage, FIF.FINGERPRINT, "数据模糊化"),
-    ("edc_site_adder", EdcSiteAdderPage, FIF.ROBOT, "EDC 施设添加"),
-    ("fullwidth_halfwidth", FullwidthHalfwidthConverterPage, FIF.FONT, "全角转半角"),
-    ("csv_quote_remover", CsvQuoteRemoverPage, FIF.CUT, "CSV 引号去除"),
-    ("xlsx_sheet_splitter", XlsxSheetSplitterPage, FIF.CLIPPING_TOOL, "工作表拆分"),
+    ("date_converter", "src.gui.widgets.date_converter_page", "DateConverterPage", FIF.CALENDAR, "日期转换"),
+    ("file_format", "src.gui.widgets.file_format_converter_page", "FileFormatConverterPage", FIF.SYNC, "文件格式转换"),
+    ("file_restructure", "src.gui.widgets.xlsx_restructure_page", "XlsxRestructurePage", FIF.DOCUMENT, "生成 Data Set"),
+    (
+        "file_field_extractor",
+        "src.gui.widgets.file_field_extractor_page",
+        "FileFieldExtractorPage",
+        FIF.LIBRARY,
+        "获取文件字段",
+    ),
+    ("dead_link_checker", "src.gui.widgets.dead_link_checker_page", "DeadLinkCheckerPage", FIF.LINK, "死链检测"),
+    ("data_cleaner", "src.gui.widgets.data_cleaner_page", "DataCleanerPage", FIF.BROOM, "数据清洗"),
+    (
+        "codelist_processor",
+        "src.gui.widgets.codelist_processor_page",
+        "CodelistProcessorPage",
+        FIF.DICTIONARY,
+        "Codelist 处理",
+    ),
+    ("data_masking", "src.gui.widgets.data_masking_page", "DataMaskingPage", FIF.FINGERPRINT, "数据模糊化"),
+    ("edc_site_adder", "src.gui.widgets.edc_site_adder_page", "EdcSiteAdderPage", FIF.ROBOT, "EDC 施设添加"),
+    (
+        "fullwidth_halfwidth",
+        "src.gui.widgets.fullwidth_halfwidth_converter_page",
+        "FullwidthHalfwidthConverterPage",
+        FIF.FONT,
+        "全角转半角",
+    ),
+    (
+        "csv_quote_remover",
+        "src.gui.widgets.csv_quote_remover_page",
+        "CsvQuoteRemoverPage",
+        FIF.CUT,
+        "CSV 引号去除",
+    ),
+    (
+        "xlsx_sheet_splitter",
+        "src.gui.widgets.xlsx_sheet_splitter_page",
+        "XlsxSheetSplitterPage",
+        FIF.CLIPPING_TOOL,
+        "工作表拆分",
+    ),
 ]
 
 
@@ -271,7 +291,7 @@ class HomePage(QWidget):
         header_layout.setSpacing(20)
 
         title_block = QVBoxLayout()
-        title = TitleLabel("工具箱")
+        title = TitleLabel("DataForge Studio")
         subtitle = SubtitleLabel(f"实用工具集合  •  v{VERSION}  •  Win11 Fluent UI")
         subtitle.setWordWrap(True)
         title_block.addWidget(title)
@@ -342,10 +362,63 @@ class HomePage(QWidget):
             self._populate_grid(grid, cards, columns)
 
 
+class LazyToolPage(QWidget):
+    def __init__(self, tool_id: str, module_path: str, class_name: str, main_window, parent=None) -> None:
+        super().__init__(parent)
+        self.setObjectName(tool_id)
+        self.main_window = main_window
+        self.module_path = module_path
+        self.class_name = class_name
+        self._inner_page: QWidget | None = None
+
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+
+        self._loading = QLabel("正在加载工具页面...")
+        self._loading.setAlignment(Qt.AlignCenter)
+        self._loading.setStyleSheet("color: #6B7280;")
+
+        self._error = QLabel("")
+        self._error.setAlignment(Qt.AlignCenter)
+        self._error.setWordWrap(True)
+        self._error.setStyleSheet("color: #DC2626; padding: 16px;")
+        self._error.hide()
+
+        self._layout.addStretch(1)
+        self._layout.addWidget(self._loading, alignment=Qt.AlignCenter)
+        self._layout.addWidget(self._error, alignment=Qt.AlignCenter)
+        self._layout.addStretch(1)
+
+    def ensure_loaded(self) -> None:
+        if self._inner_page is not None:
+            return
+
+        try:
+            module = importlib.import_module(self.module_path)
+            page_cls = getattr(module, self.class_name)
+            page = page_cls(self.main_window)
+            self._inner_page = page
+
+            while self._layout.count():
+                item = self._layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.setParent(None)
+
+            self._layout.addWidget(page)
+        except Exception as exc:  # pylint: disable=broad-except
+            self._error.setText(
+                f"页面加载失败：{self.module_path}.{self.class_name}\n"
+                f"{exc.__class__.__name__}: {exc}"
+            )
+            self._error.show()
+
+
 class MainWindow(FluentWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("工具箱")
+        self.setWindowTitle("DataForge Studio")
         self.resize(1280, 860)
         self.setMinimumSize(1160, 760)
         self._did_center = False
@@ -357,13 +430,14 @@ class MainWindow(FluentWindow):
         self.navigationInterface.panel.setMinimumExpandWidth(900)
         self.navigationInterface.panel.expand(False)
 
-        self.tool_pages: dict[str, QWidget] = {}
+        self.tool_pages: dict[str, LazyToolPage] = {}
+        self.stackedWidget.currentChanged.connect(self._ensure_current_page_loaded)
 
         self.home_interface = HomePage(TOOL_CATEGORIES, self.open_tool)
         self.addSubInterface(self.home_interface, FIF.HOME, "主页")
 
-        for tool_id, page_cls, icon, title in TOOL_PAGE_REGISTRY:
-            self._register_tool_page(tool_id, page_cls(self), icon, title)
+        for tool_id, module_path, class_name, icon, title in TOOL_PAGE_REGISTRY:
+            self._register_tool_page(tool_id, module_path, class_name, icon, title)
 
         self.switch_to(self.home_interface)
 
@@ -390,9 +464,15 @@ class MainWindow(FluentWindow):
         frame.moveCenter(available.center())
         self.move(frame.topLeft())
 
-    def _register_tool_page(self, tool_id: str, page: QWidget, icon, title: str) -> None:
+    def _register_tool_page(self, tool_id: str, module_path: str, class_name: str, icon, title: str) -> None:
+        page = LazyToolPage(tool_id, module_path, class_name, self)
         self.tool_pages[tool_id] = page
         self.addSubInterface(page, icon, title, position=NavigationItemPosition.TOP)
+
+    def _ensure_current_page_loaded(self, index: int) -> None:
+        page = self.stackedWidget.widget(index)
+        if isinstance(page, LazyToolPage):
+            page.ensure_loaded()
 
     def switch_to(self, widget: QWidget) -> None:
         self.stackedWidget.setCurrentWidget(widget)
@@ -402,4 +482,5 @@ class MainWindow(FluentWindow):
         page = self.tool_pages.get(tool_id)
         if page is None:
             return
+        page.ensure_loaded()
         self.switch_to(page)

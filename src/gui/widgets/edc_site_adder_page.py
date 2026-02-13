@@ -27,7 +27,7 @@ from qfluentwidgets import (
 )
 
 from ...utils.edc_site_adder_service import EdcSiteAdderService
-from ..qt_common import mono_font, show_error, show_info
+from ..qt_common import ensure_light_title_bar, mono_font, show_error, show_info
 
 
 class EdcSiteAdderPage(QWidget):
@@ -223,6 +223,7 @@ class EdcSiteAdderPage(QWidget):
         dialog_layout = QVBoxLayout(dialog)
         dialog_layout.setContentsMargins(24, 24, 24, 24)
         dialog_layout.setSpacing(16)
+        ensure_light_title_bar(dialog)
 
         loop_row = QHBoxLayout()
         loop_label = BodyLabel("最大循环次数")

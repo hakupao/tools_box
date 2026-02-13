@@ -3,11 +3,11 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, LineEdit, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
 from ...utils.xlsx_sheet_splitter_service import XlsxSheetSplitterService
-from ..qt_common import show_error, show_info, show_warning
+from ..qt_common import select_existing_directory, select_open_file, show_error, show_info, show_warning
 
 
 class XlsxSheetSplitterPage(QWidget):
@@ -86,7 +86,7 @@ class XlsxSheetSplitterPage(QWidget):
         layout.addWidget(self.status_label)
 
     def select_file(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择 Excel 文件", "", "Excel 文件 (*.xlsx)")
+        file_path, _ = select_open_file(self, "选择 Excel 文件", "", "Excel 文件 (*.xlsx)")
         if file_path:
             self._set_file(file_path)
 
@@ -97,7 +97,7 @@ class XlsxSheetSplitterPage(QWidget):
         self.progress_label.setText("")
 
     def select_output_path(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
+        folder = select_existing_directory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
             self.output_note.setText(f"输出到: {folder}")
@@ -169,3 +169,4 @@ class XlsxSheetSplitterPage(QWidget):
             if path and path.lower().endswith(".xlsx") and os.path.isfile(path):
                 self._set_file(path)
                 return
+

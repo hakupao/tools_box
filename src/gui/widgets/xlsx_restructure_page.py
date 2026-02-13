@@ -3,11 +3,19 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, CaptionLabel, ComboBox, PrimaryPushButton, ProgressBar, PushButton, TitleLabel
 
 from ...utils.xlsx_restructure_service import XlsxRestructureService
-from ..qt_common import FileListWidget, show_error, show_info, show_warning
+from ..qt_common import (
+    FileListWidget,
+    select_existing_directory,
+    select_open_file,
+    select_open_files,
+    show_error,
+    show_info,
+    show_warning,
+)
 
 
 class XlsxRestructurePage(QWidget):
@@ -102,17 +110,17 @@ class XlsxRestructurePage(QWidget):
         layout.addWidget(self.status_label)
 
     def select_file(self) -> None:
-        files, _ = QFileDialog.getOpenFileNames(self, "选择 Excel 文件", "", "Excel 文件 (*.xlsx)")
+        files, _ = select_open_files(self, "选择 Excel 文件", "", "Excel 文件 (*.xlsx)")
         if files:
             self.file_list.add_paths(files)
 
     def select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择包含 Excel 文件的文件夹")
+        folder = select_existing_directory(self, "选择包含 Excel 文件的文件夹")
         if folder:
             self.file_list.add_paths([folder])
 
     def select_output_path(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
+        folder = select_existing_directory(self, "选择输出文件夹")
         if folder:
             self.output_path = folder
             self.output_note.setText(f"输出到: {folder}")
@@ -121,7 +129,7 @@ class XlsxRestructurePage(QWidget):
         self.study_id = value
 
     def upload_patients_file(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择仕样书（症例关系）Excel 文件", "", "Excel 文件 (*.xlsx)")
+        file_path, _ = select_open_file(self, "选择仕样书（症例关系）Excel 文件", "", "Excel 文件 (*.xlsx)")
         if file_path:
             try:
                 self.patients_mapping = XlsxRestructureService.read_patients_mapping(file_path)
@@ -181,3 +189,4 @@ class XlsxRestructurePage(QWidget):
     def clear_file_list(self) -> None:
         self.file_list.clear()
         self.status_label.setText("")
+
