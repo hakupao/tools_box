@@ -57,8 +57,14 @@ class NoWheelComboBox(ComboBox):
 
 
 class DataMaskingPage(QWidget):
-    FORM_LABEL_WIDTH = 150
-    FORM_FIELD_WIDTH = 220
+    FORM_LABEL_WIDTH = 120
+    FORM_FIELD_WIDTH = 180
+    # Keep first textbox start aligned with standard form field column.
+    DM_PAIR_LEFT_LABEL_WIDTH = FORM_LABEL_WIDTH + 2
+    DM_PAIR_RIGHT_LABEL_WIDTH = 96
+    DM_PAIR_FIELD_WIDTH = FORM_FIELD_WIDTH
+    DM_PAIR_NOTE_WIDTH = 64
+    DM_PAIR_RIGHT_LABEL_OFFSET = 40
 
     def __init__(self, main_window) -> None:
         super().__init__()
@@ -186,7 +192,7 @@ class DataMaskingPage(QWidget):
                 font-size: 12px;
             }
             QLabel#dmFieldHint {
-                color: #64748B;
+                color: #2563EB;
                 font-size: 12px;
             }
             QLabel#dmAlertNote {
@@ -539,24 +545,35 @@ class DataMaskingPage(QWidget):
 
         self.doctor_fields_edit = LineEdit()
         self.doctor_fields_edit.setPlaceholderText("例如: INVNAM,ICINVNAM")
-        dm_form.addRow(
-            self._form_label("人名字段"),
-            self._input_with_note(self.doctor_fields_edit, "多个字段用逗号分隔"),
-        )
-
         self.doctor_value_edit = LineEdit()
+        self.doctor_replace_checkbox = CheckBox("启用替换")
+        self.doctor_replace_checkbox.setChecked(True)
         dm_form.addRow(
-            self._form_label("人名替换值"),
-            self._input_with_note(self.doctor_value_edit, "仅替换原本有值的单元格"),
+            self._paired_dm_fields(
+                "人名字段",
+                self.doctor_fields_edit,
+                "逗号分隔",
+                "人名替换值",
+                self.doctor_value_edit,
+                "",
+                enable_checkbox=self.doctor_replace_checkbox,
+            )
         )
 
         self.site_field_edit = LineEdit()
-        dm_form.addRow(self._form_label("施设字段"), self._input_with_note(self.site_field_edit, "默认 SITEID"))
-
         self.site_value_edit = LineEdit()
+        self.site_replace_checkbox = CheckBox("启用替换")
+        self.site_replace_checkbox.setChecked(True)
         dm_form.addRow(
-            self._form_label("施设替换值"),
-            self._input_with_note(self.site_value_edit, "仅替换原本有值的单元格"),
+            self._paired_dm_fields(
+                "施设字段",
+                self.site_field_edit,
+                "默认 SITEID",
+                "施设替换值",
+                self.site_value_edit,
+                "",
+                enable_checkbox=self.site_replace_checkbox,
+            )
         )
 
         self.age_field_edit = LineEdit()
@@ -763,6 +780,9 @@ class DataMaskingPage(QWidget):
         if note_object_name == "dmAlertNote":
             note_label.setTextColor("#DC2626", "#DC2626")
             note_label.setStyleSheet("color: #DC2626;")
+        elif note_object_name == "dmFieldHint":
+            note_label.setTextColor("#2563EB", "#2563EB")
+            note_label.setStyleSheet("color: #2563EB;")
         row.addWidget(note_label, 1, Qt.AlignLeft | Qt.AlignVCenter)
 
         if required:
@@ -771,6 +791,80 @@ class DataMaskingPage(QWidget):
             required_label.setTextColor("#DC2626", "#DC2626")
             required_label.setStyleSheet("color: #DC2626;")
             row.addWidget(required_label, 0, Qt.AlignRight | Qt.AlignVCenter)
+
+        return container
+
+    def _paired_dm_fields(
+        self,
+        left_label_text: str,
+        left_widget: QWidget,
+        left_note: str,
+        right_label_text: str,
+        right_widget: QWidget,
+        right_note: str,
+        *,
+        enable_checkbox: CheckBox | None = None,
+    ) -> QWidget:
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
+        row.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        container.setMinimumHeight(34)
+
+        left_label = self._form_label(left_label_text)
+        left_label.setMinimumWidth(self.DM_PAIR_LEFT_LABEL_WIDTH)
+        left_label.setMaximumWidth(self.DM_PAIR_LEFT_LABEL_WIDTH)
+        row.addWidget(left_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        left_widget.setMinimumWidth(self.DM_PAIR_FIELD_WIDTH)
+        left_widget.setMaximumWidth(self.DM_PAIR_FIELD_WIDTH)
+        row.addWidget(left_widget, 0, Qt.AlignLeft | Qt.AlignVCenter)
+
+        if left_note.strip():
+            left_note_label = CaptionLabel(left_note)
+            left_note_label.setObjectName("dmFieldHint")
+            left_note_label.setTextColor("#2563EB", "#2563EB")
+            left_note_label.setStyleSheet("color: #2563EB;")
+            left_note_label.setWordWrap(False)
+            left_note_label.setMaximumHeight(20)
+            left_note_label.setMinimumWidth(self.DM_PAIR_NOTE_WIDTH)
+            left_note_label.setMaximumWidth(self.DM_PAIR_NOTE_WIDTH)
+            left_note_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            row.addWidget(left_note_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        else:
+            row.addSpacing(self.DM_PAIR_NOTE_WIDTH)
+
+        row.addSpacing(self.DM_PAIR_RIGHT_LABEL_OFFSET)
+        right_label = self._form_label(right_label_text)
+        right_label.setMinimumWidth(self.DM_PAIR_RIGHT_LABEL_WIDTH)
+        right_label.setMaximumWidth(self.DM_PAIR_RIGHT_LABEL_WIDTH)
+        row.addWidget(right_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        right_widget.setMinimumWidth(self.DM_PAIR_FIELD_WIDTH)
+        right_widget.setMaximumWidth(self.DM_PAIR_FIELD_WIDTH)
+        if right_note.strip():
+            row.addWidget(right_widget, 0, Qt.AlignLeft | Qt.AlignVCenter)
+            right_note_label = CaptionLabel(right_note)
+            right_note_label.setObjectName("dmFieldHint")
+            right_note_label.setTextColor("#2563EB", "#2563EB")
+            right_note_label.setStyleSheet("color: #2563EB;")
+            right_note_label.setWordWrap(False)
+            right_note_label.setMaximumHeight(20)
+            right_note_label.setMinimumWidth(self.DM_PAIR_NOTE_WIDTH)
+            right_note_label.setMaximumWidth(self.DM_PAIR_NOTE_WIDTH)
+            right_note_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            row.addWidget(right_note_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        else:
+            row.addWidget(right_widget, 0, Qt.AlignLeft | Qt.AlignVCenter)
+            row.addSpacing(self.DM_PAIR_NOTE_WIDTH)
+
+        if enable_checkbox is not None:
+            enable_checkbox.setMinimumHeight(34)
+            enable_checkbox.setMinimumWidth(enable_checkbox.sizeHint().width())
+            enable_checkbox.setMaximumWidth(enable_checkbox.sizeHint().width())
+            row.addStretch(1)
+            row.addWidget(enable_checkbox, 0, Qt.AlignRight | Qt.AlignVCenter)
+        else:
+            row.addStretch(1)
 
         return container
 
@@ -798,6 +892,8 @@ class DataMaskingPage(QWidget):
         if note:
             note_label = CaptionLabel(note)
             note_label.setObjectName("dmFieldHint")
+            note_label.setTextColor("#2563EB", "#2563EB")
+            note_label.setStyleSheet("color: #2563EB;")
             note_label.setWordWrap(False)
             note_label.setMaximumHeight(20)
             row.addWidget(note_label, 1, Qt.AlignLeft | Qt.AlignVCenter)
@@ -825,6 +921,8 @@ class DataMaskingPage(QWidget):
             self.doctor_value_edit,
             self.site_field_edit,
             self.site_value_edit,
+            self.doctor_replace_checkbox,
+            self.site_replace_checkbox,
             self.age_field_edit,
             self.dm_custom_checkbox,
             self.include_subjid_checkbox,
@@ -1002,8 +1100,10 @@ class DataMaskingPage(QWidget):
 
             self.doctor_fields_edit.setText(",".join(profile.doctor_fields))
             self.doctor_value_edit.setText(profile.doctor_value)
+            self.doctor_replace_checkbox.setChecked(profile.doctor_replace_enabled)
             self.site_field_edit.setText(profile.site_field)
             self.site_value_edit.setText(profile.site_value)
+            self.site_replace_checkbox.setChecked(profile.site_replace_enabled)
             self.age_field_edit.setText(profile.age_field)
             self.include_subjid_checkbox.setChecked(profile.include_subjid)
             self.dm_custom_checkbox.setChecked(False)
@@ -1042,8 +1142,10 @@ class DataMaskingPage(QWidget):
             partial_date_policy="auto_fill_first_day",
             doctor_fields=doctor_fields,
             doctor_value=self.doctor_value_edit.text() or "テスト医師",
+            doctor_replace_enabled=self.doctor_replace_checkbox.isChecked(),
             site_field=self.site_field_edit.text().strip() or "SITEID",
             site_value=self.site_value_edit.text() or "テスト施設",
+            site_replace_enabled=self.site_replace_checkbox.isChecked(),
             age_field=self.age_field_edit.text().strip() or "AGE",
             include_subjid=self.include_subjid_checkbox.isChecked(),
         )
@@ -1253,4 +1355,3 @@ class DataMaskingPage(QWidget):
         self.scan_preview.clear()
         self.run_preview.clear()
         self._invalidate_scan()
-

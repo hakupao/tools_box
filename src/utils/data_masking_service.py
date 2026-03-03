@@ -59,8 +59,10 @@ class Pattern1Profile:
 
     doctor_fields: list[str] = field(default_factory=lambda: ["INVNAM"])
     doctor_value: str = "テスト医師"
+    doctor_replace_enabled: bool = True
     site_field: str = "SITEID"
     site_value: str = "テスト施設"
+    site_replace_enabled: bool = True
     age_field: str = "AGE"
 
     include_subjid: bool = True
@@ -109,7 +111,15 @@ class Pattern1Profile:
             profile.doctor_fields = [str(x).strip() for x in raw["doctor_fields"] if str(x).strip()]
 
         if "include_subjid" in raw:
-            profile.include_subjid = bool(raw["include_subjid"])
+            profile.include_subjid = Pattern1Profile._coerce_bool(raw["include_subjid"], profile.include_subjid)
+        if "doctor_replace_enabled" in raw:
+            profile.doctor_replace_enabled = Pattern1Profile._coerce_bool(
+                raw["doctor_replace_enabled"], profile.doctor_replace_enabled
+            )
+        if "site_replace_enabled" in raw:
+            profile.site_replace_enabled = Pattern1Profile._coerce_bool(
+                raw["site_replace_enabled"], profile.site_replace_enabled
+            )
 
         if "rule_chain_steps" in raw and isinstance(raw["rule_chain_steps"], list):
             parsed_steps = []
@@ -125,6 +135,21 @@ class Pattern1Profile:
         data = asdict(self)
         data["rule_chain_steps"] = [asdict(step) for step in self.rule_chain_steps]
         return data
+
+    @staticmethod
+    def _coerce_bool(value: Any, default: bool) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "y", "on"}:
+                return True
+            if normalized in {"0", "false", "no", "n", "off", ""}:
+                return False
+            return default
+        return bool(value)
 
 
 @dataclass
@@ -197,8 +222,10 @@ class DataMaskingService:
         "partial_date_policy",
         "doctor_fields",
         "doctor_value",
+        "doctor_replace_enabled",
         "site_field",
         "site_value",
+        "site_replace_enabled",
         "age_field",
         "include_subjid",
     }
@@ -776,19 +803,21 @@ class DataMaskingService:
         profile: Pattern1Profile,
         dm_non_empty_fields: set[str] | None = None,
     ) -> None:
-        for doctor_field in profile.doctor_fields:
-            column = self._resolve_dm_column(df, doctor_field, dm_non_empty_fields)
-            if column is None:
-                continue
-            df[column] = df[column].apply(
-                lambda x: profile.doctor_value if not self._is_blank(x) else x
-            )
+        if profile.doctor_replace_enabled:
+            for doctor_field in profile.doctor_fields:
+                column = self._resolve_dm_column(df, doctor_field, dm_non_empty_fields)
+                if column is None:
+                    continue
+                df[column] = df[column].apply(
+                    lambda x: profile.doctor_value if not self._is_blank(x) else x
+                )
 
-        site_column = self._resolve_dm_column(df, profile.site_field, dm_non_empty_fields)
-        if site_column is not None:
-            df[site_column] = df[site_column].apply(
-                lambda x: profile.site_value if not self._is_blank(x) else x
-            )
+        if profile.site_replace_enabled:
+            site_column = self._resolve_dm_column(df, profile.site_field, dm_non_empty_fields)
+            if site_column is not None:
+                df[site_column] = df[site_column].apply(
+                    lambda x: profile.site_value if not self._is_blank(x) else x
+                )
 
         age_column = self._resolve_dm_column(df, profile.age_field, dm_non_empty_fields)
         if age_column is not None:

@@ -213,6 +213,59 @@ class DataMaskingServicePattern1Tests(unittest.TestCase):
         self.assertEqual(row_2["SITEID"], "テスト施設")
         self.assertEqual(row_2["AGE"], "38")
 
+    def test_dm_overrides_skip_doctor_and_site_when_disabled(self):
+        dm_file = self._write_csv(
+            "DM.csv",
+            [
+                {"USUBJID": "S001", "INVNAM": "", "SITEID": "", "AGE": "", "STUDYID": "OLD", "DMDTC": "2024"},
+                {
+                    "USUBJID": "S002",
+                    "INVNAM": "Doctor-2",
+                    "SITEID": "Site-2",
+                    "AGE": "40",
+                    "STUDYID": "OLD",
+                    "DMDTC": "2024-05",
+                },
+            ],
+        )
+        ae_file = self._write_csv(
+            "AE.csv",
+            [
+                {"USUBJID": "S001", "SUBJID": "S001", "STUDYID": "OLD", "AESTDTC": "2024-01-01"},
+                {"USUBJID": "S002", "SUBJID": "S002", "STUDYID": "OLD", "AESTDTC": "2024-01-02"},
+            ],
+        )
+
+        profile = Pattern1Profile(
+            subject_limit=2,
+            doctor_fields=["INVNAM"],
+            doctor_value="テスト医師",
+            doctor_replace_enabled=False,
+            site_field="SITEID",
+            site_value="テスト施設",
+            site_replace_enabled=False,
+            age_field="AGE",
+            age_shift_years=-2,
+        )
+
+        report = self.service.scan_pattern1([dm_file, ae_file], profile)
+        self.assertFalse(report.errors)
+
+        output_dir = os.path.join(self.base, "out_dm_override_disabled")
+        self.service.run_pattern1([dm_file, ae_file], output_dir=output_dir, profile=profile, scan_report=report)
+
+        dm_out = pd.read_csv(os.path.join(output_dir, "DM.csv"), dtype=str, na_filter=False)
+        row_1 = dm_out.loc[dm_out["USUBJID"] == "TEST0001"].iloc[0]
+        row_2 = dm_out.loc[dm_out["USUBJID"] == "TEST0002"].iloc[0]
+
+        self.assertEqual(row_1["INVNAM"], "")
+        self.assertEqual(row_1["SITEID"], "")
+        self.assertEqual(row_1["AGE"], "")
+
+        self.assertEqual(row_2["INVNAM"], "Doctor-2")
+        self.assertEqual(row_2["SITEID"], "Site-2")
+        self.assertEqual(row_2["AGE"], "38")
+
     def test_scan_fails_when_any_file_missing_usubjid(self):
         dm_file = self._write_csv(
             "DM.csv",

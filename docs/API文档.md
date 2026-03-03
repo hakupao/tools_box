@@ -409,6 +409,16 @@ SDTM Pattern1 数据模糊化处理器（扫描 + 执行两阶段）。
 **返回值:**
 - `Pattern1RunResult`: 执行结果对象（输出目录、文件列表、映射文件、日期统计等）
 
+#### `Pattern1Profile` 关键字段（节选）
+- `doctor_fields` (`list[str]`): DM 人名字段列表，默认 `["INVNAM"]`
+- `doctor_value` (`str`): DM 人名替换值
+- `doctor_replace_enabled` (`bool`): 是否启用人名替换，默认 `True`
+- `site_field` (`str`): DM 施设字段，默认 `SITEID`
+- `site_value` (`str`): DM 施设替换值
+- `site_replace_enabled` (`bool`): 是否启用施设替换，默认 `True`
+- `age_field` (`str`): DM 年龄字段，默认 `AGE`
+- `age_shift_years` (`int`): 年龄偏移值
+
 ##### `export_scan_report(report, target_path)`
 
 导出扫描报告为 JSON 或 CSV。
@@ -740,7 +750,7 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：1.8.1
+当前 API 版本：1.8.2
 
 ### 向后兼容性
 - 1.7.x 版本的核心处理逻辑兼容，但导入路径已统一为 `*_service` 模块

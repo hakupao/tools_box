@@ -20,6 +20,7 @@
 - 次边框：`#E8EDF4`、`#DCE3ED`
 - 主文本：`#0F172A` / `#1F2937` / `#334155`
 - 次文本：`#6B7280` / `#7A8190` / `#64748B`
+- 说明蓝（字段提示）：`#2563EB`（`dmFieldHint`）
 - 强调蓝（选中）：`#DDEBFF`
 - 强调青（提示）：`#0E7490`
 - 风险红：`#DC2626`
@@ -162,27 +163,33 @@
   - `dmSectionTitle`（区块标题）
   - `dmFormLabel` / `dmSubFormLabel`（表单标签）
   - `dmMuted`（弱文本）
-  - `dmFieldHint`（字段提示）
+  - `dmFieldHint`（字段提示，蓝色）
   - `dmAlertNote` / `dmRequired`（警示文本）
   - `dmSubtle` / `dmAccent`（强调提示）
 
 ### 5.3 尺寸与表单对齐硬规则
-- `FORM_LABEL_WIDTH = 150`
-- `FORM_FIELD_WIDTH = 220`
+- `FORM_LABEL_WIDTH = 120`
+- `FORM_FIELD_WIDTH = 180`
 - 表单控件最小高度：`34`
 - `QFormLayout`：
   - Label 左对齐
   - Form 左上对齐
   - 水平间距 `10`
   - 垂直间距 `8`
-- 标签固定宽度（min=max=150），保证多卡片横向齐线
-- 输入域统一固定宽度（默认 220），备注文本在其右侧对齐
+- 标签固定宽度（min=max=120），保证多卡片横向齐线
+- 输入域统一固定宽度（默认 `180`），备注文本在其右侧
+- DM 双字段并排行（人名/施设）额外规则：
+  - `DM_PAIR_LEFT_LABEL_WIDTH = FORM_LABEL_WIDTH + 2`（首个输入框起始位与普通行对齐）
+  - `DM_PAIR_RIGHT_LABEL_OFFSET = 40`（`人名替换值/施设替换值` 标签整体右移）
+  - `DM_PAIR_FIELD_WIDTH = FORM_FIELD_WIDTH`（两侧 textbox 与“年龄字段”等宽）
+  - 尾部 `启用替换` 复选框使用 `addStretch(1)` 后右对齐
 
 ### 5.4 可复用构建方法（新增复杂页建议复用同思路）
 - `_create_card(title, subtitle)`：统一主卡片外观与标题层
 - `_style_form_layout(form)`：统一表单间距与对齐
 - `_form_label(text, submodule=False)`：统一标签宽度/字体/缩进
 - `_input_with_note(widget, note, required=False, ...)`：输入+提示+必填标识
+- `_paired_dm_fields(...)`：DM 专属双字段并排行（字段 + 替换值 + 启用开关）
 - `_checkbox_field(checkbox, note=None)`：复选框与输入行对齐
 
 ### 5.5 步骤化流程状态机规则
@@ -200,6 +207,10 @@
 - `NoWheelSpinBox/NoWheelDoubleSpinBox/NoWheelComboBox`：禁用滚轮改值
 - 高风险字段用红色提示（`dmAlertNote` + `dmRequired`）
 - 高级参数默认折叠（“显示扫描参数”）
+- DM 专属设置中：
+  - `人名字段 + 人名替换值` 与 `施设字段 + 施设替换值` 同行展示
+  - 每行尾部有 `启用替换` 复选框（默认勾选）
+  - 取消勾选后即使 DM 对应字段非空也不替换，输出原值
 
 ## 6. EDC 页面专项规范（当前实现）
 
