@@ -14,6 +14,7 @@ from qfluentwidgets import (
     TitleLabel,
 )
 
+from ...utils.csv_quote_remover_service import CsvQuoteRemoverService
 from ...utils.csv_encoding_converter_service import CsvEncodingConverterService
 from ...utils.csv_to_xlsx_converter_service import CsvToXlsxConverterService
 from ...utils.xlsx_to_csv_converter_service import XlsxToCsvConverterService
@@ -21,7 +22,7 @@ from ..qt_common import FileListWidget, select_existing_directory, select_open_f
 
 
 class FileFormatConverterPage(QWidget):
-    """文件格式转换页面：CSV/XLSX/BOM 三种模式。"""
+    """文件格式转换页面：CSV/XLSX/BOM/引号清理 四种模式。"""
 
     def __init__(self, main_window) -> None:
         super().__init__()
@@ -32,6 +33,7 @@ class FileFormatConverterPage(QWidget):
         self.csv_to_xlsx = CsvToXlsxConverterService()
         self.xlsx_to_csv = XlsxToCsvConverterService()
         self.csv_bom = CsvEncodingConverterService()
+        self.csv_quote = CsvQuoteRemoverService()
 
         self.mode_config = {
             "csv_to_xlsx": {
@@ -49,6 +51,11 @@ class FileFormatConverterPage(QWidget):
                 "input_exts": [".csv"],
                 "output_note": "默认覆盖原文件；选择输出路径则另存",
             },
+            "csv_quote": {
+                "label": "CSV 引号去除",
+                "input_exts": [".csv"],
+                "output_note": "默认覆盖原文件；选择输出路径则另存",
+            },
         }
 
         self._build_ui()
@@ -61,7 +68,7 @@ class FileFormatConverterPage(QWidget):
         header_layout = QHBoxLayout()
         header_left = QVBoxLayout()
         title = TitleLabel("文件格式转换")
-        subtitle = BodyLabel("CSV / XLSX / UTF-8 BOM 一体化转换")
+        subtitle = BodyLabel("CSV / XLSX / UTF-8 BOM / 引号清理 一体化处理")
         subtitle.setTextColor("#6B7280", "#6B7280")
         header_left.addWidget(title)
         header_left.addWidget(subtitle)
@@ -185,7 +192,9 @@ class FileFormatConverterPage(QWidget):
             return self.csv_to_xlsx.convert_file(file_path, self.output_path)
         if mode == "xlsx_to_csv":
             return self.xlsx_to_csv.convert_file(file_path, self.output_path)
-        return self.csv_bom.convert_file(file_path, self.output_path)
+        if mode == "csv_bom":
+            return self.csv_bom.convert_file(file_path, self.output_path)
+        return self.csv_quote.process_file(file_path, self.output_path)
 
     def convert_files(self) -> None:
         files = self.file_list.paths()

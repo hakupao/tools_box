@@ -11,6 +11,18 @@
 
 ### 改进
 
+## [2.0.0] - 2026-03-04
+
+### 新增
+- 新增 `仕样书工作流工具` 页面（`spec_workflow_page.py`），在单一界面内切换三种流程：生成 Data Set / 数据清洗 / Codelist 处理。
+
+### 改进
+- 文件格式转换工具扩展为四模式统一入口：CSV 转 XLSX、XLSX 转 CSV（UTF-8 BOM）、CSV 转 UTF-8（BOM）、CSV 引号去除。
+- 主界面工具入口精简为 9 个，移除重复入口并统一命名与描述文案。
+- 清理已废弃页面代码：`data_cleaner_page.py`、`codelist_processor_page.py`、`xlsx_restructure_page.py`、`csv_quote_remover_page.py`。
+- 打包配置（`tools_box.spec`、`packaging/pyinstaller/tools_box_onedir.spec`）同步隐藏导入，移除已删除页面引用。
+- 全量文档统一升级到 `v2.0.0`：`README.md`、`CHANGELOG.md`、`docs/*.md`、`packaging/README.md`、`AGENTS.md`。
+
 ## [1.8.2] - 2026-03-03
 
 ### 新增

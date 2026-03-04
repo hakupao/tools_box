@@ -2,6 +2,7 @@
 
 本文档基于当前仓库已实现页面总结，可作为后续新增页面的直接参考模板。  
 覆盖范围：`src/gui/main_window.py`、`src/gui/qt_common.py`、`src/gui/widgets/*_page.py`。
+适用版本：`v2.0.0`（2026-03-04）。
 
 ## 1. 全局基线
 
@@ -38,6 +39,7 @@
 - 适用页面：
   - 主界面：`src/gui/main_window.py` 中 `QWidget#home QScrollBar*`
   - 数据模糊化：`src/gui/widgets/data_masking_page.py` 中 `QWidget#data_masking QScrollBar*`
+  - 仕样书工作流：`src/gui/widgets/spec_workflow_page.py` 中 `QWidget#spec_workflow QScrollBar*`
 - 视觉规则（两页面共用）：
   - 轨道背景：`transparent`
   - 滚动条厚度：纵向 `10px`、横向 `10px`
@@ -48,7 +50,8 @@
 - 页面差异（保持现状）：
   - 主界面滑块最小尺寸：`56`；纵向边距 `8 4 8 0`，横向边距 `0 8 4 8`
   - 数据模糊化滑块最小尺寸：`52`；纵向边距 `6 3 6 0`，横向边距 `0 6 3 6`
-- 实现原则：滚动条 QSS 必须使用页面对象名作用域（如 `QWidget#home` / `QWidget#data_masking`），避免全局污染其它工具页
+  - 仕样书工作流滑块最小尺寸：`52`；纵向边距 `6 3 6 0`，横向边距 `0 6 3 6`
+- 实现原则：滚动条 QSS 必须使用页面对象名作用域（如 `QWidget#home` / `QWidget#data_masking` / `QWidget#spec_workflow`），避免全局污染其它工具页
 
 ### 1.5 弹窗与文件对话框规范（本轮修正重点）
 - 统一入口：
@@ -73,7 +76,7 @@
 
 ## 2. 页面布局规则（通用型页面）
 
-以下模式适用于绝大多数工具页（如 `data_cleaner`、`codelist_processor`、`file_format`、`xlsx_restructure` 等）：
+以下模式适用于绝大多数工具页（如 `file_format`、`spec_workflow`、`xlsx_sheet_splitter`、`file_field_extractor` 等）：
 
 ### 2.1 根布局
 - `QVBoxLayout(self)`

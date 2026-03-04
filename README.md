@@ -2,13 +2,13 @@
 
 一个基于 Python + PySide6 + QFluentWidgets 开发的多功能数据处理工具集合，提供 Win11 Fluent 风格界面。
 
-当前版本：`v1.8.2`（2026-03-03）
+当前版本：`v2.0.0`（2026-03-04）
 
 ## 功能特性
 
 - 🖱️ 支持文件拖拽操作
 - 🎨 Win11 Fluent 风格主界面与导航
-- 📦 多工具集成（12个专业工具）
+- 📦 多工具集成（9个专业工具入口）
 - 🔄 批量文件处理能力
 - 📊 数据格式转换与清洗
 - 🔍 字段提取与 HTML 死链检测
@@ -18,17 +18,15 @@
 ## 工具列表
 
 ### 文件处理工具
-1. **文件格式转换工具** - 单一界面切换三种模式：CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM)、CSV 转 UTF-8(BOM)
+1. **文件格式转换工具** - 单一界面切换四种模式：CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM)、CSV 转 UTF-8(BOM)、CSV 引号去除
 2. **工作表拆分工具** - 将 Excel 工作表拆分为多个 CSV（UTF-8 BOM）
-3. **生成 Data Set 工具** - XLSX 文件重构为标准 CDISC SDTM 格式
-4. **获取文件字段工具** - 批量提取 CSV/XLSX 字段并输出汇总
-5. **死链检测工具** - 扫描 HTML 文件/文件夹并生成检测报告
+3. **获取文件字段工具** - 批量提取 CSV/XLSX 字段并输出汇总
+4. **死链检测工具** - 扫描 HTML 文件/文件夹并生成检测报告
 
 ### 数据处理工具
-6. **数据清洗工具** - 基于仕样书规则进行数据清洗和过滤
-7. **Codelist 处理工具** - 编码映射和多语言值转换
-8. **数据模糊化工具** - SDTM 数据集隐私保护和模糊化处理
-9. **EDC 站点添加工具** - 自动化 EDC 系统的站点批量添加
+5. **仕样书工作流工具** - 统一入口切换：生成 Data Set / 数据清洗 / Codelist 处理
+6. **数据模糊化工具** - SDTM 数据集隐私保护和模糊化处理
+7. **EDC 站点添加工具** - 自动化 EDC 系统的站点批量添加
 
 #### 数据模糊化（Pattern1）近期更新
 - 统一 `USUBJID` 规则预览与执行逻辑，避免预览结果与实际输出不一致
@@ -38,9 +36,8 @@
 - 关闭 `启用替换` 后，DM 对应字段即使非空也保持原值输出
 
 ### 格式转换工具
-10. **日期转换工具** - 支持多种日期格式的智能转换
-11. **全角转半角工具** - 将全角字符转换为半角字符
-12. **CSV 引号去除工具** - 智能清理 CSV 文件中的多余引号
+8. **日期转换工具** - 支持多种日期格式的智能转换
+9. **全角转半角工具** - 将全角字符转换为半角字符
 
 ## 系统要求
 
@@ -100,16 +97,13 @@ tools_box/
 │   │   └── widgets/                     # 各工具页面
 │   │       ├── date_converter_page.py
 │   │       ├── file_format_converter_page.py
+│   │       ├── spec_workflow_page.py
 │   │       ├── xlsx_sheet_splitter_page.py
 │   │       ├── file_field_extractor_page.py
 │   │       ├── dead_link_checker_page.py
 │   │       ├── fullwidth_halfwidth_converter_page.py
-│   │       ├── data_cleaner_page.py
-│   │       ├── codelist_processor_page.py
 │   │       ├── data_masking_page.py
-│   │       ├── csv_quote_remover_page.py
-│   │       ├── edc_site_adder_page.py
-│   │       └── xlsx_restructure_page.py
+│   │       └── edc_site_adder_page.py
 │   └── utils/                           # 业务服务与工具函数
 │       ├── date_utils.py
 │       ├── csv_to_xlsx_converter_service.py

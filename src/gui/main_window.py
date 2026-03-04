@@ -38,19 +38,13 @@ TOOL_CATEGORIES = [
                 "id": "file_format",
                 "name": "文件格式转换",
                 "icon": "🔄",
-                "desc": "支持 CSV、Excel、SAS 等多种格式互转",
+                "desc": "支持 CSV/Excel 互转、UTF-8(BOM) 与引号清理",
             },
             {
                 "id": "xlsx_sheet_splitter",
                 "name": "工作表拆分",
                 "icon": "📄",
                 "desc": "将 Excel 工作表拆分为多个 CSV",
-            },
-            {
-                "id": "file_restructure",
-                "name": "生成 Data Set",
-                "icon": "📊",
-                "desc": "快速生成标准化数据集结构",
             },
             {
                 "id": "file_field_extractor",
@@ -71,22 +65,16 @@ TOOL_CATEGORIES = [
         "description": "数据清洗、转换和处理工具",
         "tools": [
             {
-                "id": "data_cleaner",
-                "name": "数据清洗",
-                "icon": "🧹",
-                "desc": "清理数据中的异常值和空白",
+                "id": "spec_workflow",
+                "name": "仕样书工作流",
+                "icon": "🧩",
+                "desc": "统一处理生成 Data Set、数据清洗与 Codelist",
             },
             {
                 "id": "data_masking",
                 "name": "数据模糊化",
                 "icon": "🔒",
                 "desc": "对敏感数据进行脱敏处理",
-            },
-            {
-                "id": "codelist_processor",
-                "name": "Codelist 处理",
-                "icon": "📝",
-                "desc": "处理和管理代码列表数据",
             },
             {
                 "id": "edc_site_adder",
@@ -112,12 +100,6 @@ TOOL_CATEGORIES = [
                 "icon": "🔡",
                 "desc": "全角半角字符快速转换",
             },
-            {
-                "id": "csv_quote_remover",
-                "name": "CSV 引号去除",
-                "icon": "✂️",
-                "desc": "批量去除 CSV 文件中的引号",
-            },
         ],
     },
 ]
@@ -125,7 +107,7 @@ TOOL_CATEGORIES = [
 TOOL_PAGE_REGISTRY = [
     ("date_converter", "src.gui.widgets.date_converter_page", "DateConverterPage", FIF.CALENDAR, "日期转换"),
     ("file_format", "src.gui.widgets.file_format_converter_page", "FileFormatConverterPage", FIF.SYNC, "文件格式转换"),
-    ("file_restructure", "src.gui.widgets.xlsx_restructure_page", "XlsxRestructurePage", FIF.DOCUMENT, "生成 Data Set"),
+    ("spec_workflow", "src.gui.widgets.spec_workflow_page", "SpecWorkflowPage", FIF.DOCUMENT, "仕样书工作流"),
     (
         "file_field_extractor",
         "src.gui.widgets.file_field_extractor_page",
@@ -134,14 +116,6 @@ TOOL_PAGE_REGISTRY = [
         "获取文件字段",
     ),
     ("dead_link_checker", "src.gui.widgets.dead_link_checker_page", "DeadLinkCheckerPage", FIF.LINK, "死链检测"),
-    ("data_cleaner", "src.gui.widgets.data_cleaner_page", "DataCleanerPage", FIF.BROOM, "数据清洗"),
-    (
-        "codelist_processor",
-        "src.gui.widgets.codelist_processor_page",
-        "CodelistProcessorPage",
-        FIF.DICTIONARY,
-        "Codelist 处理",
-    ),
     ("data_masking", "src.gui.widgets.data_masking_page", "DataMaskingPage", FIF.FINGERPRINT, "数据模糊化"),
     ("edc_site_adder", "src.gui.widgets.edc_site_adder_page", "EdcSiteAdderPage", FIF.ROBOT, "EDC 施设添加"),
     (
@@ -150,13 +124,6 @@ TOOL_PAGE_REGISTRY = [
         "FullwidthHalfwidthConverterPage",
         FIF.FONT,
         "全角转半角",
-    ),
-    (
-        "csv_quote_remover",
-        "src.gui.widgets.csv_quote_remover_page",
-        "CsvQuoteRemoverPage",
-        FIF.CUT,
-        "CSV 引号去除",
     ),
     (
         "xlsx_sheet_splitter",

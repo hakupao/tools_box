@@ -2,6 +2,8 @@
 
 本文档详细说明了工具箱中各个服务类的接口和使用方法。
 
+适用版本：`v2.0.0`（2026-03-04）
+
 ## 目录
 
 1. [日期工具 API](#日期工具-api)
@@ -688,6 +690,8 @@ extractor.extract_fields("data/", include_subfolders=True, progress_callback=pro
 
 ## 集成示例
 
+说明：`v2.0.0` 的 GUI 入口已通过 `SpecWorkflowPage` 统一封装“Data Set / 数据清洗 / Codelist”三种流程，以下示例展示对应的服务层串联调用方式。
+
 ### 完整的数据处理流程
 
 ```python
@@ -750,19 +754,20 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：1.8.2
+当前 API 版本：2.0.0
 
 ### 向后兼容性
-- 1.7.x 版本的核心处理逻辑兼容，但导入路径已统一为 `*_service` 模块
-- 1.6.x 及以下版本建议按本文档示例更新导入与类名
+- 1.8.x 的核心服务接口保持可用，页面入口已合并为统一工作流（`SpecWorkflowPage`）。
+- 1.7.x 及以下版本建议按本文档示例更新导入路径与调用方式。
 
 ### 废弃通知
 - `DataMaskingService` 旧版兼容接口已移除：`set_baseline_from_dm`、`process_file`、`add_masking_rule`
 - 数据模糊化请统一使用 `scan_pattern1` + `run_pattern1` 两阶段流程
+- GUI 层已移除旧独立页面：`data_cleaner_page.py`、`codelist_processor_page.py`、`xlsx_restructure_page.py`、`csv_quote_remover_page.py`
 
 ### 计划变更
-- 2.0.0 版本将支持异步处理
-- 2.0.0 版本将增加数据验证 API
+- 2.1.x 版本计划支持更细粒度的异步处理接口
+- 2.1.x 版本计划补充数据校验辅助 API
 
 ---
 
