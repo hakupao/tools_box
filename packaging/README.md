@@ -8,6 +8,7 @@
   - 新的 onedir 打包配置，输出 `dist/DataForgeStudio/DataForgeStudio.exe`。
 - `installer/tools_box.iss`
   - Inno Setup 安装器脚本，默认安装到 `%LocalAppData%\Programs\DataForgeStudio`。
+  - 安装前会清理 `{app}` 目录残留文件，避免升级时旧版本文件干扰新版本运行。
 - `scripts/build_onedir.ps1`
   - 构建 onedir 产物。
 - `scripts/build_installer.ps1`
