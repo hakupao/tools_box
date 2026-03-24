@@ -4,7 +4,7 @@ from pathlib import Path
 
 import keyboard
 import pyautogui
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
@@ -407,29 +407,40 @@ class EdcSiteAdderPage(QWidget):
 
     # ── Recording helpers ─────────────────────────────────────
 
+    def _launch_overlay(
+        self,
+        dialog: QDialog,
+        table: QTableWidget,
+        positions: list[tuple[str, dict]],
+        steps: list[str],
+    ) -> None:
+        """Hide windows, activate Chrome, show recording overlay.
+
+        If anything fails the windows are restored so the user is never stranded.
+        """
+        try:
+            dialog.hide()
+            self.main_window.showMinimized()
+
+            self._overlay = RecordingOverlay(steps)
+            self._overlay.coordinate_captured.connect(
+                lambda key, x, y: self._on_coord_captured(table, positions, key, x, y)
+            )
+            self._overlay.recording_finished.connect(lambda: self._on_recording_done(dialog))
+            self._overlay.recording_cancelled.connect(lambda: self._on_recording_done(dialog))
+            self._overlay.show()
+        except Exception as exc:
+            self._on_recording_done(dialog)
+            show_error(self, "录制失败", str(exc))
+
     def _start_recording(
         self,
         dialog: QDialog,
         table: QTableWidget,
         positions: list[tuple[str, dict]],
     ) -> None:
-        dialog.hide()
-        # Minimize main window so Chrome is fully visible
-        self.main_window.showMinimized()
-
-        # Activate Chrome so user clicks land on the right window
-        chrome_windows = pyautogui.getWindowsWithTitle("Chrome")
-        if chrome_windows:
-            chrome_windows[0].activate()
-
         steps = [key for key, _ in positions]
-        self._overlay = RecordingOverlay(steps)
-        self._overlay.coordinate_captured.connect(
-            lambda key, x, y: self._on_coord_captured(table, positions, key, x, y)
-        )
-        self._overlay.recording_finished.connect(lambda: self._on_recording_done(dialog))
-        self._overlay.recording_cancelled.connect(lambda: self._on_recording_done(dialog))
-        self._overlay.show()
+        self._launch_overlay(dialog, table, positions, steps)
 
     def _start_single_step_recording(
         self,
@@ -441,20 +452,7 @@ class EdcSiteAdderPage(QWidget):
         if row < 0 or row >= len(positions):
             return
         key = positions[row][0]
-        dialog.hide()
-        self.main_window.showMinimized()
-
-        chrome_windows = pyautogui.getWindowsWithTitle("Chrome")
-        if chrome_windows:
-            chrome_windows[0].activate()
-
-        self._overlay = RecordingOverlay([key])
-        self._overlay.coordinate_captured.connect(
-            lambda k, x, y: self._on_coord_captured(table, positions, k, x, y)
-        )
-        self._overlay.recording_finished.connect(lambda: self._on_recording_done(dialog))
-        self._overlay.recording_cancelled.connect(lambda: self._on_recording_done(dialog))
-        self._overlay.show()
+        self._launch_overlay(dialog, table, positions, [key])
 
     def _on_coord_captured(
         self,

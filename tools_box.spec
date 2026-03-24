@@ -94,6 +94,7 @@ a = Analysis(
         'openpyxl',
         'pyautogui',
         'pygetwindow',
+        'pygetwindow._pygetwindow_win',
         'pywintypes',  # 替代 pywin32
         'pythoncom',   # 替代 pywin32
         'win32api',    # Windows API
@@ -102,6 +103,7 @@ a = Analysis(
         'win32com.client',
         'win32gui',
         'mouse',
+        'mouse._winmouse',
         'keyboard',
         'requests',
         'bs4',

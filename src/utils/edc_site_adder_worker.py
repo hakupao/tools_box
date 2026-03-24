@@ -3,12 +3,50 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import ctypes
+
 import pyautogui
 import pyperclip
 import win32com.client
 from PySide6.QtCore import QThread, Signal
 
 from .edc_site_adder_service import CLICK_STEP_KEYS
+
+
+def _activate_window_by_title(title: str) -> bool:
+    """Find a window whose title contains *title* and bring it to foreground.
+
+    Uses win32 API directly so we don't depend on pygetwindow at all.
+    """
+    user32 = ctypes.windll.user32
+
+    found_hwnd = None
+
+    def enum_cb(hwnd, _):
+        nonlocal found_hwnd
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length == 0:
+            return True
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(hwnd, buf, length + 1)
+        if title in buf.value:
+            found_hwnd = hwnd
+            return False  # stop enumeration
+        return True
+
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+    user32.EnumWindows(WNDENUMPROC(enum_cb), 0)
+
+    if found_hwnd is None:
+        return False
+
+    SW_RESTORE = 9
+    if user32.IsIconic(found_hwnd):
+        user32.ShowWindow(found_hwnd, SW_RESTORE)
+    user32.SetForegroundWindow(found_hwnd)
+    return True
 
 
 class EdcSiteAdderWorker(QThread):
@@ -75,12 +113,9 @@ class EdcSiteAdderWorker(QThread):
                 return
 
             self.log.emit("切换到 Chrome 窗口...")
-            chrome_windows = pyautogui.getWindowsWithTitle("Chrome")
-            if not chrome_windows:
+            if not _activate_window_by_title("Chrome"):
                 self.finished_error.emit("未找到 Chrome 窗口")
                 return
-
-            chrome_windows[0].activate()
             time.sleep(0.1)
 
             if self._stop_requested:
