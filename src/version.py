@@ -1,8 +1,8 @@
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 APP_NAME = "DataForge Studio"
 AUTHOR = "DataForge Studio Team"
 DESCRIPTION = """
-DataForge Studio v2.0.0
+DataForge Studio v2.0.1
 功能列表：
 1. 日期转换工具 - 支持多种日期格式转换
 2. 文件格式转换工具 - 单窗口切换CSV转XLSX、XLSX转CSV(UTF-8 BOM)、CSV转UTF-8(BOM)、CSV引号去除

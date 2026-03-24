@@ -2,7 +2,7 @@
 
 本文档详细说明了工具箱中各个服务类的接口和使用方法。
 
-适用版本：`v2.0.0`（2026-03-04）
+适用版本：`v2.0.1`（2026-03-24）
 
 ## 目录
 
@@ -690,7 +690,7 @@ extractor.extract_fields("data/", include_subfolders=True, progress_callback=pro
 
 ## 集成示例
 
-说明：`v2.0.0` 的 GUI 入口已通过 `SpecWorkflowPage` 统一封装“Data Set / 数据清洗 / Codelist”三种流程，以下示例展示对应的服务层串联调用方式。
+说明：`v2.0.1` 的 GUI 入口已通过 `SpecWorkflowPage` 统一封装“Data Set / 数据清洗 / Codelist”三种流程，以下示例展示对应的服务层串联调用方式。
 
 ### 完整的数据处理流程
 
@@ -754,7 +754,7 @@ batch_convert_csv_to_xlsx("input/", "output/")
 
 ## 版本兼容性
 
-当前 API 版本：2.0.0
+当前 API 版本：2.0.1
 
 ### 向后兼容性
 - 1.8.x 的核心服务接口保持可用，页面入口已合并为统一工作流（`SpecWorkflowPage`）。

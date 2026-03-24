@@ -11,7 +11,7 @@
 - UI shell and page registry: `src/gui/main_window.py`.
 - Business logic: `src/utils/*_service.py`.
 - Tests: `tests/` (`unittest` style, pytest-compatible).
-- Current release baseline: `v2.0.0` (2026-03-04), with unified `spec_workflow_page.py` replacing separate DataSet/DataCleaner/Codelist pages.
+- Current release baseline: `v2.0.1` (2026-03-24), with unified `spec_workflow_page.py` replacing separate DataSet/DataCleaner/Codelist pages.
 
 ## Environment Setup
 - Python `3.11` is confirmed working here.

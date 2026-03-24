@@ -109,5 +109,55 @@ class UnifiedConfigServicesTests(unittest.TestCase):
         self.assertEqual(payload["edc_site_adder"]["click_positions"]["新建"]["x"], 1)
 
 
+    # ── New config fields: backward compat & round-trip ──
+
+    def test_edc_new_fields_get_defaults_when_missing(self):
+        """Old config without retry_count/step_delay should get defaults."""
+        old_config = {
+            "edc_site_adder": {
+                "max_loops": 50,
+                "click_positions": {
+                    "新建": {"x": 10, "y": 20},
+                    "查找": {"x": 30, "y": 40},
+                    "搜索框": {"x": 50, "y": 60},
+                    "搜索": {"x": 70, "y": 80},
+                    "选择": {"x": 90, "y": 100},
+                    "ok": {"x": 110, "y": 120},
+                    "确认": {"x": 130, "y": 140},
+                },
+            }
+        }
+        self.config_path.write_text(json.dumps(old_config, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        service = EdcSiteAdderService(config_path=self.config_path)
+        self.assertEqual(service.config["max_loops"], 50)
+        self.assertEqual(service.config["retry_count"], 1)
+        self.assertEqual(service.config["step_delay"], 0.3)
+        self.assertEqual(service.config["click_positions"]["新建"]["x"], 10)
+
+    def test_edc_new_fields_round_trip(self):
+        """Save config with new fields, reload, verify values."""
+        service = EdcSiteAdderService(config_path=self.config_path)
+        service.config["retry_count"] = 3
+        service.config["step_delay"] = 0.5
+        service.config["max_loops"] = 200
+        self.assertTrue(service.save_config())
+
+        service2 = EdcSiteAdderService(config_path=self.config_path)
+        self.assertEqual(service2.config["retry_count"], 3)
+        self.assertEqual(service2.config["step_delay"], 0.5)
+        self.assertEqual(service2.config["max_loops"], 200)
+
+    def test_edc_reset_restores_new_field_defaults(self):
+        service = EdcSiteAdderService(config_path=self.config_path)
+        service.config["retry_count"] = 5
+        service.config["step_delay"] = 2.0
+        service.save_config()
+
+        service.reset_to_default_config()
+        self.assertEqual(service.config["retry_count"], 1)
+        self.assertEqual(service.config["step_delay"], 0.3)
+
+
 if __name__ == "__main__":
     unittest.main()
