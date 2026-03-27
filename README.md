@@ -1,229 +1,208 @@
 # DataForge Studio
 
-一个基于 Python + PySide6 + QFluentWidgets 开发的多功能数据处理工具集合，提供 Win11 Fluent 风格界面。
+<div align="center">
 
-当前版本：`v2.0.2`（2026-03-24）
+把零散的数据处理动作，收拢成一套可交付的 Windows 桌面工作台。
 
-## 功能特性
+`tools_box` 是仓库名，`DataForge Studio` 是产品名。
 
-- 🖱️ 支持文件拖拽操作
-- 🎨 Win11 Fluent 风格主界面与导航
-- 📦 多工具集成（9个专业工具入口）
-- 🔄 批量文件处理能力
-- 📊 数据格式转换与清洗
-- 🔍 字段提取与 HTML 死链检测
-- 🔧 自动化操作支持
-- 🌐 Windows 平台支持
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![UI](https://img.shields.io/badge/UI-PySide6%20%2B%20QFluentWidgets-41CD52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
+[![Data](https://img.shields.io/badge/Data-pandas%20%2B%20openpyxl-150458?style=flat-square&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+[![Version](https://img.shields.io/badge/Version-v2.0.2-0F766E?style=flat-square)](https://github.com/hakupao/tools_box)
+[![Repo](https://img.shields.io/badge/GitHub-hakupao%2Ftools__box-181717?style=flat-square&logo=github)](https://github.com/hakupao/tools_box)
 
-## 工具列表
+[下载发布版](https://github.com/hakupao/tools_box/releases) · [快速开始](#快速开始) · [界面预览](#界面预览) · [项目文档](#项目文档) · [更新日志](CHANGELOG.md)
 
-### 文件处理工具
-1. **文件格式转换工具** - 单一界面切换四种模式：CSV 转 XLSX、XLSX 转 CSV(UTF-8 BOM)、CSV 转 UTF-8(BOM)、CSV 引号去除
-2. **工作表拆分工具** - 将 Excel 工作表拆分为多个 CSV（UTF-8 BOM）
-3. **获取文件字段工具** - 批量提取 CSV/XLSX 字段并输出汇总
-4. **死链检测工具** - 扫描 HTML 文件/文件夹并生成检测报告
+</div>
 
-### 数据处理工具
-5. **仕样书工作流工具** - 统一入口切换：生成 Data Set / 数据清洗 / Codelist 处理
-6. **数据模糊化工具** - SDTM 数据集隐私保护和模糊化处理
-7. **EDC 站点添加工具** - 自动化 EDC 系统的站点批量添加
+![DataForge Studio Home](docs/images/readme/home-overview.png)
 
-#### 数据模糊化（Pattern1）近期更新
-- 统一 `USUBJID` 规则预览与执行逻辑，避免预览结果与实际输出不一致
-- 清理未使用的旧版兼容接口，主流程固定为：扫描（`scan_pattern1`）-> 执行（`run_pattern1`）
-- 文件导入入口（按钮/拖拽）共用同一处理路径，减少重复逻辑
-- DM 专属设置中“字段+替换值”改为同行展示，并新增独立 `启用替换` 开关（默认启用）
-- 关闭 `启用替换` 后，DM 对应字段即使非空也保持原值输出
+## 项目定位
 
-### 格式转换工具
-8. **日期转换工具** - 支持多种日期格式的智能转换
-9. **全角转半角工具** - 将全角字符转换为半角字符
+DataForge Studio 不是一个为了堆砌功能而做的“工具列表”，而是一个面向真实工作流的桌面数据工具箱。
 
-## 系统要求
+它关注的不是单次脚本跑通，而是把高频、重复、容易出错的文件处理和数据整理动作，沉淀成一套可复用、可交付、可打包的 Fluent 风格桌面应用：
 
-- **Python**: 3.8 或更高版本
-- **操作系统**: Windows 10/11
-- **内存**: 建议 4GB 或以上
-- **磁盘空间**: 至少 100MB 可用空间
-- **网络**: 死链检测功能需要可访问网络
+- 把 CSV / Excel 的格式转换、字段提取、工作表拆分等日常清洗动作统一起来。
+- 把仕样书驱动的数据流转做成单入口工作流，而不是拆成分散页面。
+- 把 SDTM 数据脱敏和 EDC 重复录入这类偏业务、偏操作型任务产品化。
+- 把“服务层逻辑”和“界面交互层”清晰分开，方便持续维护和后续扩展。
 
-## 安装说明
+如果把它作为个人技术作品来看，这个项目更像是：
 
-### 从源码安装
+- 一个针对真实业务痛点构建的桌面生产力产品。
+- 一个以 `PySide6 + QFluentWidgets` 为壳、以 `pandas/openpyxl` 为核心的数据处理工作台。
+- 一个强调工程可维护性、批量处理能力和交付体验的 Python GUI 项目。
 
-1. 克隆仓库：
-```bash
-git clone [repository-url]
-cd tools_box
+## 为什么做这个项目
+
+很多团队里的数据处理工作，表面上只是“改个格式”“拆个文件”“跑个清洗规则”，实际上存在几个长期问题：
+
+- 依赖人工操作，重复成本高。
+- 规则分散在脚本、Excel 和口口相传的流程里。
+- 编码、日期、字段裁剪、导出格式很容易出现细碎但高频的错误。
+- 某些动作并不复杂，却因为缺少稳定工具而难以交接或复用。
+
+DataForge Studio 的想法很直接：
+
+> 用一个易用的桌面界面，把这些高频数据动作变成稳定工作流，让“能跑一次”升级成“别人也能稳定重复使用”。
+
+## 项目概览
+
+| 项目项 | 说明 |
+| --- | --- |
+| 产品名 | `DataForge Studio` |
+| 仓库名 | `tools_box` |
+| 当前版本 | `v2.0.2` |
+| 最近主要更新 | 统一 `仕样书工作流`，优化 `EDC 站点添加` 自动化体验 |
+| 技术栈 | Python 3.11, PySide6, QFluentWidgets, pandas, openpyxl |
+| 运行平台 | Windows 10 / 11 |
+| 体验方式 | 暂无 Web 在线体验，推荐本地运行或下载发布版 |
+| 发布形态 | 源码运行、PyInstaller `onedir`、Inno Setup 安装包 |
+
+## 核心能力
+
+| 模块 | 能力说明 | 解决的问题 |
+| --- | --- | --- |
+| 文件格式转换 | 在一个页面中统一处理 `CSV -> XLSX`、`XLSX -> CSV (UTF-8 BOM)`、`CSV -> UTF-8 BOM`、`CSV 引号清理` | 避免为多个小任务维护多套脚本或多个入口 |
+| 工作表拆分 | 将 Excel 工作表拆分为多个 CSV，并保持统一导出规范 | 处理多 sheet 文件时减少手工整理 |
+| 获取文件字段 | 批量读取 CSV / XLSX 字段并导出汇总 | 做字段盘点、结构核对更快 |
+| 死链检测 | 对 HTML 文件或目录进行链接扫描并生成报告 | 交付前自检页面链接质量 |
+| 仕样书工作流 | 单页面切换生成 Data Set、数据清洗、Codelist 处理 | 将规则驱动的数据流程集中管理 |
+| 数据模糊化 | 面向 SDTM 场景做脱敏、偏移和 ID 规则处理 | 降低隐私数据暴露风险 |
+| EDC 站点添加 | 用录制坐标 + 自动回放的方式执行批量录入 | 将重复点击型工作自动化 |
+| 日期转换 / 全角转半角 | 处理文本与日期格式细节 | 解决经常打断流程的小问题 |
+
+## 适用场景
+
+- 日常需要频繁处理 CSV / Excel 的数据运营、数据管理或实施角色。
+- 需要按固定仕样书或映射规则批量生成、清洗和标准化文件。
+- 需要在交付前做字段检查、格式修整、编码统一和简单质检。
+- 需要对临床或业务数据进行脱敏处理，降低人工操作失误。
+- 需要把重复性强、步骤固定的系统录入动作沉淀为可复用工具。
+
+## 界面预览
+
+顶部预览图展示了首页总览。下面是三个更能体现项目特点的代表性工具页面。
+
+| 文件格式转换 | 数据模糊化 | EDC 站点添加 |
+| --- | --- | --- |
+| ![File Format Converter](docs/images/readme/file-format-converter.png) | ![Data Masking Workflow](docs/images/readme/data-masking-workflow.png) | ![EDC Site Adder](docs/images/readme/edc-site-adder.png) |
+
+## 这个项目的技术亮点
+
+- `UI` 和 `业务服务` 分层明确，页面逻辑主要放在 `src/gui/widgets/*_page.py`，数据处理能力集中在 `src/utils/*_service.py`。
+- 保持桌面产品思路而不是脚本堆叠，首页、导航、卡片分组和单页多模式切换都经过统一设计。
+- 对文件处理约定做了稳定化处理，例如 CSV / Excel 读取写出、UTF-8-SIG 导出、规则驱动的清洗流程。
+- 有意识地把复杂流程产品化，例如：
+  - `仕样书工作流` 把多条数据处理链路合并为统一入口。
+  - `数据模糊化` 提供扫描、配置、执行、预览的完整链路。
+  - `EDC 站点添加` 支持一键录制、回放测试、进度反馈与日志导出。
+- 保留打包与安装链路，说明这个项目不是只面向开发者使用，也考虑了分发和落地。
+
+## 技术架构
+
+```text
+src/
+├── main.py                        # 程序入口
+├── gui/
+│   ├── main_window.py            # 主窗口、导航与首页
+│   ├── qt_common.py              # 对话框、文件选择等 GUI 公共封装
+│   └── widgets/                  # 各功能页面
+└── utils/                        # 业务服务、文件处理与规则实现
 ```
 
-2. 创建虚拟环境（推荐）：
-```bash
-python -m venv venv
-.\venv\Scripts\activate  # Windows
-```
+架构上的核心思路是：
 
-3. 安装依赖：
+- 在 GUI 层处理交互、状态和提示。
+- 在 Service 层处理转换、清洗、规则映射和导出。
+- 通过统一页面风格、统一导出约定和统一打包链路，让多个小工具保持一致体验。
+
+## 快速开始
+
+### 环境要求
+
+- Python `3.11`
+- Windows `10 / 11`
+
+### 本地运行
+
 ```bash
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### 使用打包版本
-
-推荐使用安装包版本（`onedir + Inno Setup`），安装后启动更快。
-仍保留单文件 `DataForgeStudio.exe` 作为兼容构建方式。
-
-## 使用方法
-
-### 开发环境
-```bash
 python src/main.py
 ```
 
-### 打包版本
-- 安装包模式：安装后从开始菜单或桌面快捷方式启动。
-- 兼容模式：直接双击 `DataForgeStudio.exe` 文件。
+### 运行测试
 
-## 项目结构
-
-```
-tools_box/
-├── src/                                 # 源代码目录
-│   ├── main.py                          # 程序入口
-│   ├── version.py                       # 版本信息
-│   ├── gui/                             # 图形界面相关代码
-│   │   ├── main_window.py               # 主窗口
-│   │   ├── qt_common.py                 # 通用 GUI 组件与弹窗
-│   │   └── widgets/                     # 各工具页面
-│   │       ├── date_converter_page.py
-│   │       ├── file_format_converter_page.py
-│   │       ├── spec_workflow_page.py
-│   │       ├── xlsx_sheet_splitter_page.py
-│   │       ├── file_field_extractor_page.py
-│   │       ├── dead_link_checker_page.py
-│   │       ├── fullwidth_halfwidth_converter_page.py
-│   │       ├── data_masking_page.py
-│   │       └── edc_site_adder_page.py
-│   └── utils/                           # 业务服务与工具函数
-│       ├── date_utils.py
-│       ├── csv_to_xlsx_converter_service.py
-│       ├── xlsx_to_csv_converter_service.py
-│       ├── xlsx_sheet_splitter_service.py
-│       ├── csv_encoding_converter_service.py
-│       ├── file_field_extractor_service.py
-│       ├── dead_link_checker_service.py
-│       ├── fullwidth_halfwidth_service.py
-│       ├── data_cleaner_service.py
-│       ├── codelist_service.py
-│       ├── data_masking_service.py
-│       ├── csv_quote_remover_service.py
-│       ├── xlsx_restructure_service.py
-│       └── edc_site_adder_service.py
-├── docs/                                # 项目文档
-├── packaging/                           # 打包与安装脚本
-│   ├── pyinstaller/
-│   │   └── tools_box_onedir.spec        # onedir 打包配置
-│   ├── installer/
-│   │   └── tools_box.iss                # Inno Setup 安装脚本
-│   ├── scripts/
-│   │   ├── build_onedir.ps1             # 生成 dist/DataForgeStudio/DataForgeStudio.exe
-│   │   ├── build_installer.ps1          # 生成安装包
-│   │   └── measure_startup.ps1          # 启动耗时基准对比
-│   └── README.md                        # 打包链路说明
-├── requirements.txt                     # 项目依赖
-├── tools_box.spec                       # PyInstaller 打包配置
-├── CHANGELOG.md                         # 更新日志
-└── README.md                            # 项目说明
+```bash
+python -m unittest discover -s tests
 ```
 
-## 主要依赖项
+如果只想快速验证核心回归，当前更适合优先跑：
 
-### 核心库
-- **pandas** (2.1.4) - 数据处理和分析
-- **openpyxl** (3.1.2) - Excel 文件读写
-- **PySide6** - GUI 框架
-- **PySide6-Fluent-Widgets (QFluentWidgets)** - Fluent UI 组件
-- **pyqtgraph** - 图表绘制
+```bash
+python -m unittest tests.test_data_masking_service
+python -m unittest tests.test_unified_config_services
+```
 
-### 网络与解析
-- **requests** (>=2.31.0) - 网络请求与链接检测
-- **beautifulsoup4** (>=4.12.0) - HTML 解析
+## 打包与发布
 
-### 自动化库
-- **pyautogui** (0.9.54) - GUI 自动化控制
-- **pygetwindow** (0.0.9) - 窗口管理
-- **pywin32** (306) - Windows API 接口
-- **mouse** - 鼠标控制
-- **keyboard** (0.13.5) - 键盘控制
+推荐使用 `onedir` 构建，它更适合作为实际交付版本。
 
-### 打包工具
-- **pyinstaller** (6.3.0) - 程序打包
-- **backports.tarfile** (>=1.2.0) - 打包兼容性支持
+### 构建 onedir
 
-## 开发说明
-
-### 代码规范
-- 遵循 PEP8 代码风格规范
-- 使用 4 个空格缩进
-- 行长度限制为 100 字符
-- 所有函数和类需要添加中文文档字符串
-
-### 测试
-1. 确保已安装所有开发依赖
-2. 运行单元测试（如果存在）
-3. 进行功能测试验证
-
-### 打包发布
-
-1. 推荐链路：构建 onedir 版本（首选）
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\packaging\scripts\build_onedir.ps1 -Clean
 ```
 
-2. 推荐链路：构建安装包（需要 Inno Setup 6）
+### 构建安装包
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\packaging\scripts\build_installer.ps1 -Clean
 ```
 
-3. 性能对比：测量 one-file 与 onedir 启动时间
+### 测量启动速度
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\packaging\scripts\measure_startup.ps1
 ```
 
-4. 兼容链路（回滚）：单文件构建
-```powershell
-Remove-Item -Path build,dist,temp_tkdnd -Recurse -Force -ErrorAction SilentlyContinue
-python -m PyInstaller tools_box.spec --clean
+## 项目文档
+
+- [用户手册](docs/用户手册.md)
+- [开发文档](docs/开发文档.md)
+- [API 文档](docs/API文档.md)
+- [UI 界面规范](docs/UI界面规范.md)
+- [XLSX 文件制作规范](docs/XLSX文件制作规范.md)
+- [打包说明](packaging/README.md)
+- [更新日志](CHANGELOG.md)
+
+## 仓库结构
+
+```text
+tools_box/
+├── src/                    # 应用源码
+├── tests/                  # unittest 风格测试
+├── docs/                   # 用户手册、开发文档、界面规范
+├── packaging/              # PyInstaller / Installer / 启动测速脚本
+├── assets/                 # 应用图标等资源
+├── CHANGELOG.md
+└── README.md
 ```
 
-## 技术特点
+## 仓库展示建议
 
-- **现代化界面**: 分类卡片布局与统一的 GUI 风格
-- **响应式布局**: 支持窗口大小调整和滚动适配
-- **错误处理**: 完善的异常处理和用户提示机制
-- **内存优化**: 针对大文件处理进行了内存优化
-- **编码兼容**: 统一使用 UTF-8-SIG 编码处理中文
+如果你是通过 GitHub 首页看到这个项目，建议从下面三个入口开始：
 
-## 许可证
+1. 先看 [界面预览](#界面预览)，理解它是一个怎样的桌面产品。
+2. 再看 [核心能力](#核心能力) 和 [适用场景](#适用场景)，判断它解决的是不是你所在流程里的问题。
+3. 最后进入 [开发文档](docs/开发文档.md) 或直接本地运行，查看代码组织和实现方式。
 
-本项目采用 [MIT 许可证](LICENSE)
+## 说明
 
-## 贡献指南
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
-
-欢迎提交 Issue 和 Pull Request 来帮助改进项目！
-
-## 联系方式
-
-- 项目维护者: DataForge Studio Team
-- 邮箱: [待添加]
-- 项目主页: [待添加]
-
-## 更新日志
-
-查看 [CHANGELOG.md](CHANGELOG.md) 了解详细的版本更新历史。
+- 本项目当前没有提供 Web 在线 Demo，因为它是一个以 Windows 桌面交互为核心的应用。
+- 当前仓库尚未附带 `LICENSE` 文件；如果计划进一步对外开源分发，建议补充明确许可协议。
