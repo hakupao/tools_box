@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=30&duration=3000&pause=1000&color=A8EDEA&center=true&vCenter=true&width=800&height=80&lines=DataForge+Studio;Windows+桌面工具箱+%C2%B7+SDTM+数据处理+%C2%B7+Fluent+设计" alt="DataForge Studio"/>
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=30&duration=3000&pause=1000&color=A8EDEA&center=true&vCenter=true&width=800&height=80&lines=DataForge+Studio;Windows+%E6%A1%8C%E9%9D%A2%E5%B7%A5%E5%85%B7%E7%AE%B1+%C2%B7+SDTM+%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86+%C2%B7+Fluent+%E8%AE%BE%E8%AE%A1" alt="DataForge Studio"/>
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)
 ![Windows](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square&logo=windows)
@@ -92,7 +92,7 @@ graph TB
  A[" 输入数据<br/>(XLSX/CSV/SAS/Parquet)"] -->|加载| B[" 数据加载器"]
  B --> C[" 主窗口<br/>(DataForge Studio)"]
 
- C -->|用户选择工具| D{[" 工具选择"]}
+ C -->|用户选择工具| D{" 工具选择"}
 
  D -->|格式| E[" 转换器<br/>(格式转换)"]
  D -->|清洗| F[" 清洁器<br/>(数据清洗)"]

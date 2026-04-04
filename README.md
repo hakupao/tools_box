@@ -58,7 +58,7 @@ graph TB
  A[" Input Data<br/>(XLSX/CSV/SAS/Parquet)"] -->|Load| B[" Data Loader"]
  B --> C[" Main Window<br/>(DataForge Studio)"]
 
- C -->|User selects tool| D{[" Tool Selection"]}
+ C -->|User selects tool| D{" Tool Selection"}
 
  D -->|Format| E[" Converter<br/>(Format Conversion)"]
  D -->|Cleaning| F[" Cleaner<br/>(Data Cleaning)"]
