@@ -2,23 +2,7 @@
 
 <div align="center">
 
-```svg
-<svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#a8edea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#fed6e3;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="800" height="120" fill="url(#grad5)" rx="10"/>
-  <text x="400" y="70" font-size="48" font-weight="bold" fill="white" text-anchor="middle" font-family="monospace">
-    DataForge Studio
-  </text>
-  <text x="400" y="105" font-size="16" fill="#333333" text-anchor="middle" font-family="sans-serif">
-    Windows 桌面工具箱 · SDTM 数据处理 · Fluent 设计
-  </text>
-</svg>
-```
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=30&duration=3000&pause=1000&color=A8EDEA&center=true&vCenter=true&width=800&height=80&lines=DataForge+Studio;Windows+桌面工具箱+%C2%B7+SDTM+数据处理+%C2%B7+Fluent+设计" alt="DataForge Studio"/>
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)
 ![Windows](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square&logo=windows)
@@ -31,6 +15,40 @@
 [功能](#功能) • [快速开始](#快速开始) • [用户指南](#用户指南) • [工具](#工具) • [架构](#架构)
 
 </div>
+
+---
+
+
+
+### 界面截图
+
+<details open>
+<summary><strong>主页概览</strong></summary>
+
+![主页概览](docs/images/readme/home-overview.png)
+
+</details>
+
+<details>
+<summary><strong>格式转换</strong></summary>
+
+![格式转换](docs/images/readme/file-format-converter.png)
+
+</details>
+
+<details>
+<summary><strong>数据模糊化</strong></summary>
+
+![数据模糊化](docs/images/readme/data-masking-workflow.png)
+
+</details>
+
+<details>
+<summary><strong>EDC 站点添加</strong></summary>
+
+![EDC站点添加](docs/images/readme/edc-site-adder.png)
+
+</details>
 
 ---
 
@@ -71,29 +89,29 @@
 
 ```mermaid
 graph TB
-    A["📁 输入数据<br/>(XLSX/CSV/SAS/Parquet)"] -->|加载| B["🔄 数据加载器"]
-    B --> C["📊 主窗口<br/>(DataForge Studio)"]
+ A[" 输入数据<br/>(XLSX/CSV/SAS/Parquet)"] -->|加载| B[" 数据加载器"]
+ B --> C[" 主窗口<br/>(DataForge Studio)"]
 
-    C -->|用户选择工具| D{["🛠️ 工具选择"]}
+ C -->|用户选择工具| D{[" 工具选择"]}
 
-    D -->|格式| E["🔀 转换器<br/>(格式转换)"]
-    D -->|清洗| F["🧹 清洁器<br/>(数据清洗)"]
-    D -->|掩码| G["🔐 掩码器<br/>(PII 保护)"]
-    D -->|提取| H["📋 提取器<br/>(字段提取)"]
-    D -->|批量| I["⚙️ 批处理器<br/>(多文件)"]
+ D -->|格式| E[" 转换器<br/>(格式转换)"]
+ D -->|清洗| F[" 清洁器<br/>(数据清洗)"]
+ D -->|掩码| G[" 掩码器<br/>(PII 保护)"]
+ D -->|提取| H[" 提取器<br/>(字段提取)"]
+ D -->|批量| I["⚙ 批处理器<br/>(多文件)"]
 
-    E -->|转换| J["💾 输出数据"]
-    F -->|清洁| J
-    G -->|匿名化| J
-    H -->|提取| J
-    I -->|处理| J
+ E -->|转换| J[" 输出数据"]
+ F -->|清洁| J
+ G -->|匿名化| J
+ H -->|提取| J
+ I -->|处理| J
 
-    J -->|导出| K["📤 保存<br/>(xlsx/csv/sas/parquet)"]
+ J -->|导出| K[" 保存<br/>(xlsx/csv/sas/parquet)"]
 
-    style A fill:#e3f2fd
-    style C fill:#c8e6c9
-    style J fill:#fff9c4
-    style K fill:#f0f4c3
+ style A fill:#e3f2fd
+ style C fill:#c8e6c9
+ style J fill:#fff9c4
+ style K fill:#f0f4c3
 ```
 
 ### 组件架构

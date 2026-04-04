@@ -2,23 +2,7 @@
 
 <div align="center">
 
-```svg
-<svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#a8edea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#fed6e3;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="800" height="120" fill="url(#grad5)" rx="10"/>
-  <text x="400" y="70" font-size="48" font-weight="bold" fill="white" text-anchor="middle" font-family="monospace">
-    DataForge Studio
-  </text>
-  <text x="400" y="105" font-size="16" fill="#333333" text-anchor="middle" font-family="sans-serif">
-    Windows Desktop Toolbox • SDTM Data Processing • Fluent Design
-  </text>
-</svg>
-```
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=30&duration=3000&pause=1000&color=A8EDEA&center=true&vCenter=true&width=800&height=80&lines=DataForge+Studio;Windows+Desktop+Toolbox+%C2%B7+SDTM+Data+Processing+%C2%B7+Fluent+Design" alt="DataForge Studio"/>
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)
 ![Windows](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square&logo=windows)
@@ -71,29 +55,29 @@
 
 ```mermaid
 graph TB
-    A["📁 Input Data<br/>(XLSX/CSV/SAS/Parquet)"] -->|Load| B["🔄 Data Loader"]
-    B --> C["📊 Main Window<br/>(DataForge Studio)"]
+ A[" Input Data<br/>(XLSX/CSV/SAS/Parquet)"] -->|Load| B[" Data Loader"]
+ B --> C[" Main Window<br/>(DataForge Studio)"]
 
-    C -->|User selects tool| D{["🛠️ Tool Selection"]}
+ C -->|User selects tool| D{[" Tool Selection"]}
 
-    D -->|Format| E["🔀 Converter<br/>(Format Conversion)"]
-    D -->|Cleaning| F["🧹 Cleaner<br/>(Data Cleaning)"]
-    D -->|Masking| G["🔐 Masker<br/>(PII Protection)"]
-    D -->|Extraction| H["📋 Extractor<br/>(Field Extraction)"]
-    D -->|Batch| I["⚙️ Batch Processor<br/>(Multi-file)"]
+ D -->|Format| E[" Converter<br/>(Format Conversion)"]
+ D -->|Cleaning| F[" Cleaner<br/>(Data Cleaning)"]
+ D -->|Masking| G[" Masker<br/>(PII Protection)"]
+ D -->|Extraction| H[" Extractor<br/>(Field Extraction)"]
+ D -->|Batch| I["⚙ Batch Processor<br/>(Multi-file)"]
 
-    E -->|Transform| J["💾 Output Data"]
-    F -->|Clean| J
-    G -->|Anonymize| J
-    H -->|Extract| J
-    I -->|Process| J
+ E -->|Transform| J[" Output Data"]
+ F -->|Clean| J
+ G -->|Anonymize| J
+ H -->|Extract| J
+ I -->|Process| J
 
-    J -->|Export| K["📤 Save<br/>(xlsx/csv/sas/parquet)"]
+ J -->|Export| K[" Save<br/>(xlsx/csv/sas/parquet)"]
 
-    style A fill:#e3f2fd
-    style C fill:#c8e6c9
-    style J fill:#fff9c4
-    style K fill:#f0f4c3
+ style A fill:#e3f2fd
+ style C fill:#c8e6c9
+ style J fill:#fff9c4
+ style K fill:#f0f4c3
 ```
 
 ### Component Architecture
@@ -178,6 +162,40 @@ Download the latest release from [Releases](https://github.com/hakupao/tools_box
 5. Click "Process" or "Preview"
 6. Export results via "Save As"
 ```
+
+---
+
+
+
+### Screenshots
+
+<details open>
+<summary><strong>Home Overview</strong></summary>
+
+![Home Overview](docs/images/readme/home-overview.png)
+
+</details>
+
+<details>
+<summary><strong>Format Converter</strong></summary>
+
+![Format Converter](docs/images/readme/file-format-converter.png)
+
+</details>
+
+<details>
+<summary><strong>Data Masking</strong></summary>
+
+![Data Masking](docs/images/readme/data-masking-workflow.png)
+
+</details>
+
+<details>
+<summary><strong>EDC Site Adder</strong></summary>
+
+![EDC Site Adder](docs/images/readme/edc-site-adder.png)
+
+</details>
 
 ---
 
