@@ -1,208 +1,624 @@
-# DataForge Studio
+[English](README.md) | [中文](README_CN.md)
 
 <div align="center">
 
-把零散的数据处理动作，收拢成一套可交付的 Windows 桌面工作台。
+```svg
+<svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a8edea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fed6e3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="120" fill="url(#grad5)" rx="10"/>
+  <text x="400" y="70" font-size="48" font-weight="bold" fill="white" text-anchor="middle" font-family="monospace">
+    DataForge Studio
+  </text>
+  <text x="400" y="105" font-size="16" fill="#333333" text-anchor="middle" font-family="sans-serif">
+    Windows Desktop Toolbox • SDTM Data Processing • Fluent Design
+  </text>
+</svg>
+```
 
-`tools_box` 是仓库名，`DataForge Studio` 是产品名。
+![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)
+![Windows](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square&logo=windows)
+![PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52?style=flat-square&logo=qt)
+![Fluent Design](https://img.shields.io/badge/Design-Fluent-0078d4?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![UI](https://img.shields.io/badge/UI-PySide6%20%2B%20QFluentWidgets-41CD52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
-[![Data](https://img.shields.io/badge/Data-pandas%20%2B%20openpyxl-150458?style=flat-square&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
-[![Version](https://img.shields.io/badge/Version-v2.0.2-0F766E?style=flat-square)](https://github.com/hakupao/tools_box)
-[![Repo](https://img.shields.io/badge/GitHub-hakupao%2Ftools__box-181717?style=flat-square&logo=github)](https://github.com/hakupao/tools_box)
+**Windows desktop toolbox for SDTM-oriented data processing with Fluent Design UI. Format conversion, data cleaning, masking, extraction, and batch utilities all in one studio.**
 
-[下载发布版](https://github.com/hakupao/tools_box/releases) · [快速开始](#快速开始) · [界面预览](#界面预览) · [项目文档](#项目文档) · [更新日志](CHANGELOG.md)
+[Features](#features) • [Getting Started](#getting-started) • [User Guide](#user-guide) • [Tools](#tools) • [Architecture](#architecture)
 
 </div>
 
-![DataForge Studio Home](docs/images/readme/home-overview.png)
+---
 
-## 项目定位
+## Overview
 
-DataForge Studio 不是一个为了堆砌功能而做的“工具列表”，而是一个面向真实工作流的桌面数据工具箱。
+**DataForge Studio** (工具箱) is a comprehensive Windows desktop application for data professionals working with SDTM and clinical trial datasets. Built with PySide6 and QFluentWidgets, it provides a native Windows 11 Fluent Design interface with powerful data processing capabilities.
 
-它关注的不是单次脚本跑通，而是把高频、重复、容易出错的文件处理和数据整理动作，沉淀成一套可复用、可交付、可打包的 Fluent 风格桌面应用：
+**Key Strengths:**
+- 🎨 **Windows 11 Fluent Design**: Native, modern UI with smooth animations and dark/light modes
+- 📊 **SDTM-Focused**: Specialized tools for clinical data processing
+- 🔧 **Format Conversion**: Excel ↔ CSV ↔ SAS ↔ Parquet
+- 🧹 **Data Cleaning**: Missing value handling, deduplication, outlier detection
+- 🔐 **Data Masking**: PII anonymization, field encryption, value scrambling
+- 📋 **Field Extraction**: Pattern matching, subset selection, field mapping
+- ⚙️ **Batch Utilities**: Multi-file processing, automation scripts
+- 📦 **PyInstaller Build**: Ready-to-deploy .exe executable for Windows
 
-- 把 CSV / Excel 的格式转换、字段提取、工作表拆分等日常清洗动作统一起来。
-- 把仕样书驱动的数据流转做成单入口工作流，而不是拆成分散页面。
-- 把 SDTM 数据脱敏和 EDC 重复录入这类偏业务、偏操作型任务产品化。
-- 把“服务层逻辑”和“界面交互层”清晰分开，方便持续维护和后续扩展。
+---
 
-如果把它作为个人技术作品来看，这个项目更像是：
+## Key Features
 
-- 一个针对真实业务痛点构建的桌面生产力产品。
-- 一个以 `PySide6 + QFluentWidgets` 为壳、以 `pandas/openpyxl` 为核心的数据处理工作台。
-- 一个强调工程可维护性、批量处理能力和交付体验的 Python GUI 项目。
+| Feature | Description |
+|---------|-------------|
+| 🎨 **Fluent UI** | Windows 11 Fluent Design System with dark/light themes |
+| 📦 **Format Conversion** | XLSX ↔ CSV ↔ SAS ↔ Parquet with encoding support |
+| 🧹 **Data Cleaning** | Remove duplicates, handle missing values, outlier detection |
+| 🔐 **Data Masking** | PII protection, field-level encryption, value hashing |
+| 📊 **Field Extraction** | Regex-based extraction, field mapping, subsetting |
+| 🔄 **Batch Processing** | Process multiple files with same rules |
+| 📈 **Statistics & Analysis** | Data profiling, quality metrics, summary reports |
+| 💾 **Project Workspace** | Save/load processing configurations |
+| ⚡ **Multi-Threading** | Non-blocking UI during long operations |
+| 📚 **Help & Documentation** | Integrated help, user manual, API docs |
 
-## 为什么做这个项目
+---
 
-很多团队里的数据处理工作，表面上只是“改个格式”“拆个文件”“跑个清洗规则”，实际上存在几个长期问题：
+## Architecture
 
-- 依赖人工操作，重复成本高。
-- 规则分散在脚本、Excel 和口口相传的流程里。
-- 编码、日期、字段裁剪、导出格式很容易出现细碎但高频的错误。
-- 某些动作并不复杂，却因为缺少稳定工具而难以交接或复用。
+```mermaid
+graph TB
+    A["📁 Input Data<br/>(XLSX/CSV/SAS/Parquet)"] -->|Load| B["🔄 Data Loader"]
+    B --> C["📊 Main Window<br/>(DataForge Studio)"]
 
-DataForge Studio 的想法很直接：
+    C -->|User selects tool| D{["🛠️ Tool Selection"]}
 
-> 用一个易用的桌面界面，把这些高频数据动作变成稳定工作流，让“能跑一次”升级成“别人也能稳定重复使用”。
+    D -->|Format| E["🔀 Converter<br/>(Format Conversion)"]
+    D -->|Cleaning| F["🧹 Cleaner<br/>(Data Cleaning)"]
+    D -->|Masking| G["🔐 Masker<br/>(PII Protection)"]
+    D -->|Extraction| H["📋 Extractor<br/>(Field Extraction)"]
+    D -->|Batch| I["⚙️ Batch Processor<br/>(Multi-file)"]
 
-## 项目概览
+    E -->|Transform| J["💾 Output Data"]
+    F -->|Clean| J
+    G -->|Anonymize| J
+    H -->|Extract| J
+    I -->|Process| J
 
-| 项目项 | 说明 |
-| --- | --- |
-| 产品名 | `DataForge Studio` |
-| 仓库名 | `tools_box` |
-| 当前版本 | `v2.0.2` |
-| 最近主要更新 | 统一 `仕样书工作流`，优化 `EDC 站点添加` 自动化体验 |
-| 技术栈 | Python 3.11, PySide6, QFluentWidgets, pandas, openpyxl |
-| 运行平台 | Windows 10 / 11 |
-| 体验方式 | 暂无 Web 在线体验，推荐本地运行或下载发布版 |
-| 发布形态 | 源码运行、PyInstaller `onedir`、Inno Setup 安装包 |
+    J -->|Export| K["📤 Save<br/>(xlsx/csv/sas/parquet)"]
 
-## 核心能力
-
-| 模块 | 能力说明 | 解决的问题 |
-| --- | --- | --- |
-| 文件格式转换 | 在一个页面中统一处理 `CSV -> XLSX`、`XLSX -> CSV (UTF-8 BOM)`、`CSV -> UTF-8 BOM`、`CSV 引号清理` | 避免为多个小任务维护多套脚本或多个入口 |
-| 工作表拆分 | 将 Excel 工作表拆分为多个 CSV，并保持统一导出规范 | 处理多 sheet 文件时减少手工整理 |
-| 获取文件字段 | 批量读取 CSV / XLSX 字段并导出汇总 | 做字段盘点、结构核对更快 |
-| 死链检测 | 对 HTML 文件或目录进行链接扫描并生成报告 | 交付前自检页面链接质量 |
-| 仕样书工作流 | 单页面切换生成 Data Set、数据清洗、Codelist 处理 | 将规则驱动的数据流程集中管理 |
-| 数据模糊化 | 面向 SDTM 场景做脱敏、偏移和 ID 规则处理 | 降低隐私数据暴露风险 |
-| EDC 站点添加 | 用录制坐标 + 自动回放的方式执行批量录入 | 将重复点击型工作自动化 |
-| 日期转换 / 全角转半角 | 处理文本与日期格式细节 | 解决经常打断流程的小问题 |
-
-## 适用场景
-
-- 日常需要频繁处理 CSV / Excel 的数据运营、数据管理或实施角色。
-- 需要按固定仕样书或映射规则批量生成、清洗和标准化文件。
-- 需要在交付前做字段检查、格式修整、编码统一和简单质检。
-- 需要对临床或业务数据进行脱敏处理，降低人工操作失误。
-- 需要把重复性强、步骤固定的系统录入动作沉淀为可复用工具。
-
-## 界面预览
-
-顶部预览图展示了首页总览。下面是三个更能体现项目特点的代表性工具页面。
-
-| 文件格式转换 | 数据模糊化 | EDC 站点添加 |
-| --- | --- | --- |
-| ![File Format Converter](docs/images/readme/file-format-converter.png) | ![Data Masking Workflow](docs/images/readme/data-masking-workflow.png) | ![EDC Site Adder](docs/images/readme/edc-site-adder.png) |
-
-## 这个项目的技术亮点
-
-- `UI` 和 `业务服务` 分层明确，页面逻辑主要放在 `src/gui/widgets/*_page.py`，数据处理能力集中在 `src/utils/*_service.py`。
-- 保持桌面产品思路而不是脚本堆叠，首页、导航、卡片分组和单页多模式切换都经过统一设计。
-- 对文件处理约定做了稳定化处理，例如 CSV / Excel 读取写出、UTF-8-SIG 导出、规则驱动的清洗流程。
-- 有意识地把复杂流程产品化，例如：
-  - `仕样书工作流` 把多条数据处理链路合并为统一入口。
-  - `数据模糊化` 提供扫描、配置、执行、预览的完整链路。
-  - `EDC 站点添加` 支持一键录制、回放测试、进度反馈与日志导出。
-- 保留打包与安装链路，说明这个项目不是只面向开发者使用，也考虑了分发和落地。
-
-## 技术架构
-
-```text
-src/
-├── main.py                        # 程序入口
-├── gui/
-│   ├── main_window.py            # 主窗口、导航与首页
-│   ├── qt_common.py              # 对话框、文件选择等 GUI 公共封装
-│   └── widgets/                  # 各功能页面
-└── utils/                        # 业务服务、文件处理与规则实现
+    style A fill:#e3f2fd
+    style C fill:#c8e6c9
+    style J fill:#fff9c4
+    style K fill:#f0f4c3
 ```
 
-架构上的核心思路是：
+### Component Architecture
 
-- 在 GUI 层处理交互、状态和提示。
-- 在 Service 层处理转换、清洗、规则映射和导出。
-- 通过统一页面风格、统一导出约定和统一打包链路，让多个小工具保持一致体验。
+```
+DataForge Studio
+├── GUI Layer (PySide6 + QFluentWidgets)
+│   ├── Main Window
+│   ├── Tool Selection Panel
+│   ├── Preview Pane
+│   └── Status/Progress Bar
+│
+├── Tools Layer
+│   ├── Converter (format conversion)
+│   ├── Cleaner (data quality)
+│   ├── Masker (PII protection)
+│   ├── Extractor (field ops)
+│   └── BatchProcessor (multi-file)
+│
+├── Data Layer (pandas/numpy)
+│   ├── DataLoader (multi-format read)
+│   ├── DataProcessor (transform)
+│   └── DataExporter (multi-format write)
+│
+└── Config Layer (JSON/TOML)
+    ├── Project config
+    ├── Tool presets
+    └── User preferences
+```
 
-## 快速开始
+---
 
-### 环境要求
+## Getting Started
 
-- Python `3.11`
-- Windows `10 / 11`
+### Prerequisites
 
-### 本地运行
+- **Windows 7 or newer** (Windows 11 recommended for full Fluent Design)
+- **Python 3.11+**
+- **~200 MB disk space**
+
+### Installation
+
+#### Option 1: Python Installation (For Developers)
 
 ```bash
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-python src/main.py
+# Clone repository
+git clone https://github.com/hakupao/tools_box.git
+cd tools_box
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+
+# Launch
+python -m tools_box
 ```
 
-### 运行测试
+#### Option 2: Standalone .exe (For End Users)
+
+Download the latest release from [Releases](https://github.com/hakupao/tools_box/releases).
 
 ```bash
-python -m unittest discover -s tests
+# Just double-click DataForge_Studio.exe
+# No Python installation required!
 ```
 
-如果只想快速验证核心回归，当前更适合优先跑：
+### 5-Minute Quick Start
 
-```bash
-python -m unittest tests.test_data_masking_service
-python -m unittest tests.test_unified_config_services
+```
+1. Launch DataForge Studio
+2. Click "Load Data" → select your CSV/Excel file
+3. Choose a tool from the left panel:
+   - Format Conversion
+   - Data Cleaning
+   - Data Masking
+   - Field Extraction
+   - Batch Processing
+4. Configure options in the tool panel
+5. Click "Process" or "Preview"
+6. Export results via "Save As"
 ```
 
-## 打包与发布
+---
 
-推荐使用 `onedir` 构建，它更适合作为实际交付版本。
+## User Guide
 
-### 构建 onedir
+### Loading Data
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\packaging\scripts\build_onedir.ps1 -Clean
+1. **File Menu** → **Open** or drag & drop file
+2. Supported formats: `XLSX`, `CSV`, `SAS7BDAT`, `Parquet`
+3. Encoding auto-detected; can override if needed
+4. Preview shows first 100 rows
+
+### Format Conversion
+
+**Convert between data formats:**
+
+```
+XLSX → CSV          Excel to comma-separated values
+CSV → XLSX          CSV to Excel workbook
+CSV → SAS          CSV to SAS dataset
+Parquet → CSV      Parquet to CSV
 ```
 
-### 构建安装包
+**Options:**
+- Delimiter (,, ;, \t, |)
+- Encoding (utf-8, latin1, cp1252, etc.)
+- Decimal separator (., ,)
+- Sheet selection (for XLSX)
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\packaging\scripts\build_installer.ps1 -Clean
+### Data Cleaning
+
+**Remove data quality issues:**
+
+- **Remove Duplicates**: Exact or fuzzy matching
+- **Handle Missing Values**: Delete rows, fill forward, mean imputation
+- **Outlier Detection**: IQR method, z-score method
+- **Data Type Correction**: Auto-detect and convert types
+- **Trim Whitespace**: Remove leading/trailing spaces
+
+**Configuration:**
+```json
+{
+  "duplicates": {
+    "enabled": true,
+    "method": "exact",
+    "subset": ["USUBJID", "VISIT"]
+  },
+  "missing": {
+    "method": "delete_row",
+    "threshold": 0.5
+  },
+  "outliers": {
+    "detect": true,
+    "method": "iqr",
+    "action": "flag"
+  }
+}
 ```
 
-### 测量启动速度
+### Data Masking
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\packaging\scripts\measure_startup.ps1
+**Protect PII and sensitive information:**
+
+- **Field Masking**: Replace values (e.g., names → "XXX")
+- **Hashing**: SHA-256 hash sensitive fields
+- **Encryption**: AES-256 field encryption
+- **Date Shifting**: Add random days to dates
+- **Value Scrambling**: Shuffle/randomize values
+
+**Example:**
+```json
+{
+  "fields_to_mask": {
+    "SUBJID": "hash",
+    "FNAME": "replace",
+    "LNAME": "replace",
+    "DOB": "date_shift",
+    "ADDRESS": "encryption"
+  },
+  "encryption_key": "use-key-from-vault"
+}
 ```
 
-## 项目文档
+### Field Extraction
 
-- [用户手册](docs/用户手册.md)
-- [开发文档](docs/开发文档.md)
-- [API 文档](docs/API文档.md)
-- [UI 界面规范](docs/UI界面规范.md)
-- [XLSX 文件制作规范](docs/XLSX文件制作规范.md)
-- [打包说明](packaging/README.md)
-- [更新日志](CHANGELOG.md)
+**Extract and manipulate specific fields:**
 
-## 仓库结构
+- **Regex Extraction**: Pattern matching (e.g., extract area codes)
+- **Column Selection**: Keep/drop specific columns
+- **Field Mapping**: Rename columns
+- **Calculated Fields**: Create new fields from formulas
+- **Value Substitution**: Find & replace values
 
-```text
+**Example:**
+```
+Extract area code from phone number
+Pattern: (\d{3})-\d{3}-\d{4}
+Replace: $1
+Result: "555-123-4567" → "555"
+```
+
+### Batch Processing
+
+**Process multiple files with the same rules:**
+
+1. **Select Tool** (Format Conversion, Cleaning, etc.)
+2. **Select Input Folder** (all matching files)
+3. **Configure Tool Options**
+4. **Click "Start Batch"**
+5. Progress shown per file
+6. All results saved to output folder
+
+---
+
+## Tools Overview
+
+### Format Converter
+Convert between Excel, CSV, SAS, Parquet with full control over encoding and delimiters.
+
+### Data Cleaner
+Remove duplicates, handle missing values, detect outliers, auto-correct data types.
+
+### Data Masker
+Anonymize PII through masking, hashing, encryption, and date shifting.
+
+### Field Extractor
+Extract patterns, select columns, create calculated fields, map/rename columns.
+
+### Batch Processor
+Apply any tool to multiple files with progress tracking.
+
+---
+
+## Project Structure
+
+<details>
+<summary><b>📁 Complete Directory Layout</b></summary>
+
+```
 tools_box/
-├── src/                    # 应用源码
-├── tests/                  # unittest 风格测试
-├── docs/                   # 用户手册、开发文档、界面规范
-├── packaging/              # PyInstaller / Installer / 启动测速脚本
-├── assets/                 # 应用图标等资源
-├── CHANGELOG.md
-└── README.md
+│
+├── 📄 README.md & README_CN.md
+├── 📄 pyproject.toml           # Python project config
+├── 📄 requirements.txt
+├── 📄 CHANGELOG.md
+│
+├── 🎨 tools_box/ (Package)
+│   ├── __main__.py             # Entry point
+│   ├── __init__.py
+│   ├── main_window.py          # Main GUI window
+│   ├── config.py               # Configuration management
+│   │
+│   ├── gui/
+│   │   ├── main_panel.py       # Main workspace
+│   │   ├── tool_selector.py    # Tool selection panel
+│   │   ├── preview_pane.py     # Data preview
+│   │   ├── status_bar.py       # Status & progress
+│   │   ├── dialogs.py          # File dialogs, settings
+│   │   └── styles.css          # Fluent Design styles
+│   │
+│   ├── tools/
+│   │   ├── base_tool.py        # Base tool class
+│   │   ├── converter.py        # Format conversion
+│   │   ├── cleaner.py          # Data cleaning
+│   │   ├── masker.py           # Data masking
+│   │   ├── extractor.py        # Field extraction
+│   │   └── batch_processor.py  # Batch operations
+│   │
+│   ├── data/
+│   │   ├── loader.py           # Multi-format data loading
+│   │   ├── processor.py        # Data transformation
+│   │   ├── exporter.py         # Multi-format export
+│   │   └── validator.py        # Data validation
+│   │
+│   ├── utils/
+│   │   ├── crypto.py           # Encryption utilities
+│   │   ├── regex.py            # Pattern matching
+│   │   ├── hash.py             # Hashing functions
+│   │   └── logging.py          # Logging setup
+│   │
+│   └── resources/
+│       ├── icons/
+│       ├── themes/
+│       └── config_templates/
+│
+├── 📚 docs/
+│   ├── 用户手册.md             # User manual (Chinese)
+│   ├── API文档.md              # API documentation
+│   ├── 开发文档.md             # Developer guide
+│   ├── QUICK_START.md
+│   └── assets/
+│       ├── gui_screenshot.png
+│       └── tutorial.md
+│
+├── 📦 packaging/
+│   ├── pyinstaller_config.spec # PyInstaller spec
+│   ├── build_executable.py     # Build script
+│   └── installer_config.nsi    # NSIS installer
+│
+└── ✅ tests/
+    ├── test_converter.py
+    ├── test_cleaner.py
+    ├── test_masker.py
+    ├── test_extractor.py
+    └── test_batch_processor.py
 ```
 
-## 仓库展示建议
+</details>
 
-如果你是通过 GitHub 首页看到这个项目，建议从下面三个入口开始：
+---
 
-1. 先看 [界面预览](#界面预览)，理解它是一个怎样的桌面产品。
-2. 再看 [核心能力](#核心能力) 和 [适用场景](#适用场景)，判断它解决的是不是你所在流程里的问题。
-3. 最后进入 [开发文档](docs/开发文档.md) 或直接本地运行，查看代码组织和实现方式。
+## Advanced Usage
 
-## 说明
+<details>
+<summary><b>🎛️ Custom Tool Development</b></summary>
 
-- 本项目当前没有提供 Web 在线 Demo，因为它是一个以 Windows 桌面交互为核心的应用。
-- 当前仓库尚未附带 `LICENSE` 文件；如果计划进一步对外开源分发，建议补充明确许可协议。
+Create custom tools by extending `BaseTool`:
+
+```python
+from tools_box.tools.base_tool import BaseTool
+
+class MyCustomTool(BaseTool):
+    def __init__(self):
+        super().__init__(
+            name="My Custom Tool",
+            description="Does something useful"
+        )
+
+    def process(self, dataframe, **options):
+        # Your processing logic
+        df = dataframe.copy()
+        # ... transformation code ...
+        return df
+
+    def get_options_ui(self):
+        # Return QWidget with options UI
+        pass
+```
+
+</details>
+
+<details>
+<summary><b>🤖 Automation Scripts</b></summary>
+
+Run DataForge Studio via Python API:
+
+```python
+from tools_box.data.loader import DataLoader
+from tools_box.tools.converter import Converter
+
+# Load data
+loader = DataLoader()
+df = loader.load("input.xlsx")
+
+# Convert format
+converter = Converter()
+result = converter.process(
+    df,
+    input_format="xlsx",
+    output_format="csv",
+    encoding="utf-8"
+)
+
+# Export
+loader.save(result, "output.csv")
+```
+
+</details>
+
+<details>
+<summary><b>🔐 Encryption Key Management</b></summary>
+
+Secure encryption keys:
+
+```python
+import os
+from tools_box.utils.crypto import EncryptionManager
+
+# Load key from environment variable (recommended)
+key = os.environ.get("DATAFORGE_ENCRYPTION_KEY")
+
+manager = EncryptionManager(key)
+encrypted_data = manager.encrypt("sensitive_value")
+decrypted_data = manager.decrypt(encrypted_data)
+```
+
+</details>
+
+---
+
+## Dependencies
+
+```
+PySide6>=6.5              # Qt GUI framework
+QFluentWidgets>=0.4.4    # Fluent Design UI components
+pandas>=2.0              # Data manipulation
+numpy>=1.21              # Numerical operations
+openpyxl>=3.0            # Excel I/O
+pyarrow>=10.0            # Parquet support
+cryptography>=38.0       # Encryption
+```
+
+---
+
+## Building Executable
+
+### Using PyInstaller
+
+```bash
+# Install build dependencies
+pip install pyinstaller
+
+# Build executable
+python packaging/build_executable.py
+
+# Output: dist/DataForge_Studio.exe
+```
+
+### Creating Installer
+
+```bash
+# Install NSIS (Nullsoft Installer System)
+# Download from https://nsis.sourceforge.io/
+
+# Build installer
+makensis packaging/installer_config.nsi
+
+# Output: dist/DataForge_Studio_Installer.exe
+```
+
+---
+
+## Configuration & Settings
+
+### User Settings (JSON)
+
+Located in: `%APPDATA%/DataForge Studio/config.json`
+
+```json
+{
+  "theme": "dark",
+  "language": "en",
+  "recent_files": [
+    "C:/Data/file1.csv",
+    "C:/Data/file2.xlsx"
+  ],
+  "tool_presets": {
+    "cleaning": {
+      "remove_duplicates": true,
+      "handle_missing": "delete"
+    }
+  }
+}
+```
+
+---
+
+## Performance Tips
+
+- 📊 **Large Files**: Use Parquet format for better performance
+- 🔄 **Batch Processing**: Process files in batches of 100-1000
+- 💾 **Memory**: Monitor RAM when processing files > 500 MB
+- 🚀 **Threading**: UI remains responsive during processing
+- 📈 **Optimization**: Enable caching for repeated operations
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>Common Issues</b></summary>
+
+| Issue | Solution |
+|-------|----------|
+| File won't open | Check encoding, try auto-detect |
+| Data shows as corrupted | Verify file format, check delimiters |
+| GUI freezes during processing | Wait for operation to complete (check taskbar) |
+| Out of memory error | Process file in smaller chunks or use Parquet |
+| Encryption key lost | Keep backup in secure vault (e.g., Azure Key Vault) |
+
+</details>
+
+---
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+```bash
+# Development setup
+git clone https://github.com/hakupao/tools_box.git
+cd tools_box
+pip install -e ".[dev]"
+pytest tests/
+```
+
+---
+
+## Roadmap
+
+- [ ] Database connector (SQL Server, PostgreSQL)
+- [ ] Advanced visualization (charts, profiling reports)
+- [ ] Machine learning features (clustering, classification)
+- [ ] REST API server mode
+- [ ] Cloud storage integration (Azure, AWS)
+- [ ] Real-time data validation rules
+
+---
+
+## License
+
+MIT License © 2024 hakupao
+
+---
+
+## Citation
+
+```bibtex
+@software{dataforge2024,
+  author = {hakupao},
+  title = {DataForge Studio: Windows Desktop Toolbox for SDTM Data Processing},
+  url = {https://github.com/hakupao/tools_box},
+  year = {2024}
+}
+```
+
+---
+
+## Support
+
+- 📧 **Issues**: [GitHub Issues](https://github.com/hakupao/tools_box/issues)
+- 📖 **Documentation**: [docs/](docs/)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/hakupao/tools_box/discussions)
+- 📚 **User Manual**: [docs/用户手册.md](docs/用户手册.md)
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#-dataforge-studio)**
+
+Built with precision for data professionals
+
+</div>
