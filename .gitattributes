@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Golden samples must stay byte-exact (leading/trailing spaces, LF endings)
+tests/golden/**/*.txt -text
+tests/golden/**/*.csv -text

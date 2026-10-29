@@ -39,8 +39,16 @@ def _run_width_convert(input_dir: Path, output_dir: Path, params: dict[str, Any]
             raise AssertionError(f"tool reported errors: {result.errors}")
 
 
+def _run_date_convert(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
+    from dataforge.tools.date_convert import convert_text
+
+    text = (input_dir / "input.txt").read_bytes().decode("utf-8")
+    (output_dir / "output.txt").write_bytes(convert_text(text).encode("utf-8"))
+
+
 ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "width_convert": _run_width_convert,
+    "date_convert": _run_date_convert,
 }
 
 

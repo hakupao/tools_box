@@ -41,6 +41,13 @@ class RegistryTests(unittest.TestCase):
         self.assertIs(load_page_class(spec), collections.OrderedDict)
 
 
+class PageImportTests(unittest.TestCase):
+    def test_every_page_importable(self) -> None:
+        for spec in TOOLS:
+            with self.subTest(tool=spec.id):
+                self.assertTrue(isinstance(load_page_class(spec), type))
+
+
 class LayoutTests(unittest.TestCase):
     def test_layout_breakpoints(self) -> None:
         cases = [

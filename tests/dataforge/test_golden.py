@@ -13,6 +13,10 @@ class GoldenTests(unittest.TestCase):
         self.assertIn("width_convert", golden.ADAPTERS)
         self.assertTrue(golden.discover("width_convert"))
 
+    def test_date_convert_has_cases(self) -> None:
+        self.assertIn("date_convert", golden.ADAPTERS)
+        self.assertTrue(golden.discover("date_convert"))
+
     def test_golden_samples(self) -> None:
         for tool_id, adapter in golden.ADAPTERS.items():
             for case in golden.discover(tool_id):
