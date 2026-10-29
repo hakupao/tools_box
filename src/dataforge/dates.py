@@ -66,7 +66,9 @@ class ParsedDate:
 
 _SLASH_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 _FULL_RE = re.compile(r"^(\d{4})[-/](\d{1,2})[-/](\d{1,2})")
-_TIME_RE = re.compile(r"^[T ]\d{1,2}:\d{1,2}")
+_SUFFIX_RE = re.compile(
+    r"^([T ]\d{1,2}:\d{1,2}(:\d{1,2}(\.\d+)?)?)?(Z|[+-]\d{2}:?\d{2})?$"
+)
 _YEAR_MONTH_RE = re.compile(r"^(\d{4})[-/](\d{1,2})$")
 _YEAR_RE = re.compile(r"^\d{4}$")
 
@@ -106,7 +108,7 @@ def parse_mask_date(text: str, order: SlashOrder | None = None) -> ParsedDate | 
     match = _FULL_RE.match(t)
     if match:
         rest = t[match.end():]
-        if rest == "" or rest == "Z" or _TIME_RE.match(rest):
+        if _SUFFIX_RE.match(rest):
             parsed = _make_date(*(int(g) for g in match.groups()))
             return ParsedDate(parsed, False, rest) if parsed else None
         return None
@@ -121,8 +123,7 @@ def parse_mask_date(text: str, order: SlashOrder | None = None) -> ParsedDate | 
     if readings is None:
         return None
     day_first, month_first = readings
-    kind = slash_kind(t)
-    if kind is SlashKind.AMBIGUOUS:
+    if day_first and month_first and day_first != month_first:  # ambiguous
         if order is None:
             return None
         chosen = day_first if order is SlashOrder.DAY_FIRST else month_first

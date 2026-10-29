@@ -40,6 +40,15 @@ CASES = [
     ("", None, "", BLANK),
     ("NaN", None, "NaN", BLANK),
     ("0001-03-01", None, "0001-03-01", UNPARSED),
+    ("2024-06-15 10:30 admitted 2024-06-10", None, "2024-06-15 10:30 admitted 2024-06-10", UNPARSED),
+    ("2024-06-15T10:30 JOHN", None, "2024-06-15T10:30 JOHN", UNPARSED),
+    ("2024-06-15abc", None, "2024-06-15abc", UNPARSED),
+    ("2024-06-15Z", None, "2022-06-15Z", SHIFTED),
+    ("2024-06-15T13:30:00.123+0900", None, "2022-06-15T13:30:00.123+0900", SHIFTED),
+    ("9999-12-31", None, "9999-12-31", UNPARSED),
+    ("31/31/2024", None, "31/31/2024", UNPARSED),
+    ("  2024-05-01  ", None, "2022-05-01", SHIFTED),
+    ("05/05/2024", DAY_FIRST, "2022-05-05", SHIFTED),
 ]
 
 
@@ -47,7 +56,8 @@ class DatesMaskingTests(unittest.TestCase):
     def test_mask_date_cases(self):
         for text, order, expected, outcome in CASES:
             with self.subTest(text=text, order=order):
-                self.assertEqual(mask_date(text, -2, order), (expected, outcome))
+                years = 1 if text == "9999-12-31" else -2
+                self.assertEqual(mask_date(text, years, order), (expected, outcome))
 
     def test_leap_forward(self):
         self.assertEqual(mask_date("2024-02-29", 4, None)[0], "2028-02-29")
