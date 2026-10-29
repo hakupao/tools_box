@@ -14,22 +14,19 @@ def to_iso8601(value: str) -> str:
         return text
     pieces = text.split("/")
     try:
-        numbers = [int(p) for p in pieces]
+        year = int(pieces[0])
+        if not 1000 <= year <= 9999:
+            return text
+        month = int(pieces[1])
+        if not 1 <= month <= 12:
+            return f"{year:04d}"
+        if len(pieces) == 2:
+            return f"{year:04d}-{month:02d}"
+        day = int(pieces[2])
     except ValueError:
         return text
-    if len(numbers) > 3:
+    if len(pieces) > 3:
         return text
-    year = numbers[0]
-    if not 1000 <= year <= 9999:
-        return text
-    if len(numbers) == 1:
-        return f"{year:04d}"
-    month = numbers[1]
-    if not 1 <= month <= 12:
-        return f"{year:04d}"
-    if len(numbers) == 2:
-        return f"{year:04d}-{month:02d}"
-    day = numbers[2]
     if 1 <= day <= calendar.monthrange(year, month)[1]:
         return f"{year:04d}-{month:02d}-{day:02d}"
     return f"{year:04d}-{month:02d}"
