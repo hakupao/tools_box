@@ -124,7 +124,9 @@ class MainWindow(FluentWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._runner.is_busy():
             box = MessageBox("任务仍在运行", "确定退出？正在运行的任务会被取消。", self)
-            if not box.exec():
+            accepted = box.exec()
+            box.deleteLater()
+            if not accepted:
                 event.ignore()
                 return
         self._runner.shutdown()

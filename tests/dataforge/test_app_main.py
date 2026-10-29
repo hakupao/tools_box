@@ -12,6 +12,7 @@ class AppMainTests(unittest.TestCase):
         runner = order.runner
         with mock.patch.object(app, "setup_logging"), \
                 mock.patch.object(app, "QApplication") as qapp, \
+                mock.patch.object(app, "MainThreadGarbageCollector"), \
                 mock.patch.object(app, "ConfigStore"), \
                 mock.patch.object(app, "apply_theme_mode"), \
                 mock.patch.object(app, "start_system_theme_listener"), \

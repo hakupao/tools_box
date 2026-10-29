@@ -42,6 +42,12 @@ class EncodingChoiceDialog(MessageBoxBase):
         return self._rest.isChecked()
 
 
+def _dispose(dialog: object) -> None:
+    delete = getattr(dialog, "deleteLater", None)
+    if delete is not None:
+        delete()
+
+
 def ask_encodings(
     parent: QWidget,
     questions: list[EncodingQuestion],
@@ -55,9 +61,15 @@ def ask_encodings(
             answers[question.path] = sticky
             continue
         dialog = dialog_factory(parent, question)
-        if not dialog.exec():
+        try:
+            accepted = dialog.exec()
+            chosen = dialog.chosen() if accepted else None
+            rest = bool(accepted) and dialog.apply_to_rest()
+        finally:
+            _dispose(dialog)
+        if not accepted:
             break
-        answers[question.path] = dialog.chosen()
-        if dialog.apply_to_rest():
-            sticky = dialog.chosen()
+        answers[question.path] = chosen
+        if rest:
+            sticky = chosen
     return answers
