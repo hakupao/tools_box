@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import shiboken6
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from qfluentwidgets import PushButton
 
@@ -457,6 +458,48 @@ class AuxJobTests(unittest.TestCase):
         bar.warning.assert_called_once()
         self.assertEqual(bar.warning.call_args.args[:2], ("无法开始", "已有任务正在运行"))
         self.assertEqual(page._job_kind, "run")
+
+    def test_hook_can_queue_next_job_when_idle(self) -> None:
+        for _ in range(10):
+            page = _AuxPage(get_tool("date_convert"), self.runner)
+            page.runs = 0
+
+            def again(progress, token) -> Result:
+                return Result()
+
+            def hook(kind, result, page=page, again=again):
+                page.aux_calls.append((kind, result))
+                if len(page.aux_calls) == 1:
+                    page.submit_job_when_idle(again, "scan")
+
+            page.on_aux_finished = hook
+            with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+                page.run_bar.start_requested.emit()
+                wait_until(lambda: len(page.aux_calls) == 2)
+                wait_until(lambda: not self.runner.is_busy())
+            self.assertEqual(bar.method_calls, [])
+            self.assertEqual(page.locked[-1], False)
+            shiboken6.delete(page)  # stale pages would also hear the next runs
+
+    def test_aux_then_run_emits_run_succeeded_once(self) -> None:
+        page = _AuxPage(get_tool("date_convert"), self.runner)
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar"):
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: page.aux_calls != [])
+            wait_until(lambda: not self.runner.is_busy())
+
+            def run_job(progress, token) -> Result:
+                r = Result()
+                r.add_output(Path("out.csv"))
+                return r
+
+            self.assertTrue(page.submit_job(run_job))
+            wait_until(lambda: got != [])
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(got, [("quiet", {"k": 1})])
+        self.assertEqual(len(page.aux_calls), 1)
 
     def test_default_hook_raises(self) -> None:
         page = _Quiet(get_tool("date_convert"), self.runner)

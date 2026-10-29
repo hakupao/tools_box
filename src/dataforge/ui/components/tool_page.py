@@ -158,8 +158,27 @@ class ToolPage(QWidget):
         return "run"
 
     def on_aux_finished(self, kind: str, result: Result) -> None:
-        """Called when an auxiliary (non-"run") job finished successfully."""
+        """Called when an auxiliary (non-"run") job finished successfully.
+
+        The runner is still busy while this hook runs (it is released when the worker
+        thread ends), so queue any follow-up job with submit_job_when_idle(), never
+        submit_job().
+        """
         raise NotImplementedError
+
+    def submit_job_when_idle(self, fn: JobFn, kind: str = "run") -> None:
+        """submit_job() now if the runner is idle, else as soon as it becomes idle."""
+        if not self.runner.is_busy():
+            self.submit_job(fn, kind)
+            return
+
+        def on_busy_changed(busy: bool) -> None:
+            if busy:
+                return
+            self.runner.busy_changed.disconnect(on_busy_changed)
+            self.submit_job(fn, kind)  # warns if another tool grabbed the runner first
+
+        self.runner.busy_changed.connect(on_busy_changed)
 
     # -- run flow ----------------------------------------------------------------
     def _is_mine(self) -> bool:
