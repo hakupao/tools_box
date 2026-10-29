@@ -50,8 +50,10 @@ class WidthConvertPage(ToolPage):
         overwrite = self.overwrite_box.isChecked()
         if overwrite:
             box = MessageBox("覆盖原文件", "将直接修改原文件且无法撤销。覆盖后，原文件中的图表、图片、数据透视表等可能丢失。确定继续吗？", self.window())
-            accepted = box.exec()
-            box.deleteLater()
+            try:
+                accepted = box.exec()
+            finally:
+                box.deleteLater()
             if not accepted:
                 return None
         options = WidthOptions(

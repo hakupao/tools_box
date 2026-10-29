@@ -37,7 +37,8 @@ def main(argv: list[str] | None = None) -> int:
     window.show()
 
     code = app.exec()
-    gc_guard.stop()  # also keeps the guard referenced until the event loop has ended
+    # gc stays disabled through shutdown: a still-running worker must never trigger a
+    # collection off the GUI thread. ``gc_guard`` stays referenced until main() returns.
 
     runner.shutdown()
     runner.dispose()

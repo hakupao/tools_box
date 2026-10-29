@@ -33,6 +33,8 @@ class MainThreadGarbageCollector(QObject):
 
     def check(self) -> None:
         """Generation-aware collection, mirroring the interpreter's own thresholds."""
+        if gc.isenabled():
+            gc.disable()
         counts = gc.get_count()
         thresholds = gc.get_threshold()
         for generation in (2, 1, 0):
