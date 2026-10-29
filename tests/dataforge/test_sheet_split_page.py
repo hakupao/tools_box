@@ -7,7 +7,7 @@ from unittest import mock
 
 from openpyxl import Workbook
 
-from tests.dataforge.qt_helpers import qapp, wait_until
+from tests.dataforge.qt_helpers import drain_deleted, qapp, wait_until
 
 
 def _make_book(path: Path) -> None:
@@ -24,19 +24,24 @@ class SheetSplitPageTests(unittest.TestCase):
 
         qapp()
         self.runner = JobRunner()
+        self._pages: list = []
         self._tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self._tmp.name)
 
     def tearDown(self) -> None:
+        wait_until(lambda: not self.runner.is_busy())
         self.runner.shutdown()
         self.runner.dispose()
+        drain_deleted(*self._pages, self.runner)
         self._tmp.cleanup()
 
     def _page(self):
         from dataforge.ui.pages.sheet_split_page import SheetSplitPage
         from dataforge.ui.registry import get_tool
 
-        return SheetSplitPage(get_tool("sheet_split"), self.runner)
+        page = SheetSplitPage(get_tool("sheet_split"), self.runner)
+        self._pages.append(page)
+        return page
 
     def test_build_job_validation(self) -> None:
         page = self._page()

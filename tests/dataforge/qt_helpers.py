@@ -22,3 +22,13 @@ def wait_until(predicate: Callable[[], bool], timeout_ms: int = 5000) -> None:
             raise AssertionError(f"condition not met within {timeout_ms} ms")
         QCoreApplication.processEvents()
         QThread.msleep(10)
+
+
+def drain_deleted(*objs) -> None:
+    """deleteLater() every object, then run the deferred deletes deterministically."""
+    from PySide6.QtCore import QEvent
+
+    for obj in objs:
+        obj.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    QCoreApplication.processEvents()

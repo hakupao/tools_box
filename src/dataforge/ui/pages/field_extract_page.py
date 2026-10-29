@@ -1,6 +1,7 @@
 """Field extraction tool page: summarise the header fields of a folder's files."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +46,7 @@ class FieldExtractPage(ToolPage):
 
         self.run_bar.primary_button().setText("开始获取")
 
-    def _options(self, folder: Path) -> FieldOptions:
+    def _options(self) -> FieldOptions:
         return FieldOptions(
             header_row=self.header_spin.value(),
             include_subfolders=self.subfolder_box.isChecked(),
@@ -60,7 +61,7 @@ class FieldExtractPage(ToolPage):
             InfoBar.warning("请先选择文件夹", "请先选择要读取的文件夹", parent=self._info_parent(),
                             position=InfoBarPosition.TOP_RIGHT)
             return None
-        options = self._options(folder)
+        options = self._options()
 
         def job(progress, token):
             return field_extract.run(folder, options, progress, token)
@@ -72,22 +73,28 @@ class FieldExtractPage(ToolPage):
         carried = self.carried_result()
         if folder is None or carried is None:
             return None
-        options = self._options(folder)
+        options = self._options()
         options.encodings = dict(encodings)
         old_outputs = list(carried.outputs)
         old_warnings = list(carried.warnings)
 
         def job(progress, token):
-            # Runs on the worker: drop the first-run summary so only one remains.
-            for old in old_outputs:
-                try:
-                    Path(old).unlink()
-                except FileNotFoundError:
-                    pass
+            # The old summary still exists, so the rerun writes a ``_N`` sibling; only after
+            # a successful run is it swapped in, so cancel/failure leaves the old one intact.
             result: Result = field_extract.run(folder, options, progress, token)
-            # Files still unanswered were already reported as skipped in the first run.
-            result.encoding_questions = []
-            result.warnings = old_warnings + result.warnings
+            result.encoding_questions = []  # unanswered files were already reported as skipped
+            if len(old_outputs) == 1 and len(result.outputs) == 1:
+                old, new = Path(old_outputs[0]), Path(result.outputs[0])
+                if new != old:
+                    try:
+                        os.replace(new, old)
+                    except OSError:
+                        result.warn(
+                            new, f"无法覆盖原汇总（可能已被打开），新汇总另存为 {new.name}"
+                        )
+                    else:
+                        result.outputs = [old]
+            result.warnings = old_warnings + [w for w in result.warnings if w not in old_warnings]
             return result
 
         return job
