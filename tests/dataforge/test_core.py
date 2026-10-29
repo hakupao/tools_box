@@ -93,3 +93,12 @@ class ResultEncodingTests(unittest.TestCase):
         r.ask_encoding(Path("q.csv"), {"cp932": "a", "gbk": "b"})
         self.assertTrue(r.ok)
         self.assertEqual(r.encoding_questions[0].path, "q.csv")
+
+
+class ResultDataTests(unittest.TestCase):
+    def test_result_data_not_extended(self):
+        a = Result(data="keep")
+        b = Result(data="other")
+        a.extend(b)
+        self.assertEqual(a.data, "keep")
+        self.assertIsNone(Result().data)

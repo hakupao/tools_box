@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class Result:
     errors: list[FileIssue] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
     encoding_questions: list[EncodingQuestion] = field(default_factory=list)
+    data: Any = None  # structured payload of the task; not merged by extend()
 
     @property
     def ok(self) -> bool:
