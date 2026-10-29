@@ -232,6 +232,46 @@ class ComponentTests(unittest.TestCase):
         panel.clear()
         self.assertEqual(panel.summary_text(), "0 个输出 · 0 个问题")
 
+    def test_form_set_row_visible_hides_label_field_and_hint(self) -> None:
+        form = ResponsiveForm()
+        f1, f2 = QLineEdit(), QLineEdit()
+        form.add_row("甲", f1, hint="提示甲")
+        form.add_row("乙", f2)
+        hint = next(w for w in form.findChildren(CaptionLabel) if w.text() == "提示甲")
+        labels = _labels(form)
+        form.set_row_visible(f1, False)
+        for widget in (labels["甲"], f1, hint):
+            self.assertTrue(widget.isHidden())
+        self.assertFalse(f2.isHidden())
+        self.assertFalse(labels["乙"].isHidden())
+        form.set_compact(True)  # relayout must not resurrect a hidden row
+        self.assertTrue(f1.isHidden() and hint.isHidden() and labels["甲"].isHidden())
+        form.set_row_visible(f1, True)
+        for widget in (labels["甲"], f1, hint):
+            self.assertFalse(widget.isHidden())
+
+    def test_file_card_set_extensions_removes_mismatched(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for n in ["a.csv", "b.xlsx", "c.csv"]:
+                (root / n).write_text("x")
+            card = FileInputCard("输入", (".csv", ".xlsx"))
+            card.set_files([root / "a.csv", root / "b.xlsx", root / "c.csv"])
+            emitted: list[list] = []
+            card.files_changed.connect(emitted.append)
+            removed = card.set_extensions((".csv",))
+            self.assertEqual(removed, [root / "b.xlsx"])
+            self.assertEqual(card.files(), [root / "a.csv", root / "c.csv"])
+            self.assertEqual(len(emitted), 1)
+            self.assertEqual(card._list.count(), 2)
+            self.assertEqual(card.set_extensions((".csv",)), [])
+            self.assertEqual(len(emitted), 1)
+            card.add_paths([root / "b.xlsx"])  # new filter applies to later additions
+            self.assertEqual(card.files(), [root / "a.csv", root / "c.csv"])
+            card.set_extensions((".xlsx",))
+            card.add_paths([root])
+            self.assertEqual(card.files(), [root / "b.xlsx"])
+
 
 if __name__ == "__main__":
     unittest.main()

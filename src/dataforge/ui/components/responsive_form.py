@@ -22,6 +22,16 @@ class ResponsiveForm(QWidget):
         self._rows.append((label_widget, field, hint_widget))
         self._relayout()
 
+    def set_row_visible(self, field: QWidget, visible: bool) -> None:
+        """Show or hide a whole row (label, field and hint) by its field widget."""
+        for label, row_field, hint in self._rows:
+            if row_field is field:
+                for widget in (label, row_field, hint):
+                    if widget is not None:
+                        widget.setVisible(visible)
+                return
+        raise KeyError("field is not part of this form")
+
     def is_compact(self) -> bool:
         return self._compact
 

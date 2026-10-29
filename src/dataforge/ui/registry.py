@@ -25,6 +25,14 @@ class ToolSpec:
 
 TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
+        id="format_convert",
+        name="格式转换",
+        description="CSV↔XLSX、转 UTF-8 BOM、去引号",
+        group=ToolGroup.FILES,
+        icon=FluentIcon.SYNC,
+        page="dataforge.ui.pages.format_convert_page:FormatConvertPage",
+    ),
+    ToolSpec(
         id="sheet_split",
         name="工作表拆分",
         description="每个工作表导出为一个 CSV",

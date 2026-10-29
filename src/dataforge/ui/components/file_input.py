@@ -58,6 +58,16 @@ class FileInputCard(SimpleCardWidget):
     def set_files(self, paths: list[Path]) -> None:
         self._apply([], paths)
 
+    def set_extensions(self, extensions: tuple[str, ...]) -> list[Path]:
+        """Change the accepted extensions; returns the already-listed files that were removed."""
+        self._extensions = extensions
+        allowed = {e.lower() for e in extensions}
+        kept = [p for p in self._files if p.suffix.lower() in allowed]
+        removed = [p for p in self._files if p.suffix.lower() not in allowed]
+        if removed:
+            self._apply(kept, [])
+        return removed
+
     def clear(self) -> None:
         self._apply([], [])
 
