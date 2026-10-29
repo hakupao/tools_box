@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from PySide6.QtCore import QCoreApplication, QObject
-from qfluentwidgets import PushButton, Theme, isDarkTheme, setTheme
+from qfluentwidgets import PushButton, Theme, isDarkTheme, qconfig, setTheme
 
 from dataforge.ui.layout import MIN_WINDOW_WIDTH, LayoutMode, layout_mode_for_width
 from dataforge.ui.registry import TOOLS, ToolGroup, get_tool, load_page_class
@@ -89,7 +89,10 @@ class ThemeTests(unittest.TestCase):
     def test_watcher_applies_system_dark(self) -> None:
         qapp()
         with mock.patch("darkdetect.theme", return_value="Dark"):
-            setTheme(Theme.AUTO)
+            with mock.patch("darkdetect.theme", return_value="Light"):
+                setTheme(Theme.LIGHT)
+                setTheme(Theme.AUTO)
+            self.assertFalse(isDarkTheme())
             btn = PushButton("x")
             btn.show()
             QCoreApplication.processEvents()
@@ -99,6 +102,34 @@ class ThemeTests(unittest.TestCase):
             QCoreApplication.processEvents()
             self.assertNotEqual(btn.styleSheet(), before)
             btn.close()
+
+    def test_watcher_emits_theme_changed(self) -> None:
+        qapp()
+        with mock.patch("darkdetect.theme", return_value="Light"):
+            setTheme(Theme.LIGHT)
+            setTheme(Theme.AUTO)
+        got: list[Theme] = []
+        qconfig.themeChanged.connect(got.append)
+        self.addCleanup(qconfig.themeChanged.disconnect, got.append)
+        with mock.patch("darkdetect.theme", return_value="Dark"):
+            self._watcher(lambda cb: cb("Dark"))
+            wait_until(lambda: bool(got))
+        self.assertEqual(got, [Theme.AUTO])
+
+    def test_watcher_unchanged_theme_does_not_emit(self) -> None:
+        qapp()
+        called: list[str] = []
+        with mock.patch("darkdetect.theme", return_value="Light"):
+            setTheme(Theme.LIGHT)
+            setTheme(Theme.AUTO)
+            got: list[Theme] = []
+            qconfig.themeChanged.connect(got.append)
+            self.addCleanup(qconfig.themeChanged.disconnect, got.append)
+            self._watcher(lambda cb: (cb("Light"), called.append("x")))
+            wait_until(lambda: bool(called))
+            for _ in range(5):
+                QCoreApplication.processEvents()
+        self.assertEqual(got, [])
 
     def test_watcher_ignored_in_fixed_mode(self) -> None:
         qapp()

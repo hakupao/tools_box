@@ -27,11 +27,17 @@ class _ThemeBridge(QObject):
 
     @Slot()
     def on_system_theme_changed(self) -> None:
-        if qconfig.themeMode.value == Theme.AUTO:
-            # setTheme(AUTO) alone is a no-op while the mode is unchanged; the property
-            # setter re-reads the system theme, then setTheme refreshes the style sheets.
-            qconfig.theme = Theme.AUTO
-            setTheme(Theme.AUTO, lazy=True)
+        if qconfig.themeMode.value != Theme.AUTO:
+            return
+        resolved = darkdetect.theme()
+        current = Theme(resolved) if resolved else Theme.LIGHT
+        if current == qconfig.theme:
+            return
+        # setTheme(AUTO) alone is a no-op while the mode is unchanged and emits nothing; the
+        # property setter re-reads the system theme, and widgets listen to themeChanged.
+        qconfig.theme = Theme.AUTO
+        qconfig._cfg.themeChanged.emit(Theme.AUTO)
+        setTheme(Theme.AUTO, lazy=True)
 
 
 class SystemThemeWatcher(QObject):
