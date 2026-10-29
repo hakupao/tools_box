@@ -49,3 +49,17 @@ class DetectEncodingTests(unittest.TestCase):
             detect_encoding(data)
         for text in cm.exception.previews.values():
             self.assertEqual(len(text.splitlines()), 5)
+
+    def test_forced_utf8_with_bom_becomes_utf8_sig(self):
+        self.assertEqual(
+            detect_encoding(b"\xef\xbb\xbfa,b\n", forced="utf-8").encoding, "utf-8-sig"
+        )
+
+    def test_preview_splits_on_lf_only_and_clips_long_lines(self):
+        long_line = "あ" * 300
+        data = (long_line + "\r\n" + "x\x0cy\n").encode("cp932")
+        with self.assertRaises(AmbiguousEncodingError) as cm:
+            detect_encoding(data)
+        lines = cm.exception.previews["cp932"].split("\n")
+        self.assertEqual(lines[0], "あ" * 200 + "…\r")
+        self.assertEqual(lines[1], "x\x0cy")

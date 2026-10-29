@@ -16,6 +16,7 @@ ENCODING_LABELS = {
     "gbk": "中文 (GBK)",
 }
 _PREVIEW_LINES = 5
+_PREVIEW_CHARS = 200
 
 
 class EncodingError(DataForgeError):
@@ -37,10 +38,27 @@ class EncodingDecision:
 
 
 def _preview(text: str) -> str:
-    return "".join(text.splitlines(keepends=True)[:_PREVIEW_LINES])
+    """First 5 lines (split on LF only, endings kept), each clipped to 200 characters."""
+    parts = text.split("\n")
+    lines = [part + "\n" for part in parts[:-1]]
+    if parts[-1]:
+        lines.append(parts[-1])
+    return "".join(_clip(line) for line in lines[:_PREVIEW_LINES])
+
+
+def _clip(line: str) -> str:
+    body = line.rstrip("\n")
+    ending = line[len(body) :]
+    if body.endswith("\r"):
+        body, ending = body[:-1], "\r" + ending
+    if len(body) > _PREVIEW_CHARS:
+        body = body[:_PREVIEW_CHARS] + "…"
+    return body + ending
 
 
 def detect_encoding(data: bytes, forced: str | None = None) -> EncodingDecision:
+    if forced == "utf-8" and data.startswith(b"\xef\xbb\xbf"):
+        forced = "utf-8-sig"
     if forced:
         try:
             data.decode(forced)

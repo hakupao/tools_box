@@ -61,3 +61,13 @@ class TextIoTests(unittest.TestCase):
             tmp.write_text("ok")
         self.assertEqual(t.read_text(), "ok")
         self.assertEqual(list(self.dir.iterdir()), [t])
+
+
+class ForcedBomTests(unittest.TestCase):
+    def test_forced_utf8_strips_bom(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "a.csv"
+            p.write_bytes(b"\xef\xbb\xbfSUBJID,x\n")
+            text, decision = read_text(p, "utf-8")
+        self.assertEqual(decision.encoding, "utf-8-sig")
+        self.assertFalse(text.startswith("\ufeff"))
