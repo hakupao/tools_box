@@ -172,6 +172,18 @@ class ToolPageTests(unittest.TestCase):
         bar = self._finish_with(r)
         bar.success.assert_called_once()
 
+    def test_snapshot_cleared_after_run(self) -> None:
+        page = self._page()
+        page.run_bar.start_requested.emit()
+        wait_until(lambda: not self.runner.is_busy() and page.locked == [True, False])
+        self.assertIsNone(page._snapshot)
+
+    def test_zero_output_without_issues_shows_info(self) -> None:
+        bar = self._finish_with(Result())
+        bar.info.assert_called_once()
+        self.assertEqual(bar.info.call_args.args[:2], ("未生成文件", "本次运行没有生成任何文件"))
+        bar.success.assert_not_called()
+
     def test_other_tool_running_blocks(self) -> None:
         page = self._page("date_convert")
         self.assertTrue(self.runner.submit("width_convert", self._blocking_fn()))

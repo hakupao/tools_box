@@ -176,10 +176,12 @@ class ToolPage(QWidget):
     def _end_run(self) -> None:
         self.set_inputs_locked(False)
         self.run_bar.set_running(False)
+        self._snapshot = None
 
     def _on_finished(self, tool_id: str, result: Result) -> None:
         if tool_id != self.spec.id:
             return
+        snapshot = self._snapshot
         self._end_run()
         self.result_panel.show_result(result)
         parent = self._info_parent()
@@ -191,12 +193,13 @@ class ToolPage(QWidget):
         elif result.errors:
             InfoBar.warning("部分文件失败", f"{len(result.errors)} 个文件处理失败",
                             parent=parent, position=pos)
+        elif not result.outputs:
+            InfoBar.info("未生成文件", "本次运行没有生成任何文件", parent=parent, position=pos)
         else:
             InfoBar.success("完成", f"已生成 {len(result.outputs)} 个输出",
                             parent=parent, position=pos)
         if result.outputs:
-            snapshot = self._snapshot or (self.summary(), self.capture_state())
-            self.run_succeeded.emit(*snapshot)
+            self.run_succeeded.emit(*(snapshot or (self.summary(), self.capture_state())))
 
     def _on_failed(self, tool_id: str, message: str) -> None:
         if tool_id != self.spec.id:

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from PySide6.QtCore import QCoreApplication, QObject
-from qfluentwidgets import PushButton, Theme, isDarkTheme
+from qfluentwidgets import PushButton, Theme, isDarkTheme, setTheme
 
 from dataforge.ui.layout import MIN_WINDOW_WIDTH, LayoutMode, layout_mode_for_width
 from dataforge.ui.registry import TOOLS, ToolGroup, get_tool, load_page_class
 from dataforge.ui.theme import apply_theme_mode, start_system_theme_listener
 
-from .qt_helpers import qapp
+from .qt_helpers import qapp, wait_until
 
 
 class RegistryTests(unittest.TestCase):
@@ -76,41 +77,56 @@ class ThemeTests(unittest.TestCase):
         self.assertIs(apply_theme_mode("light"), Theme.LIGHT)
         self.assertIs(apply_theme_mode("auto"), Theme.AUTO)
 
-    def test_system_theme_change_restyles_widgets(self) -> None:
+    def tearDown(self) -> None:
+        setTheme(Theme.AUTO)
+
+    def _watcher(self, watch):
+        parent = QObject()
+        self.addCleanup(parent.deleteLater)
+        watcher = start_system_theme_listener(parent, watch=watch)
+        return watcher
+
+    def test_watcher_applies_system_dark(self) -> None:
         qapp()
-        with mock.patch("darkdetect.theme", return_value="Light"):
-            apply_theme_mode("auto")
+        with mock.patch("darkdetect.theme", return_value="Dark"):
+            setTheme(Theme.AUTO)
             btn = PushButton("x")
             btn.show()
             QCoreApplication.processEvents()
             before = btn.styleSheet()
-            self.assertFalse(isDarkTheme())
-            parent = QObject()
-            listener = start_system_theme_listener(parent)
-            listener.terminate()
-            listener.wait()
-            with mock.patch("darkdetect.theme", return_value="Dark"):
-                listener._onThemeChanged("dark")
-                QCoreApplication.processEvents()
-                self.assertTrue(isDarkTheme())
-                self.assertNotEqual(btn.styleSheet(), before)
-            btn.close()
-        apply_theme_mode("auto")
-
-    def test_system_theme_change_ignored_in_fixed_mode(self) -> None:
-        qapp()
-        apply_theme_mode("light")
-        parent = QObject()
-        bridge_calls: list[int] = []
-        with mock.patch("dataforge.ui.theme.setTheme") as st:
-            listener = start_system_theme_listener(parent)
-            listener.terminate()
-            listener.wait()
-            listener.systemThemeChanged.emit()
+            self._watcher(lambda cb: cb("Dark"))
+            wait_until(isDarkTheme)
             QCoreApplication.processEvents()
-            bridge_calls.append(st.call_count)
-        self.assertEqual(bridge_calls, [0])
-        apply_theme_mode("auto")
+            self.assertNotEqual(btn.styleSheet(), before)
+            btn.close()
+
+    def test_watcher_ignored_in_fixed_mode(self) -> None:
+        qapp()
+        setTheme(Theme.LIGHT)
+        called: list[str] = []
+        with mock.patch("darkdetect.theme", return_value="Dark"):
+            watcher = self._watcher(lambda cb: (cb("Dark"), called.append("x")))
+            wait_until(lambda: bool(called))
+            for _ in range(5):
+                QCoreApplication.processEvents()
+            self.assertFalse(isDarkTheme())
+        self.assertIsNotNone(watcher)
+
+    def test_watch_exception_does_not_crash(self) -> None:
+        qapp()
+
+        def boom(cb):
+            raise RuntimeError("no listener")
+
+        with self.assertLogs("dataforge.ui.theme", "ERROR"):
+            watcher = self._watcher(boom)
+            watcher._thread.join(5)
+        self.assertFalse(watcher._thread.is_alive())
+
+    def test_theme_module_has_no_terminate(self) -> None:
+        root = Path(__file__).resolve().parents[2] / "src" / "dataforge"
+        for rel in ("ui/theme.py", "app.py"):
+            self.assertNotIn("terminate(", (root / rel).read_text(encoding="utf-8"), rel)
 
 
 if __name__ == "__main__":

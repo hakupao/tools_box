@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     app = QApplication(sys.argv if argv is None else argv)
     config = ConfigStore()
     apply_theme_mode(config.section("app").get("theme", "auto"))
-    listener = start_system_theme_listener(app)
+    theme_watcher = start_system_theme_listener(app)  # daemon thread; dies with the process
     runner = JobRunner()
     recent = RecentStore(config)
     window = MainWindow(config, runner, recent)
@@ -37,9 +37,6 @@ def main(argv: list[str] | None = None) -> int:
 
     runner.shutdown()
     runner.dispose()
-    # On Windows the listener blocks inside darkdetect.listener(); it has no stop flag.
-    listener.terminate()
-    listener.wait()
     if not wait_for_orphans(3000):
         logger.warning("Background job still running at exit; forcing exit")
         logging.shutdown()
