@@ -49,6 +49,14 @@ TOOLS: tuple[ToolSpec, ...] = (
         page="dataforge.ui.pages.field_extract_page:FieldExtractPage",
     ),
     ToolSpec(
+        id="masking",
+        name="数据模糊化",
+        description="SDTM Pattern1：扫描 → 配置 → 执行",
+        group=ToolGroup.BUSINESS,
+        icon=FluentIcon.HIDE,
+        page="dataforge.ui.pages.masking.page:MaskingPage",
+    ),
+    ToolSpec(
         id="date_convert",
         name="日期转换",
         description="文本中的日期转为 ISO 8601",

@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from PySide6.QtCore import QCoreApplication, QObject
-from qfluentwidgets import PushButton, Theme, isDarkTheme, qconfig, setTheme
+from qfluentwidgets import FluentIcon, PushButton, Theme, isDarkTheme, qconfig, setTheme
 
 from dataforge.ui.layout import MIN_WINDOW_WIDTH, LayoutMode, layout_mode_for_width
 from dataforge.ui.registry import TOOLS, ToolGroup, get_tool, load_page_class
@@ -19,12 +19,29 @@ class RegistryTests(unittest.TestCase):
         ids = [t.id for t in TOOLS]
         self.assertEqual(len(ids), len(set(ids)))
         self.assertEqual(
-            ids, ["format_convert", "sheet_split", "field_extract", "date_convert", "width_convert"]
+            ids,
+            [
+                "format_convert",
+                "sheet_split",
+                "field_extract",
+                "masking",
+                "date_convert",
+                "width_convert",
+            ],
         )
 
     def test_files_group_order(self) -> None:
         files = [t.id for t in TOOLS if t.group is ToolGroup.FILES]
         self.assertEqual(files, ["format_convert", "sheet_split", "field_extract"])
+
+    def test_business_group(self) -> None:
+        business = [t for t in TOOLS if t.group is ToolGroup.BUSINESS]
+        self.assertEqual([t.id for t in business], ["masking"])
+        spec = business[0]
+        self.assertEqual(spec.name, "数据模糊化")
+        self.assertEqual(spec.description, "SDTM Pattern1：扫描 → 配置 → 执行")
+        self.assertIs(spec.icon, FluentIcon.HIDE)
+        self.assertEqual(spec.page, "dataforge.ui.pages.masking.page:MaskingPage")
 
     def test_get_tool(self) -> None:
         spec = get_tool("date_convert")
