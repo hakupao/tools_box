@@ -58,10 +58,27 @@ def _run_sheet_split(input_dir: Path, output_dir: Path, params: dict[str, Any]) 
             raise AssertionError(f"tool reported errors: {result.errors}")
 
 
+def _run_format_convert(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
+    from dataforge.tools.format_convert import MODE_EXTENSIONS, ConvertMode, FormatOptions, run
+
+    mode = ConvertMode(params["mode"])
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / "input"
+        shutil.copytree(input_dir, work)
+        files = sorted(p for p in work.iterdir() if p.suffix.lower() in MODE_EXTENSIONS[mode])
+        options = FormatOptions(
+            mode=mode, output_dir=output_dir, all_sheets=params.get("all_sheets", False)
+        )
+        result = run(files, options, no_progress, CancelToken())
+        if result.errors:
+            raise AssertionError(f"tool reported errors: {result.errors}")
+
+
 ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "width_convert": _run_width_convert,
     "date_convert": _run_date_convert,
     "sheet_split": _run_sheet_split,
+    "format_convert": _run_format_convert,
 }
 
 

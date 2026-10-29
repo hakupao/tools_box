@@ -21,6 +21,10 @@ class GoldenTests(unittest.TestCase):
         self.assertIn("sheet_split", golden.ADAPTERS)
         self.assertTrue(golden.discover("sheet_split"))
 
+    def test_format_convert_has_cases(self) -> None:
+        self.assertIn("format_convert", golden.ADAPTERS)
+        self.assertEqual(len(golden.discover("format_convert")), 4)
+
     def test_golden_samples(self) -> None:
         for tool_id, adapter in golden.ADAPTERS.items():
             for case in golden.discover(tool_id):

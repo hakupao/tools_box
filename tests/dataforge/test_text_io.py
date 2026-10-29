@@ -35,6 +35,11 @@ class TextIoTests(unittest.TestCase):
         write_text("a\r\nb", p)
         self.assertEqual(p.read_bytes(), b"\xef\xbb\xbfa\r\nb")
 
+    def test_write_text_empty_is_bom_only(self):
+        p = self.dir / "e.txt"
+        write_text("", p)
+        self.assertEqual(p.read_bytes(), b"\xef\xbb\xbf")
+
     def test_atomic_path_cleans_up_on_error(self):
         t = self.dir / "x.csv"
         with self.assertRaises(RuntimeError):

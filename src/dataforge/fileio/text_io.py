@@ -31,5 +31,7 @@ def write_csv_rows(
 
 def write_text(text: str, path: Path) -> None:
     with atomic_path(path) as tmp:
-        with open(tmp, "w", encoding="utf-8-sig", newline="") as f:
+        # explicit BOM: utf-8-sig may emit nothing for an empty file
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            f.write("\ufeff")
             f.write(text)
