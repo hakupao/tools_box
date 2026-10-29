@@ -329,6 +329,142 @@ class _CancellingTwo(_TwoAmbiguous):
         return job
 
 
+class _AuxPage(_Quiet):
+    """Page whose job is a 'scan' auxiliary job returning data."""
+
+    def __init__(self, spec, runner, parent=None, fn: JobFn | None = None) -> None:
+        super().__init__(spec, runner, parent)
+        self.fn = fn
+        self.aux_calls: list[tuple] = []
+        self.locked: list[bool] = []
+
+    def current_job_kind(self) -> str:
+        return "scan"
+
+    def build_job(self) -> JobFn | None:
+        if self.fn is not None:
+            return self.fn
+
+        def job(progress, token) -> Result:
+            r = Result()
+            r.data = {"columns": ["a"]}
+            return r
+
+        return job
+
+    def on_aux_finished(self, kind: str, result: Result) -> None:
+        self.aux_calls.append((kind, result))
+
+    def set_inputs_locked(self, locked: bool) -> None:
+        self.locked.append(locked)
+
+
+class AuxJobTests(unittest.TestCase):
+    def setUp(self) -> None:
+        qapp()
+        self.runner = JobRunner()
+        self.gates: list[threading.Event] = []
+
+    def tearDown(self) -> None:
+        for g in self.gates:
+            g.set()
+        self.runner.shutdown()
+        self.runner.dispose()
+
+    def _run_aux(self, page, settle) -> mock.MagicMock:
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            wait_until(settle)
+            wait_until(lambda: not self.runner.is_busy())
+        return bar
+
+    def test_aux_finish_calls_hook_without_recent_or_infobar(self) -> None:
+        page = _AuxPage(get_tool("date_convert"), self.runner)
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        bar = self._run_aux(page, lambda: page.aux_calls != [])
+        kind, result = page.aux_calls[0]
+        self.assertEqual(kind, "scan")
+        self.assertEqual(result.data, {"columns": ["a"]})
+        self.assertEqual(got, [])
+        self.assertEqual(bar.method_calls, [])
+        self.assertIs(page.locked[-1], False)
+        self.assertEqual(page._job_kind, "run")
+
+    def test_aux_with_encoding_questions_skips_retry(self) -> None:
+        def fn(progress, token) -> Result:
+            r = Result()
+            r.ask_encoding("amb.csv", {"cp932": "a", "gbk": "b"})
+            return r
+
+        page = _AuxPage(get_tool("date_convert"), self.runner, fn=fn)
+        with mock.patch("dataforge.ui.components.tool_page.ask_encodings") as ask:
+            self._run_aux(page, lambda: page.aux_calls != [])
+        ask.assert_not_called()
+        self.assertEqual(len(page.aux_calls[0][1].encoding_questions), 1)
+
+    def test_aux_failure_shows_error_no_recent(self) -> None:
+        def fn(progress, token) -> Result:
+            raise DataForgeError("boom")
+
+        page = _AuxPage(get_tool("date_convert"), self.runner, fn=fn)
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: bar.error.called)
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(got, [])
+        self.assertEqual(page.aux_calls, [])
+        self.assertEqual(page._job_kind, "run")
+        self.assertIs(page.locked[-1], False)
+
+    def test_aux_cancel_shows_info_no_recent(self) -> None:
+        started = threading.Event()
+
+        def fn(progress, token) -> Result:
+            started.set()
+            for _ in range(500):
+                token.raise_if_cancelled()
+                threading.Event().wait(0.01)
+            return Result()
+
+        page = _AuxPage(get_tool("date_convert"), self.runner, fn=fn)
+        page._carry = Result()  # stale carry must not be shown
+        page._carry.add_output(Path("stale.csv"))
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            wait_until(started.is_set)
+            page.run_bar.cancel_requested.emit()
+            wait_until(lambda: bar.info.called)
+        self.assertEqual(got, [])
+        self.assertEqual(page._job_kind, "run")
+
+    def test_submit_job_busy_warns(self) -> None:
+        gate = threading.Event()
+        self.gates.append(gate)
+
+        def blocker(progress, token) -> Result:
+            gate.wait(5)
+            return Result()
+
+        self.assertTrue(self.runner.submit("width_convert", blocker))
+        page = _AuxPage(get_tool("date_convert"), self.runner)
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            self.assertFalse(page.submit_job(blocker, "scan"))
+        bar.warning.assert_called_once()
+        self.assertEqual(bar.warning.call_args.args[:2], ("无法开始", "已有任务正在运行"))
+        self.assertEqual(page._job_kind, "run")
+
+    def test_default_hook_raises(self) -> None:
+        page = _Quiet(get_tool("date_convert"), self.runner)
+        with self.assertRaises(NotImplementedError):
+            page.on_aux_finished("scan", Result())
+        self.assertEqual(page.current_job_kind(), "run")
+
+
 class RetryFlowTests(unittest.TestCase):
     def setUp(self) -> None:
         qapp()

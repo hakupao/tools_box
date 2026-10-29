@@ -47,6 +47,7 @@ class ToolPage(QWidget):
         self._carry: Result | None = None
         self._retrying = False
         self._retry_snapshot: tuple[str, dict[str, Any]] | None = None
+        self._job_kind = "run"
 
         self.result_panel = ResultPanel(self)
         self.run_bar = RunBar(self)
@@ -152,6 +153,14 @@ class ToolPage(QWidget):
         """The first-run Result held while a retry is pending or running, else None."""
         return self._carry
 
+    def current_job_kind(self) -> str:
+        """Kind of job the main button submits; anything but "run" is an auxiliary job."""
+        return "run"
+
+    def on_aux_finished(self, kind: str, result: Result) -> None:
+        """Called when an auxiliary (non-"run") job finished successfully."""
+        raise NotImplementedError
+
     # -- run flow ----------------------------------------------------------------
     def _is_mine(self) -> bool:
         return self.runner.current_tool() == self.spec.id
@@ -160,15 +169,25 @@ class ToolPage(QWidget):
         return self.window()
 
     def _on_start_requested(self) -> None:
+        kind = self.current_job_kind()
         fn = self.build_job()
         if fn is None:
             return
+        self.submit_job(fn, kind)
+
+    def submit_job(self, fn: JobFn, kind: str = "run") -> bool:
+        """Queue a job; only "run" jobs snapshot state for the recent list."""
+        previous = self._job_kind
+        self._job_kind = kind
         if self.runner.submit(self.spec.id, fn):
-            # Snapshot at start so the recent entry matches what actually ran.
-            self._snapshot = (self.summary(), self.capture_state())
-        else:
-            InfoBar.warning("无法开始", "已有任务正在运行", parent=self._info_parent(),
-                            position=InfoBarPosition.TOP_RIGHT)
+            if kind == "run":
+                # Snapshot at start so the recent entry matches what actually ran.
+                self._snapshot = (self.summary(), self.capture_state())
+            return True
+        self._job_kind = previous
+        InfoBar.warning("无法开始", "已有任务正在运行", parent=self._info_parent(),
+                        position=InfoBarPosition.TOP_RIGHT)
+        return False
 
     def _on_cancel_requested(self) -> None:
         if self._is_mine():
@@ -199,6 +218,7 @@ class ToolPage(QWidget):
         self._carry = None
         self._retrying = False
         self._retry_snapshot = None
+        self._job_kind = "run"
 
     def _supports_retry(self) -> bool:
         return type(self).build_retry_job is not ToolPage.build_retry_job
@@ -236,6 +256,11 @@ class ToolPage(QWidget):
 
     def _on_finished(self, tool_id: str, result: Result) -> None:
         if tool_id != self.spec.id:
+            return
+        if self._job_kind != "run":
+            kind = self._job_kind
+            self._end_run()
+            self.on_aux_finished(kind, result)
             return
         if self._retrying and self._carry is not None:
             carried, snapshot = self._carry, self._retry_snapshot
@@ -285,7 +310,8 @@ class ToolPage(QWidget):
     def _on_failed(self, tool_id: str, message: str) -> None:
         if tool_id != self.spec.id:
             return
-        carried, snapshot = self._carry, self._retry_snapshot
+        aux = self._job_kind != "run"
+        carried, snapshot = (None, None) if aux else (self._carry, self._retry_snapshot)
         self._end_run()
         self._show_carried(carried, snapshot)
         InfoBar.error("失败", message, parent=self._info_parent(),
@@ -294,7 +320,8 @@ class ToolPage(QWidget):
     def _on_cancelled(self, tool_id: str) -> None:
         if tool_id != self.spec.id:
             return
-        carried, snapshot = self._carry, self._retry_snapshot
+        aux = self._job_kind != "run"
+        carried, snapshot = (None, None) if aux else (self._carry, self._retry_snapshot)
         self._end_run()
         self._show_carried(carried, snapshot)
         InfoBar.info("已取消", "", parent=self._info_parent(),

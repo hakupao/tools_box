@@ -137,6 +137,23 @@ class ShellSmokeTests(unittest.TestCase):
             w.open_tool("date_convert")
         self.assertIsNone(w.page_for("date_convert"))
 
+    def test_shell_injects_config(self):
+        from dataforge.ui.components.tool_page import ToolPage
+
+        seen: dict = {}
+
+        class _CfgPage(ToolPage):
+            USES_CONFIG = True
+
+            def __init__(self, spec, runner, parent=None, config=None):
+                super().__init__(spec, runner, parent)
+                seen["config"] = config
+
+        w = self._window()
+        with mock.patch("dataforge.ui.shell.load_page_class", return_value=_CfgPage):
+            w.open_tool("date_convert")
+        self.assertIs(seen["config"], self.config)
+
     def test_run_succeeded_records_recent(self):
         w = self._window()
         w.open_tool("width_convert")

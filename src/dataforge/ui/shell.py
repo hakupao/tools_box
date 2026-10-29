@@ -103,7 +103,11 @@ class MainWindow(FluentWindow):
             return None
         spec = get_tool(tool_id)
         try:
-            page = load_page_class(spec)(spec, self._runner)
+            page_cls = load_page_class(spec)
+            if getattr(page_cls, "USES_CONFIG", False):
+                page = page_cls(spec, self._runner, config=self._config)
+            else:
+                page = page_cls(spec, self._runner)
         except Exception as exc:  # noqa: BLE001 - never crash the window
             logger.exception("Failed to load page for %s", tool_id)
             container.layout().addWidget(BodyLabel(f"页面加载失败：{exc}", container))
