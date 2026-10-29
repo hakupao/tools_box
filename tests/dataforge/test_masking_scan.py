@@ -239,3 +239,41 @@ class ScanTests(ScanBase):
         self.assertIn("DM.csv,1,1,USUBJID|D,E,D", text)
         js = export_report(res.data, self.dir / "r.json")
         self.assertEqual(json.loads(js.read_text(encoding="utf-8"))["dm_file"], "DM.csv")
+
+
+class ScanFixRoundTests(ScanBase):
+    def test_missing_csv_dropped_silently(self):
+        dm = self._write("DM.csv", "USUBJID\nS1\n")
+        ae = self._write("AE.csv", "USUBJID\nS1\n")
+        res = self._scan([dm, self.dir / "gone.csv", ae])
+        self.assertTrue(res.ok)
+        self.assertTrue(res.data.processable)
+        self.assertEqual([f.file_name for f in res.data.files], ["DM.csv", "AE.csv"])
+
+    def test_all_missing_is_no_csv_error(self):
+        res = self._scan([self.dir / "gone.csv"])
+        self.assertEqual(res.errors[0].message, "未选择任何 CSV 文件")
+
+    def test_csv_error_becomes_file_error(self):
+        dm = self._write("DM.csv", "USUBJID\nS1\n")
+        ae = self._write("AE.csv", "USUBJID,X\nS1," + "a" * 50 + "\n")
+        import csv
+
+        old = csv.field_size_limit(10)
+        self.addCleanup(csv.field_size_limit, old)
+        res = self._scan([dm, ae])
+        msgs = [e.message for e in res.errors]
+        self.assertTrue(any(m.startswith("AE.csv：") for m in msgs), msgs)
+
+    def test_encoding_note_becomes_warning(self):
+        dm = self._write("DM.csv", "USUBJID\nS1\n")
+        ae = self._write("AE.csv", "USUBJID,ｼﾒｲ\nA001,ﾔﾏﾀﾞ\n", encoding="cp932")
+        res = self._scan([dm, ae])
+        self.assertTrue(any("自动识别为" in w.message for w in res.warnings))
+        self.assertEqual(res.data.warnings, [w.message for w in res.warnings])
+
+    def test_duplicate_path_scanned_once(self):
+        dm = self._write("DM.csv", "USUBJID\nS1\n")
+        res = self._scan([dm, dm])
+        self.assertTrue(res.ok)
+        self.assertEqual(len(res.data.files), 1)

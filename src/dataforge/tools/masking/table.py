@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dataforge.core.errors import DataForgeError
+from dataforge.fileio.encoding import EncodingDecision
 from dataforge.fileio.text_io import read_text
 
 
@@ -34,6 +35,13 @@ class Table:
 
 def read_table(path: Path, encoding: str | None) -> Table:
     text, decision = read_text(path, encoding)
+    try:
+        return _parse(text, decision)
+    except csv.Error as exc:
+        raise DataForgeError(f"CSV 格式错误（{exc}）") from exc
+
+
+def _parse(text: str, decision: EncodingDecision) -> Table:
     reader = csv.reader(io.StringIO(text, newline=""))
     header: list[str] | None = None
     rows: list[list[str]] = []

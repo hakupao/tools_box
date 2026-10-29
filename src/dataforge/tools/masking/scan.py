@@ -179,7 +179,7 @@ def scan(
     files: list[Path] = []
     seen: set[Path] = set()
     for path in paths:
-        if path.suffix.lower() == ".csv" and path not in seen:
+        if path.suffix.lower() == ".csv" and path.is_file() and path not in seen:
             seen.add(path)
             files.append(path)
 
