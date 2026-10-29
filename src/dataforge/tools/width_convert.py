@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from openpyxl.cell.rich_text import CellRichText, TextBlock
 from dataforge.core.errors import DataForgeError
 from dataforge.core.progress import CancelToken, ProgressFn
 from dataforge.core.result import Result
+from dataforge.fileio.atomic import atomic_path
 from dataforge.fileio.paths import plan_output
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,6 @@ def run(
     for index, src in enumerate(files):
         progress(index, total, src.name)
         cancel.raise_if_cancelled()
-        tmp: Path | None = None
         try:
             wb, changed = _convert_workbook(src)
             if changed == 0:
@@ -96,10 +95,8 @@ def run(
                 output_dir=options.output_dir,
                 overwrite_source=options.overwrite_source,
             )
-            tmp = target.parent / f".{target.stem}.{os.getpid()}.tmp{target.suffix}"
-            wb.save(tmp)
-            os.replace(tmp, target)
-            tmp = None
+            with atomic_path(target) as tmp:
+                wb.save(tmp)
         except PermissionError:
             logger.warning("Cannot write output for %s", src, exc_info=True)
             result.fail(src, "无法写入输出文件（可能已在 Excel 中打开）")
@@ -108,9 +105,6 @@ def run(
             logger.exception("Width conversion failed for %s", src)
             result.fail(src, f"转换失败：{e}")
             continue
-        finally:
-            if tmp is not None:
-                tmp.unlink(missing_ok=True)
         result.add_output(target)
         result.count("files")
         result.count("cells_changed", changed)

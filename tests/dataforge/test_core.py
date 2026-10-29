@@ -65,3 +65,31 @@ class CancelTokenTests(unittest.TestCase):
 
     def test_no_progress_is_noop(self):
         self.assertIsNone(no_progress(1, 2, "x"))
+
+
+class ResultEncodingTests(unittest.TestCase):
+    def test_result_extend(self):
+        from dataforge.core.result import EncodingQuestion
+
+        a = Result()
+        a.add_output(Path("1"))
+        a.warn("w1", "m")
+        a.count("n", 1)
+        b = Result()
+        b.add_output(Path("2"))
+        b.fail("e", "m")
+        b.ask_encoding("q.csv", {"gbk": "x"})
+        b.count("n", 2)
+        b.count("k")
+        a.extend(b)
+        self.assertEqual(a.outputs, [Path("1"), Path("2")])
+        self.assertEqual(len(a.warnings), 1)
+        self.assertEqual(a.errors, [FileIssue("e", "m")])
+        self.assertEqual(a.encoding_questions, [EncodingQuestion("q.csv", {"gbk": "x"})])
+        self.assertEqual(a.stats, {"n": 3, "k": 1})
+
+    def test_ask_encoding_not_error(self):
+        r = Result()
+        r.ask_encoding(Path("q.csv"), {"cp932": "a", "gbk": "b"})
+        self.assertTrue(r.ok)
+        self.assertEqual(r.encoding_questions[0].path, "q.csv")

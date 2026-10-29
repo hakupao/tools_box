@@ -11,12 +11,19 @@ class FileIssue:
     message: str
 
 
+@dataclass(frozen=True)
+class EncodingQuestion:
+    path: str
+    previews: dict[str, str]
+
+
 @dataclass
 class Result:
     outputs: list[Path] = field(default_factory=list)
     warnings: list[FileIssue] = field(default_factory=list)
     errors: list[FileIssue] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
+    encoding_questions: list[EncodingQuestion] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -33,3 +40,14 @@ class Result:
 
     def count(self, key: str, n: int = 1) -> None:
         self.stats[key] = self.stats.get(key, 0) + n
+
+    def ask_encoding(self, path: str | Path, previews: dict[str, str]) -> None:
+        self.encoding_questions.append(EncodingQuestion(str(path), previews))
+
+    def extend(self, other: Result) -> None:
+        self.outputs.extend(other.outputs)
+        self.warnings.extend(other.warnings)
+        self.errors.extend(other.errors)
+        self.encoding_questions.extend(other.encoding_questions)
+        for key, n in other.stats.items():
+            self.count(key, n)
