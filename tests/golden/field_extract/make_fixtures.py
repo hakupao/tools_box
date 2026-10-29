@@ -41,8 +41,24 @@ def basic() -> None:
     )
 
 
+def stale_summary() -> None:
+    case = ROOT / "stale_summary"
+    (case / "input").mkdir(parents=True, exist_ok=True)
+    (case / "expected").mkdir(parents=True, exist_ok=True)
+    (case / "params.json").write_bytes((json.dumps({"header_row": 1}) + "\n").encode("utf-8"))
+    (case / "input" / "a.csv").write_bytes(b"id,name\r\n1,x\r\n")
+    # output of an earlier run: must not be read as an input
+    (case / "input" / "file_fields_summary.csv").write_bytes(
+        BOM + "文件名,字段名\r\nold.csv,old\r\n".encode("utf-8")
+    )
+    (case / "expected" / "file_fields_summary.csv").write_bytes(
+        BOM + "文件名,字段名\r\n".encode("utf-8") + b"a.csv,id\r\na.csv,name\r\n"
+    )
+
+
 def main() -> None:
     basic()
+    stale_summary()
 
 
 if __name__ == "__main__":

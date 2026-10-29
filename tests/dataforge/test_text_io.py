@@ -20,6 +20,16 @@ class TextIoTests(unittest.TestCase):
         self.assertEqual(text, "a\r\nb\r\n")
         self.assertEqual(decision.encoding, "utf-8")
 
+    def test_read_text_logs_encoding(self):
+        p = self.dir / "a.txt"
+        p.write_bytes("SUBJID,姓名\nA001,张伟\n".encode("gbk"))
+        with self.assertLogs("dataforge.fileio.text_io", level="INFO") as cm:
+            read_text(p)
+        self.assertEqual(cm.output[0].split(":", 2)[2], "a.txt: 编码 gbk（自动识别）")
+        with self.assertLogs("dataforge.fileio.text_io", level="INFO") as cm:
+            read_text(p, "gbk")
+        self.assertEqual(cm.output[0].split(":", 2)[2], "a.txt: 编码 gbk（手动指定）")
+
     def test_read_text_forced_encoding(self):
         p = self.dir / "a.txt"
         p.write_bytes("张伟".encode("gbk"))

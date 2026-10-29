@@ -18,6 +18,7 @@ from qfluentwidgets import (
 from dataforge import __version__
 from dataforge.config.recent import RecentStore
 from dataforge.config.store import ConfigStore
+from dataforge.ui.components.confirm import use_chinese_buttons
 from dataforge.ui.home import HomePage
 from dataforge.ui.jobs import JobRunner
 from dataforge.ui.layout import MIN_WINDOW_WIDTH, WIDE_MIN_WIDTH
@@ -123,7 +124,7 @@ class MainWindow(FluentWindow):
     # -- closing ------------------------------------------------------------
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._runner.is_busy():
-            box = MessageBox("任务仍在运行", "确定退出？正在运行的任务会被取消。", self)
+            box = use_chinese_buttons(MessageBox("任务仍在运行", "确定退出？正在运行的任务会被取消。", self))
             try:
                 accepted = box.exec()
             finally:

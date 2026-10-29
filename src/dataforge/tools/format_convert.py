@@ -138,6 +138,9 @@ def _convert_csv(
     forced = options.encodings.get(str(src), options.encoding)
     try:
         text, decision = read_text(src, forced)
+    except PermissionError:
+        result.fail(src, "无法读取文件（可能已被其他程序打开）")
+        return
     except AmbiguousEncodingError as exc:
         result.ask_encoding(src, exc.previews)
         return
@@ -151,7 +154,7 @@ def _convert_csv(
     if mode is ConvertMode.CSV_TO_XLSX:
         _csv_to_xlsx(text, src, options, result, cancel)
     elif mode is ConvertMode.CSV_TO_BOM:
-        if decision.encoding == "utf-8-sig":
+        if decision.had_bom:
             result.warn(src, "已是 UTF-8 BOM，未生成文件")
             return
         _csv_to_bom(text, src, options, result)
@@ -175,6 +178,7 @@ def run(
             continue
         errors_before = len(result.errors)
         outputs_before = len(result.outputs)
+        questions_before = len(result.encoding_questions)
         try:
             if options.mode is ConvertMode.XLSX_TO_CSV:
                 sheet_split.export_workbook(
@@ -191,6 +195,8 @@ def run(
         except Exception as exc:  # noqa: BLE001 - per-file isolation
             logger.exception("convert failed: %s", src)
             result.fail(src, f"转换失败：{exc}")
+        if len(result.encoding_questions) > questions_before:
+            continue  # asked, not skipped: the retry counts it
         if len(result.errors) == errors_before:
             result.count("files" if len(result.outputs) > outputs_before else "skipped")
     return result

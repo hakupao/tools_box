@@ -170,6 +170,45 @@ class FormatConvertTests(unittest.TestCase):
         with self.assertRaises(DataForgeError):
             self._run([], ConvertMode.CSV_TO_BOM)
 
+    def test_forced_utf8_sig_on_plain_file_converts(self):
+        f = self._csv("p.csv", b"a,b\n")
+        r = self._run([f], ConvertMode.CSV_TO_BOM, encoding="utf-8-sig")
+        self.assertEqual(r.warnings, [])
+        self.assertEqual((self.dir / "p_bom.csv").read_bytes(), BOM + b"a,b\n")
+        self.assertEqual(r.stats, {"files": 1})
+
+    def test_bom_file_is_skipped_with_warning(self):
+        f = self._csv("b.csv", BOM + b"a\n")
+        r = self._run([f], ConvertMode.CSV_TO_BOM)
+        self.assertEqual(r.outputs, [])
+        self.assertEqual([w.message for w in r.warnings], ["已是 UTF-8 BOM，未生成文件"])
+        self.assertEqual(r.stats, {"skipped": 1})
+
+    def test_forced_gbk_on_bom_file_warns_and_skips(self):
+        f = self._csv("b.csv", BOM + "姓名\n".encode("utf-8"))
+        r = self._run([f], ConvertMode.CSV_TO_XLSX, encoding="gbk")
+        self.assertIn("文件带 UTF-8 BOM，已忽略手动指定的编码", [w.message for w in r.warnings])
+        self.assertEqual(load_workbook(self.dir / "b.xlsx").active["A1"].value, "姓名")
+
+    def test_questioned_files_are_not_counted_as_skipped(self):
+        ok = self._csv("ok.csv", b"a\n")
+        amb = self._csv("m.csv", AMBIGUOUS)
+        first = self._run([ok, amb], ConvertMode.CSV_TO_BOM)
+        self.assertEqual(first.stats, {"files": 1})
+        retry = self._run([amb], ConvertMode.CSV_TO_BOM, encodings={str(amb): "cp932"})
+        first.extend(retry)
+        self.assertEqual(first.stats, {"files": 2})
+
+    def test_read_permission_error_message(self):
+        f = self._csv("p.csv", b"a\n")
+        with mock.patch(
+            "dataforge.tools.format_convert.read_text", side_effect=PermissionError("x")
+        ):
+            r = self._run([f], ConvertMode.CSV_TO_BOM)
+        self.assertEqual(
+            [e.message for e in r.errors], ["无法读取文件（可能已被其他程序打开）"]
+        )
+
     def test_write_permission_error_message(self):
         f = self._csv("p.csv", b"a\n")
         with mock.patch(
@@ -220,7 +259,7 @@ class FormatConvertTests(unittest.TestCase):
         bad = self._csv("bad.csv", UNDECODABLE)
         r = self._run([ok, bom, amb, bad], ConvertMode.CSV_TO_BOM)
         self.assertEqual(r.stats.get("files"), 1)
-        self.assertEqual(r.stats.get("skipped"), 2)
+        self.assertEqual(r.stats.get("skipped"), 1)  # the ambiguous file is asked, not skipped
 
 
 if __name__ == "__main__":

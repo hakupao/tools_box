@@ -21,7 +21,8 @@ class GcGuardTests(unittest.TestCase):
         qapp()
         was_enabled = gc.isenabled()
         guard = MainThreadGarbageCollector(interval_ms=50)
-        self.addCleanup(guard.stop if was_enabled else guard._timer.stop)
+        self.addCleanup(gc.enable if was_enabled else gc.disable)
+        self.addCleanup(lambda: guard._timer.stop())  # closure keeps the guard alive
         guard.start()
         self.assertFalse(gc.isenabled())
         a, b = _Node(), _Node()
@@ -38,7 +39,7 @@ class GcGuardTests(unittest.TestCase):
         del junk
         self.assertIsNone(ref())
         guard.stop()
-        self.assertTrue(gc.isenabled())
+        self.assertTrue(gc.isenabled())  # stop() re-enables; restored to the prior state below
 
 
 if __name__ == "__main__":

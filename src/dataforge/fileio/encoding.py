@@ -15,6 +15,7 @@ ENCODING_LABELS = {
     "cp932": "日文 (cp932)",
     "gbk": "中文 (GBK)",
 }
+_BOM = b"\xef\xbb\xbf"
 _PREVIEW_LINES = 5
 _PREVIEW_CHARS = 200
 
@@ -35,6 +36,7 @@ class AmbiguousEncodingError(EncodingError):
 class EncodingDecision:
     encoding: str
     note: str | None
+    had_bom: bool = False
 
 
 def _preview(text: str) -> str:
@@ -57,16 +59,22 @@ def _clip(line: str) -> str:
 
 
 def detect_encoding(data: bytes, forced: str | None = None) -> EncodingDecision:
-    if forced == "utf-8" and data.startswith(b"\xef\xbb\xbf"):
+    had_bom = data.startswith(_BOM)
+    if had_bom and forced in LEGACY_ENCODINGS:
+        # a BOM always wins: decoding it as GBK/cp932 corrupts the first field
+        return EncodingDecision(
+            "utf-8-sig", "文件带 UTF-8 BOM，已忽略手动指定的编码", had_bom=True
+        )
+    if forced == "utf-8" and had_bom:
         forced = "utf-8-sig"
     if forced:
         try:
             data.decode(forced)
         except (UnicodeDecodeError, LookupError) as e:
             raise EncodingError(f"无法按 {forced} 解码") from e
-        return EncodingDecision(forced, None)
-    if data.startswith(b"\xef\xbb\xbf"):
-        return EncodingDecision("utf-8-sig", None)
+        return EncodingDecision(forced, None, had_bom=had_bom)
+    if had_bom:
+        return EncodingDecision("utf-8-sig", None, had_bom=True)
     try:
         data.decode("utf-8")
         return EncodingDecision("utf-8", None)

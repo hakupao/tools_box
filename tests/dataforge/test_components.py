@@ -232,6 +232,14 @@ class ComponentTests(unittest.TestCase):
         panel.clear()
         self.assertEqual(panel.summary_text(), "0 个输出 · 0 个问题")
 
+    def test_result_panel_omits_empty_path_prefix(self) -> None:
+        panel = ResultPanel()
+        result = Result()
+        result.warn("", "重新处理未能开始")
+        result.warn("a.csv", "x")
+        panel.show_result(result)
+        self.assertEqual(panel.page_text("warnings"), "重新处理未能开始\na.csv: x")
+
     def test_form_set_row_visible_hides_label_field_and_hint(self) -> None:
         form = ResponsiveForm()
         f1, f2 = QLineEdit(), QLineEdit()

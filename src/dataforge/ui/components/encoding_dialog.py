@@ -14,6 +14,8 @@ from dataforge.fileio.encoding import ENCODING_LABELS
 class EncodingChoiceDialog(MessageBoxBase):
     def __init__(self, parent: QWidget, question: EncodingQuestion) -> None:
         super().__init__(parent)
+        self.yesButton.setText("确定")
+        self.cancelButton.setText("取消")
         self.viewLayout.addWidget(StrongBodyLabel("选择编码", self))
         self.viewLayout.addWidget(StrongBodyLabel(Path(question.path).name, self))
         self._group = QButtonGroup(self)

@@ -9,6 +9,10 @@ from dataforge.core.result import Result
 _KEYS = ("result", "warnings", "log")
 
 
+def _issue_line(path: str, message: str) -> str:
+    return f"{path}: {message}" if path else message
+
+
 class ResultPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -51,8 +55,8 @@ class ResultPanel(QWidget):
             lines.extend(f"{k}: {v}" for k, v in result.stats.items())
         self._edits["result"].setPlainText("\n".join(lines))
         issues = [
-            *(f"{i.path}: {i.message}" for i in result.warnings),
-            *(f"{i.path}: {i.message}" for i in result.errors),
+            *(_issue_line(i.path, i.message) for i in result.warnings),
+            *(_issue_line(i.path, i.message) for i in result.errors),
             *(f"{q.path}: 需要选择编码" for q in result.encoding_questions),
         ]
         self._edits["warnings"].setPlainText("\n".join(issues))

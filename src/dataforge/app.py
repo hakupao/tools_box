@@ -5,7 +5,9 @@ import logging
 import os
 import sys
 
+from PySide6.QtCore import QLocale
 from PySide6.QtWidgets import QApplication
+from qfluentwidgets import FluentTranslator
 
 from dataforge.config.recent import RecentStore
 from dataforge.config.store import ConfigStore
@@ -26,6 +28,8 @@ def main(argv: list[str] | None = None) -> int:
         logger.exception("File logging unavailable; logging to stderr")
 
     app = QApplication(sys.argv if argv is None else argv)
+    translator = FluentTranslator(QLocale("zh_CN"))  # Chinese button texts in fluent dialogs
+    app.installTranslator(translator)  # ``translator`` stays referenced until main() returns
     gc_guard = MainThreadGarbageCollector(app)
     gc_guard.start()
     config = ConfigStore()

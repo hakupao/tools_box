@@ -140,6 +140,25 @@ class WidgetTests(unittest.TestCase):
         self.assertEqual(dlg.chosen(), "gbk")
         self.assertTrue(dlg.apply_to_rest())
 
+    def test_dialog_button_texts_are_chinese(self) -> None:
+        from dataforge.ui.components.encoding_dialog import EncodingChoiceDialog
+
+        q = EncodingQuestion("d/a.csv", {"cp932": "日本", "gbk": "中文"})
+        host = QWidget()
+        dlg = EncodingChoiceDialog(host, q)
+        self.assertEqual(dlg.yesButton.text(), "确定")
+        self.assertEqual(dlg.cancelButton.text(), "取消")
+
+    def test_confirm_box_button_texts_are_chinese(self) -> None:
+        from qfluentwidgets import MessageBox
+
+        from dataforge.ui.components.confirm import use_chinese_buttons
+
+        host = QWidget()
+        box = use_chinese_buttons(MessageBox("标题", "内容", host))
+        self.assertEqual(box.yesButton.text(), "确定")
+        self.assertEqual(box.cancelButton.text(), "取消")
+
     def test_ask_encodings_apply_to_rest(self) -> None:
         from dataforge.ui.components.encoding_dialog import ask_encodings
 

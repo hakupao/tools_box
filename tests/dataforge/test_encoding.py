@@ -63,3 +63,20 @@ class DetectEncodingTests(unittest.TestCase):
         lines = cm.exception.previews["cp932"].split("\n")
         self.assertEqual(lines[0], "あ" * 200 + "…\r")
         self.assertEqual(lines[1], "x\x0cy")
+
+    def test_had_bom_flag(self):
+        self.assertTrue(detect_encoding(b"\xef\xbb\xbfa").had_bom)
+        self.assertFalse(detect_encoding(b"a").had_bom)
+        self.assertFalse(detect_encoding(b"a", "utf-8-sig").had_bom)
+        self.assertTrue(detect_encoding(b"\xef\xbb\xbfa", "utf-8-sig").had_bom)
+        self.assertTrue(detect_encoding(b"\xef\xbb\xbfa", "utf-8").had_bom)
+
+    def test_forced_legacy_encoding_on_bom_file_is_overridden(self):
+        data = b"\xef\xbb\xbfid,name\n1,x\n"
+        for forced in ("gbk", "cp932"):
+            with self.subTest(forced=forced):
+                d = detect_encoding(data, forced)
+                self.assertEqual(d.encoding, "utf-8-sig")
+                self.assertEqual(d.note, "文件带 UTF-8 BOM，已忽略手动指定的编码")
+                self.assertTrue(d.had_bom)
+                self.assertEqual(data.decode(d.encoding), "id,name\n1,x\n")

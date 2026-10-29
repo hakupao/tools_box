@@ -268,23 +268,31 @@ class ToolPage(QWidget):
         if result.outputs:
             self.run_succeeded.emit(*(snapshot or (self.summary(), self.capture_state())))
 
+    def _show_carried(
+        self, carried: Result | None, snapshot: tuple[str, dict[str, Any]] | None
+    ) -> None:
+        """A retry that failed or was cancelled: the first run's outputs still count."""
+        if carried is None:
+            return
+        self.result_panel.show_result(carried)
+        if carried.outputs:
+            self.run_succeeded.emit(*(snapshot or (self.summary(), self.capture_state())))
+
     def _on_failed(self, tool_id: str, message: str) -> None:
         if tool_id != self.spec.id:
             return
-        carried = self._carry
+        carried, snapshot = self._carry, self._retry_snapshot
         self._end_run()
-        if carried is not None:
-            self.result_panel.show_result(carried)
+        self._show_carried(carried, snapshot)
         InfoBar.error("失败", message, parent=self._info_parent(),
                       position=InfoBarPosition.TOP_RIGHT)
 
     def _on_cancelled(self, tool_id: str) -> None:
         if tool_id != self.spec.id:
             return
-        carried = self._carry
+        carried, snapshot = self._carry, self._retry_snapshot
         self._end_run()
-        if carried is not None:
-            self.result_panel.show_result(carried)
+        self._show_carried(carried, snapshot)
         InfoBar.info("已取消", "", parent=self._info_parent(),
                      position=InfoBarPosition.TOP_RIGHT)
 

@@ -40,6 +40,8 @@ def iter_input_files(
     def accept(file: Path) -> None:
         if file.name.startswith("~$") or file.suffix.lower() not in exts:
             return
+        if file.name.startswith(".") and ".tmp" in file.name:
+            return  # leftover atomic-write temp file
         key = file.resolve()
         if key in seen:
             return

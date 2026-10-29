@@ -268,6 +268,24 @@ class _Retrying(_Quiet):
         return job
 
 
+class _CancellingRetry(_Retrying):
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        def job(progress, token) -> Result:
+            token.cancel()
+            token.raise_if_cancelled()
+            return Result()
+
+        return job
+
+
+class _FailingRetry(_Retrying):
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        def job(progress, token) -> Result:
+            raise RuntimeError("boom")
+
+        return job
+
+
 class _ReplacingRetry(_Retrying):
     RETRY_MERGES = False
 
@@ -325,6 +343,16 @@ class RetryFlowTests(unittest.TestCase):
         self.assertIn("amb.csv: 未选择编码，已跳过", page.result_panel.page_text("warnings"))
         self.assertNotIn("需要选择编码", page.result_panel.page_text("warnings"))
         self.assertEqual(len(got), 1)
+
+    def test_cancelled_retry_still_emits_run_succeeded_once(self) -> None:
+        page, got, _ = self._run(_CancellingRetry, {"amb.csv": "gbk"})
+        self.assertEqual(got, [("quiet", {"k": 1})])
+        self.assertIn("first.csv", page.result_panel.page_text("result"))
+
+    def test_failed_retry_still_emits_run_succeeded_once(self) -> None:
+        page, got, _ = self._run(_FailingRetry, {"amb.csv": "gbk"})
+        self.assertEqual(got, [("quiet", {"k": 1})])
+        self.assertIn("first.csv", page.result_panel.page_text("result"))
 
     def test_retry_not_offered_without_hook(self) -> None:
         page, got, ask = self._run(_Quiet, {"amb.csv": "gbk"})

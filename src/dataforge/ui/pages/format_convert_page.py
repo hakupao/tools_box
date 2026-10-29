@@ -17,6 +17,7 @@ from qfluentwidgets import (
 
 from dataforge.tools import format_convert
 from dataforge.tools.format_convert import MODE_EXTENSIONS, ConvertMode, FormatOptions
+from dataforge.ui.components.confirm import use_chinese_buttons
 from dataforge.ui.components.encoding_field import EncodingField
 from dataforge.ui.components.file_input import FileInputCard
 from dataforge.ui.components.output_location import OutputLocationField
@@ -114,7 +115,7 @@ class FormatConvertPage(ToolPage):
             return None
         overwrite = self.overwrite_box.isChecked() and self._mode in _OVERWRITE_MODES
         if overwrite:
-            box = MessageBox("覆盖原文件", "将直接修改原文件且无法撤销。确定继续吗？", self.window())
+            box = use_chinese_buttons(MessageBox("覆盖原文件", "将直接修改原文件且无法撤销。确定继续吗？", self.window()))
             try:
                 accepted = box.exec()
             finally:

@@ -9,6 +9,7 @@ from qfluentwidgets import CheckBox, InfoBar, InfoBarPosition, MessageBox
 
 from dataforge.tools import width_convert
 from dataforge.tools.width_convert import WidthOptions
+from dataforge.ui.components.confirm import use_chinese_buttons
 from dataforge.ui.components.file_input import FileInputCard
 from dataforge.ui.components.output_location import OutputLocationField
 from dataforge.ui.components.responsive_form import ResponsiveForm
@@ -49,7 +50,7 @@ class WidthConvertPage(ToolPage):
             return None
         overwrite = self.overwrite_box.isChecked()
         if overwrite:
-            box = MessageBox("覆盖原文件", "将直接修改原文件且无法撤销。覆盖后，原文件中的图表、图片、数据透视表等可能丢失。确定继续吗？", self.window())
+            box = use_chinese_buttons(MessageBox("覆盖原文件", "将直接修改原文件且无法撤销。覆盖后，原文件中的图表、图片、数据透视表等可能丢失。确定继续吗？", self.window()))
             try:
                 accepted = box.exec()
             finally:

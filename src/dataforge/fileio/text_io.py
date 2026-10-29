@@ -16,6 +16,9 @@ def read_text(path: Path, encoding: str | None = None) -> tuple[str, EncodingDec
     """Read ``path`` as text, keeping line endings exactly as stored."""
     data = path.read_bytes()
     decision = detect_encoding(data, encoding)
+    logger.info(
+        "%s: 编码 %s（%s）", path.name, decision.encoding, "手动指定" if encoding else "自动识别"
+    )
     return data.decode(decision.encoding), decision
 
 

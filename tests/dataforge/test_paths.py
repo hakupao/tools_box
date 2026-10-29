@@ -52,6 +52,14 @@ class IterInputFilesTests(unittest.TestCase):
             got, [self.tmp / "A.XLSX", self.tmp / "b.xlsx", self.tmp / "sub" / "c.xlsx"]
         )
 
+    def test_iter_skips_atomic_temp_files(self):
+        (self.tmp / ".b.123.abcd1234.tmp.xlsx").write_bytes(b"")
+        (self.tmp / ".hidden.xlsx").write_bytes(b"")
+        got = iter_input_files([self.tmp], (".xlsx",))
+        self.assertEqual(
+            got, [self.tmp / ".hidden.xlsx", self.tmp / "A.XLSX", self.tmp / "b.xlsx"]
+        )
+
     def test_iter_dedupes(self):
         f = self.tmp / "b.xlsx"
         got = iter_input_files([f, f, self.tmp], (".xlsx",))

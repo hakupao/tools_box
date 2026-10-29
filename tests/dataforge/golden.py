@@ -58,6 +58,11 @@ def _run_sheet_split(input_dir: Path, output_dir: Path, params: dict[str, Any]) 
             raise AssertionError(f"tool reported errors: {result.errors}")
 
 
+def _map_encodings(encodings: dict[str, str], work: Path) -> dict[str, str]:
+    """``encodings`` keys are input-relative paths; the tools key on the copied absolute path."""
+    return {str(work / rel): enc for rel, enc in encodings.items()}
+
+
 def _run_format_convert(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
     from dataforge.tools.format_convert import MODE_EXTENSIONS, ConvertMode, FormatOptions, run
 
@@ -67,11 +72,19 @@ def _run_format_convert(input_dir: Path, output_dir: Path, params: dict[str, Any
         shutil.copytree(input_dir, work)
         files = sorted(p for p in work.iterdir() if p.suffix.lower() in MODE_EXTENSIONS[mode])
         options = FormatOptions(
-            mode=mode, output_dir=output_dir, all_sheets=params.get("all_sheets", False)
+            mode=mode,
+            output_dir=output_dir,
+            overwrite_source=params.get("overwrite_source", False),
+            all_sheets=params.get("all_sheets", False),
+            encoding=params.get("encoding"),
+            encodings=_map_encodings(params.get("encodings", {}), work),
         )
         result = run(files, options, no_progress, CancelToken())
         if result.errors:
             raise AssertionError(f"tool reported errors: {result.errors}")
+        if options.overwrite_source:  # outputs are the rewritten inputs: collect them for diffing
+            for out in result.outputs:
+                shutil.copy2(out, output_dir / out.relative_to(work))
 
 
 def _run_field_extract(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
@@ -84,6 +97,8 @@ def _run_field_extract(input_dir: Path, output_dir: Path, params: dict[str, Any]
             header_row=params.get("header_row", 1),
             include_subfolders=params.get("include_subfolders", False),
             output_dir=output_dir,
+            encoding=params.get("encoding"),
+            encodings=_map_encodings(params.get("encodings", {}), work),
         )
         result = run(work, options, no_progress, CancelToken())
         if result.errors:
@@ -100,6 +115,8 @@ ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
 
 
 def _list_files(root: Path) -> list[str]:
+    if not root.is_dir():  # an absent expected/ means "no output files"
+        return []
     return sorted(p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file())
 
 
