@@ -30,8 +30,10 @@ class _FakeDialog:
         self._script = script
         self._calls = calls
         self._cur: tuple[bool, str, bool] | None = None
+        self.defaults: list[str | None] = []
 
-    def for_question(self, parent, question):
+    def for_question(self, parent, question, default=None):
+        self.defaults.append(default)
         self._calls.append(question.path)
         self._cur = self._script[len(self._calls) - 1]
         return self
@@ -176,6 +178,30 @@ class WidgetTests(unittest.TestCase):
         answers = ask_encodings(None, _questions(), fake.for_question)
         self.assertEqual(calls, ["a.csv", "b.csv"])
         self.assertEqual(answers, {"a.csv": "cp932"})
+
+    def test_dialog_preselects_last_choice(self) -> None:
+        from dataforge.ui.components.encoding_dialog import ask_encodings, reset_encoding_memory
+
+        reset_encoding_memory()
+        self.addCleanup(reset_encoding_memory)
+        calls: list[str] = []
+        fake = _FakeDialog([(True, "gbk", False), (True, "cp932", False)], calls)
+        ask_encodings(None, _questions()[:1], fake.for_question)
+        ask_encodings(None, _questions()[:1], fake.for_question)
+        self.assertEqual(fake.defaults, [None, "gbk"])
+
+    def test_real_dialog_default_selected(self) -> None:
+        from dataforge.ui.components.encoding_dialog import EncodingChoiceDialog
+        from tests.dataforge.qt_helpers import drain_deleted
+
+        q = EncodingQuestion("d/a.csv", {"cp932": "日本", "gbk": "中文"})
+        host = QWidget()
+        host.resize(800, 600)
+        dlg = EncodingChoiceDialog(host, q, default="gbk")
+        self.assertEqual(dlg.chosen(), "gbk")
+        other = EncodingChoiceDialog(host, q, default="utf-8")
+        self.assertEqual(other.chosen(), "cp932")
+        drain_deleted(dlg, other)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ class GoldenTests(unittest.TestCase):
 
     def test_format_convert_has_cases(self) -> None:
         self.assertIn("format_convert", golden.ADAPTERS)
-        self.assertEqual(len(golden.discover("format_convert")), 8)
+        self.assertEqual(len(golden.discover("format_convert")), 9)
 
     def test_field_extract_has_cases(self) -> None:
         self.assertIn("field_extract", golden.ADAPTERS)

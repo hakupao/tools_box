@@ -4,6 +4,8 @@ Threading model: every :class:`_Worker` (a ``QThread`` subclass) lives in the ma
 thread; its signals are emitted from the worker thread and connected to
 :class:`JobRunner` slots with ``Qt.QueuedConnection``, so all runner state changes
 happen in the main thread. Job code only ever emits signals; it never touches widgets.
+Job functions must not create QObjects or call ``gc.collect()`` (garbage collection
+happens only in the main thread, via ``MainThreadGarbageCollector``).
 """
 from __future__ import annotations
 

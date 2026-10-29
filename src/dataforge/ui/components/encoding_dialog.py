@@ -11,8 +11,18 @@ from dataforge.core.result import EncodingQuestion
 from dataforge.fileio.encoding import ENCODING_LABELS
 
 
+_last_choice: str | None = None
+
+
+def reset_encoding_memory() -> None:
+    global _last_choice
+    _last_choice = None
+
+
 class EncodingChoiceDialog(MessageBoxBase):
-    def __init__(self, parent: QWidget, question: EncodingQuestion) -> None:
+    def __init__(
+        self, parent: QWidget, question: EncodingQuestion, default: str | None = None
+    ) -> None:
         super().__init__(parent)
         self.yesButton.setText("确定")
         self.cancelButton.setText("取消")
@@ -30,7 +40,8 @@ class EncodingChoiceDialog(MessageBoxBase):
             self.viewLayout.addWidget(radio)
             self.viewLayout.addWidget(edit)
         if self._radios:
-            next(iter(self._radios.values())).setChecked(True)
+            preselect = default if default in self._radios else next(iter(self._radios))
+            self._radios[preselect].setChecked(True)
         self._rest = CheckBox("本批其余文件也用此编码", self)
         self.viewLayout.addWidget(self._rest)
 
@@ -53,16 +64,17 @@ def _dispose(dialog: object) -> None:
 def ask_encodings(
     parent: QWidget,
     questions: list[EncodingQuestion],
-    dialog_factory: Callable[[QWidget, EncodingQuestion], object] = EncodingChoiceDialog,
+    dialog_factory: Callable[[QWidget, EncodingQuestion, str | None], object] = EncodingChoiceDialog,
 ) -> dict[str, str]:
     """Ask for each question's encoding; stop at the first cancel and return answers so far."""
+    global _last_choice
     answers: dict[str, str] = {}
     sticky: str | None = None
     for question in questions:
         if sticky is not None and sticky in question.previews:
             answers[question.path] = sticky
             continue
-        dialog = dialog_factory(parent, question)
+        dialog = dialog_factory(parent, question, _last_choice)
         try:
             accepted = dialog.exec()
             chosen = dialog.chosen() if accepted else None
@@ -72,6 +84,7 @@ def ask_encodings(
         if not accepted:
             break
         answers[question.path] = chosen
+        _last_choice = chosen
         if rest:
             sticky = chosen
     return answers

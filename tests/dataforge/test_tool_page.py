@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import unittest
 from pathlib import Path
@@ -9,6 +10,7 @@ from unittest import mock
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from qfluentwidgets import PushButton
 
+from dataforge.core.errors import DataForgeError
 from dataforge.core.result import Result
 from dataforge.ui.components.responsive_form import ResponsiveForm
 from dataforge.ui.components.tool_page import ToolPage
@@ -295,6 +297,38 @@ class _ReplacingRetry(_Retrying):
         return super().build_retry_job(encodings)
 
 
+class _TwoAmbiguous(_Retrying):
+    def build_job(self) -> JobFn | None:
+        def job(progress, token) -> Result:
+            logging.getLogger("dataforge.test").info("first-run-line")
+            r = Result()
+            r.add_output(Path("first.csv"))
+            r.count("skipped", 1)
+            r.ask_encoding("amb1.csv", {"cp932": "a", "gbk": "b"})
+            r.ask_encoding("amb2.csv", {"cp932": "a", "gbk": "b"})
+            return r
+
+        return job
+
+
+class _DataForgeErrorRetry(_TwoAmbiguous):
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        def job(progress, token) -> Result:
+            raise DataForgeError("bad retry")
+
+        return job
+
+
+class _CancellingTwo(_TwoAmbiguous):
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        def job(progress, token) -> Result:
+            token.cancel()
+            token.raise_if_cancelled()
+            return Result()
+
+        return job
+
+
 class RetryFlowTests(unittest.TestCase):
     def setUp(self) -> None:
         qapp()
@@ -360,6 +394,47 @@ class RetryFlowTests(unittest.TestCase):
         self.assertEqual(page.result_panel.tab_text("warnings"), "警告 (1)")
         self.assertIn("amb.csv: 需要选择编码", page.result_panel.page_text("warnings"))
         self.assertEqual(len(got), 1)
+
+    def test_declined_encoding_counts_as_skipped(self) -> None:
+        page, _, _ = self._run(_TwoAmbiguous, {"amb1.csv": "gbk"})
+        self.assertIn("skipped: 2", page.result_panel.page_text("result"))
+        self.assertIn("amb2.csv: 未选择编码，已跳过", page.result_panel.page_text("warnings"))
+
+    def test_retry_keeps_first_run_log(self) -> None:
+        page, _, _ = self._run(_TwoAmbiguous, {"amb1.csv": "gbk"})
+        log = page.result_panel.page_text("log")
+        self.assertIn("first-run-line", log)
+        self.assertIn("—— 重新处理编码有歧义的文件 ——", log)
+
+    def test_retry_failure_keeps_first_outputs(self) -> None:
+        page = _DataForgeErrorRetry(get_tool("date_convert"), self.runner)
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        with mock.patch("dataforge.ui.components.tool_page.ask_encodings",
+                        return_value={"amb1.csv": "gbk"}), \
+                mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            page.state = {"k": 2}
+            wait_until(lambda: bar.error.called)
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(got, [("quiet", {"k": 1})])
+        self.assertIn("first.csv", page.result_panel.page_text("result"))
+        bar.error.assert_called_once()
+
+    def test_retry_cancel_keeps_first_outputs(self) -> None:
+        page = _CancellingTwo(get_tool("date_convert"), self.runner)
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        with mock.patch("dataforge.ui.components.tool_page.ask_encodings",
+                        return_value={"amb1.csv": "gbk"}), \
+                mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            page.state = {"k": 2}
+            wait_until(lambda: bar.info.called)
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(got, [("quiet", {"k": 1})])
+        self.assertIn("first.csv", page.result_panel.page_text("result"))
+        bar.info.assert_called_once()
 
 
 if __name__ == "__main__":

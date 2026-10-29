@@ -126,6 +126,15 @@ def csv_to_bom_ambiguous_chosen() -> None:
     (case / "expected" / "amb_bom.csv").write_bytes(BOM + text.encode("utf-8"))
 
 
+def overwrite_source() -> None:
+    case = _write_case(
+        "overwrite_source",
+        {"mode": "csv_to_bom", "overwrite_source": True},
+        {"plain.csv": b"id,name\r\n1,x\r\n"},
+    )
+    (case / "expected" / "plain.csv").write_bytes(BOM + b"id,name\r\n1,x\r\n")
+
+
 def main() -> None:
     csv_to_xlsx()
     xlsx_to_csv_all()
@@ -135,6 +144,7 @@ def main() -> None:
     csv_unquote_semicolon()
     csv_to_bom_already()
     csv_to_bom_ambiguous_chosen()
+    overwrite_source()
 
 
 if __name__ == "__main__":

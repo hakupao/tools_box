@@ -1,8 +1,11 @@
 """Output path planning and input file expansion."""
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from pathlib import Path
+
+_ATOMIC_TMP = re.compile(r"^\..+\.\d+\.[0-9a-f]{8}\.tmp(\.[^.]*)?$")
 
 
 def plan_output(
@@ -40,7 +43,7 @@ def iter_input_files(
     def accept(file: Path) -> None:
         if file.name.startswith("~$") or file.suffix.lower() not in exts:
             return
-        if file.name.startswith(".") and ".tmp" in file.name:
+        if _ATOMIC_TMP.match(file.name):
             return  # leftover atomic-write temp file
         key = file.resolve()
         if key in seen:

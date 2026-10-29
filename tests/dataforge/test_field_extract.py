@@ -134,6 +134,12 @@ class FieldExtractTests(unittest.TestCase):
             r = self._run()
         self.assertIn("可能已在 Excel 中打开", r.errors[0].message)
 
+    def test_csv_permission_error_message(self):
+        (self.dir / "a.csv").write_bytes(b"x,y\n")
+        with mock.patch("dataforge.tools.field_extract.read_text", side_effect=PermissionError):
+            r = self._run()
+        self.assertEqual(r.errors[0].message, "无法读取文件（可能已在 Excel 中打开）")
+
     def test_excel_sheet_with_fewer_rows(self):
         wb = Workbook()
         wb.active.title = "S1"

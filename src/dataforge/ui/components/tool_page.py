@@ -179,7 +179,10 @@ class ToolPage(QWidget):
             return
         self.set_inputs_locked(True)
         self.run_bar.set_running(True)
-        self.result_panel.clear()
+        if self._retrying:
+            self.result_panel.append_log("—— 重新处理编码有歧义的文件 ——")
+        else:
+            self.result_panel.clear()
 
     def _on_progress(self, current: int, total: int, label: str) -> None:
         if self._is_mine():
@@ -207,6 +210,7 @@ class ToolPage(QWidget):
         for question in questions:
             if question.path not in answers:
                 result.warn(question.path, "未选择编码，已跳过")
+                result.count("skipped")
         result.encoding_questions = []
         if not answers:
             return False

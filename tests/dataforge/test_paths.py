@@ -52,6 +52,15 @@ class IterInputFilesTests(unittest.TestCase):
             got, [self.tmp / "A.XLSX", self.tmp / "b.xlsx", self.tmp / "sub" / "c.xlsx"]
         )
 
+    def test_temp_skip_rule(self):
+        (self.tmp / ".a.123.0123abcd.tmp.xlsx").write_bytes(b"")
+        (self.tmp / ".tmpdata.xlsx").write_bytes(b"")
+        (self.tmp / ".x.tmp.xlsx").write_bytes(b"")
+        names = {p.name for p in iter_input_files([self.tmp], (".xlsx",))}
+        self.assertNotIn(".a.123.0123abcd.tmp.xlsx", names)
+        self.assertIn(".tmpdata.xlsx", names)
+        self.assertIn(".x.tmp.xlsx", names)
+
     def test_iter_skips_atomic_temp_files(self):
         (self.tmp / ".b.123.abcd1234.tmp.xlsx").write_bytes(b"")
         (self.tmp / ".hidden.xlsx").write_bytes(b"")

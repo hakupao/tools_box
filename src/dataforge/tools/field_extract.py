@@ -44,6 +44,9 @@ def _csv_fields(src: Path, options: FieldOptions, result: Result) -> list[str] |
     except EncodingError as exc:
         result.fail(src, str(exc))
         return []
+    except PermissionError:
+        result.fail(src, "无法读取文件（可能已在 Excel 中打开）")
+        return []
     if decision.note:
         result.warn(src, decision.note)
     for index, row in enumerate(csv.reader(io.StringIO(text, newline="")), 1):
