@@ -80,16 +80,14 @@ class ConfigStore:
             else:
                 return {}
         try:
-            text = source.read_text(encoding="utf-8")
+            data = json.loads(source.read_text(encoding="utf-8"))
         except FileNotFoundError:
             return {}
-        # other OSError propagates: a read failure is not corruption
-        try:
-            data = json.loads(text)
-        except ValueError:
-            logger.warning("Unreadable config file: %s", source)
+        except ValueError:  # JSONDecodeError and UnicodeDecodeError
+            logger.warning("Corrupt config file: %s", source)
             self._backup_corrupt(source)
             return {}
+        # other OSError propagates: a read failure is not corruption
         if not isinstance(data, dict):
             logger.warning("Config top level is not an object: %s", source)
             self._backup_corrupt(source)

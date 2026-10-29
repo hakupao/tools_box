@@ -82,6 +82,25 @@ class ConfigStoreTests(unittest.TestCase):
         self.assertEqual(self.path.read_text(encoding="utf-8"), text)
         self.assertEqual(list(self.path.parent.iterdir()), [self.path])
 
+    def test_non_utf8_file_is_backed_up(self):
+        self.path.parent.mkdir(parents=True)
+        bad = bytes([0xFF, 0xFE, 0x7B])
+        self.path.write_bytes(bad)
+        self.assertEqual(ConfigStore(self.path, self.legacy).section("a"), {})
+        baks = list(self.path.parent.glob("*.corrupt-*.bak"))
+        self.assertEqual(len(baks), 1)
+        self.assertEqual(baks[0].read_bytes(), bad)
+        self.assertFalse(self.path.exists())
+
+    def test_non_utf8_legacy_left_untouched(self):
+        self.legacy.parent.mkdir(parents=True)
+        bad = bytes([0xFF, 0xFE, 0x7B])
+        self.legacy.write_bytes(bad)
+        s = ConfigStore(self.path, self.legacy)
+        self.assertEqual(s.section("a"), {})
+        self.assertEqual(self.legacy.read_bytes(), bad)
+        self.assertEqual(list(self.legacy.parent.iterdir()), [self.legacy])
+
     def test_env_var_overrides_path(self):
         p = self.tmp / "env.json"
         with patch.dict(os.environ, {"DATAFORGE_STUDIO_CONFIG_PATH": str(p)}):
