@@ -49,6 +49,14 @@ class ConfigStore:
             return {}
         return copy.deepcopy(value) if isinstance(value, dict) else {}
 
+    def root(self) -> dict[str, Any]:
+        """Deep copy of the whole config; {} if it cannot be read."""
+        try:
+            return copy.deepcopy(self._load())
+        except OSError:
+            logger.exception("Could not read config %s", self.path)
+            return {}
+
     def update_section(self, name: str, data: dict[str, Any]) -> bool:
         tmp_name: str | None = None
         try:
