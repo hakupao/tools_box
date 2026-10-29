@@ -123,6 +123,65 @@ class RunTests(unittest.TestCase):
             run([], WidthOptions(), no_progress, CancelToken())
 
 
+class FixRoundTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_rich_text_converted_and_preserved(self) -> None:
+        from openpyxl.cell.rich_text import CellRichText, TextBlock
+        from openpyxl.cell.text import InlineFont
+
+        src = self.dir / "rich.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        bold = InlineFont(b=True)
+        ws["A1"] = CellRichText(TextBlock(bold, "ＡＢＣ"), "ｘ plain")
+        ws["A2"] = CellRichText(TextBlock(bold, "keep"), " same")
+        wb.save(src)
+        result = run([src], WidthOptions(), no_progress, CancelToken())
+        self.assertEqual(result.stats, {"files": 1, "cells_changed": 1})
+        out = load_workbook(result.outputs[0], rich_text=True).active
+        a1, a2 = out["A1"].value, out["A2"].value
+        self.assertEqual(str(a1), "ABCx plain")
+        self.assertTrue(a1[0].font.b)
+        self.assertEqual(str(a2), "keep same")
+        self.assertTrue(a2[0].font.b)
+        self.assertEqual(a2[0].text, "keep")
+
+    def test_unchanged_file_not_saved(self) -> None:
+        src = self.dir / "plain.xlsx"
+        wb = Workbook()
+        wb.active["A1"] = "plain"
+        wb.save(src)
+        before = src.read_bytes()
+        for overwrite in (False, True):
+            result = run([src], WidthOptions(overwrite_source=overwrite), no_progress, CancelToken())
+            self.assertEqual(result.outputs, [])
+            self.assertEqual(len(result.warnings), 1)
+            self.assertNotIn("files", result.stats)
+        self.assertEqual(src.read_bytes(), before)
+        self.assertEqual(sorted(p.name for p in self.dir.iterdir()), ["plain.xlsx"])
+
+    def test_failed_save_leaves_source_and_no_temp(self) -> None:
+        src = self.dir / "s.xlsx"
+        _make_sample(src)
+        before = src.read_bytes()
+
+        def broken(self_wb, filename):
+            Path(filename).write_bytes(b"partial")
+            raise OSError("disk full")
+
+        with mock.patch.object(Workbook, "save", broken):
+            result = run([src], WidthOptions(overwrite_source=True), no_progress, CancelToken())
+        self.assertEqual(len(result.errors), 1)
+        self.assertEqual(src.read_bytes(), before)
+        self.assertEqual(sorted(p.name for p in self.dir.iterdir()), ["s.xlsx"])
+
+
 class PageTests(unittest.TestCase):
     def setUp(self) -> None:
         from dataforge.ui.jobs import JobRunner

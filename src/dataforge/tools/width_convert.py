@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 from openpyxl import load_workbook
 from openpyxl.cell.cell import MergedCell
+from openpyxl.cell.rich_text import CellRichText, TextBlock
 
 from dataforge.core.errors import DataForgeError
 from dataforge.core.progress import CancelToken, ProgressFn
@@ -36,7 +38,7 @@ def to_halfwidth(text: str) -> str:
 
 def _convert_workbook(path: Path) -> tuple[object, int]:
     keep_vba = path.suffix.lower() == ".xlsm"
-    wb = load_workbook(path, keep_vba=keep_vba)
+    wb = load_workbook(path, keep_vba=keep_vba, rich_text=True)
     changed = 0
     for ws in wb.worksheets:
         for row in ws.iter_rows():
@@ -44,6 +46,22 @@ def _convert_workbook(path: Path) -> tuple[object, int]:
                 if isinstance(cell, MergedCell) or cell.data_type != "s":
                     continue
                 value = cell.value
+                if isinstance(value, CellRichText):
+                    runs = []
+                    run_changed = False
+                    for part in value:
+                        if isinstance(part, TextBlock):
+                            text = to_halfwidth(part.text)
+                            run_changed |= text != part.text
+                            runs.append(TextBlock(part.font, text))
+                        else:
+                            text = to_halfwidth(str(part))
+                            run_changed |= text != part
+                            runs.append(text)
+                    if run_changed:
+                        cell.value = CellRichText(*runs)
+                        changed += 1
+                    continue
                 if not isinstance(value, str):
                     continue
                 converted = to_halfwidth(value)
@@ -66,15 +84,22 @@ def run(
     for index, src in enumerate(files):
         progress(index, total, src.name)
         cancel.raise_if_cancelled()
+        tmp: Path | None = None
         try:
             wb, changed = _convert_workbook(src)
+            if changed == 0:
+                result.warn(src, "未发现需要转换的全角字符，未生成文件")
+                continue
             target = plan_output(
                 src,
                 new_name=f"{src.stem}_halfwidth{src.suffix}",
                 output_dir=options.output_dir,
                 overwrite_source=options.overwrite_source,
             )
-            wb.save(target)
+            tmp = target.parent / f".{target.stem}.{os.getpid()}.tmp{target.suffix}"
+            wb.save(tmp)
+            os.replace(tmp, target)
+            tmp = None
         except PermissionError:
             logger.warning("Cannot write output for %s", src, exc_info=True)
             result.fail(src, "无法写入输出文件（可能已在 Excel 中打开）")
@@ -83,6 +108,9 @@ def run(
             logger.exception("Width conversion failed for %s", src)
             result.fail(src, f"转换失败：{e}")
             continue
+        finally:
+            if tmp is not None:
+                tmp.unlink(missing_ok=True)
         result.add_output(target)
         result.count("files")
         result.count("cells_changed", changed)
