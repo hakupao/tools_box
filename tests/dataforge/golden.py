@@ -46,9 +46,22 @@ def _run_date_convert(input_dir: Path, output_dir: Path, params: dict[str, Any])
     (output_dir / "output.txt").write_bytes(convert_text(text).encode("utf-8"))
 
 
+def _run_sheet_split(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
+    from dataforge.tools.sheet_split import SUPPORTED_EXTENSIONS, SplitOptions, run
+
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / "input"
+        shutil.copytree(input_dir, work)
+        files = sorted(p for p in work.iterdir() if p.suffix.lower() in SUPPORTED_EXTENSIONS)
+        result = run(files, SplitOptions(output_dir=output_dir), no_progress, CancelToken())
+        if result.errors:
+            raise AssertionError(f"tool reported errors: {result.errors}")
+
+
 ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "width_convert": _run_width_convert,
     "date_convert": _run_date_convert,
+    "sheet_split": _run_sheet_split,
 }
 
 

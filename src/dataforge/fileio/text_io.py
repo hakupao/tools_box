@@ -23,7 +23,9 @@ def write_csv_rows(
     rows: Iterable[Sequence[str]], path: Path, *, delimiter: str = ","
 ) -> None:
     with atomic_path(path) as tmp:
-        with open(tmp, "w", encoding="utf-8-sig", newline="") as f:
+        # explicit BOM: utf-8-sig emits nothing for an empty file
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            f.write("\ufeff")
             csv.writer(f, delimiter=delimiter, lineterminator="\r\n").writerows(rows)
 
 
