@@ -11,11 +11,13 @@ _CUSTOM_DIR = 1
 
 
 class OutputLocationField(QWidget):
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, parent: QWidget | None = None, same_label: str = "与原文件相同"
+    ) -> None:
         super().__init__(parent)
         self._output_dir: str | None = None
         self.combo = ComboBox(self)
-        self.combo.addItems(["与原文件相同", "指定文件夹…"])
+        self.combo.addItems([same_label, "指定文件夹…"])
         self.path_label = CaptionLabel("", self)
         self.path_label.setWordWrap(True)
         self.path_label.setVisible(False)

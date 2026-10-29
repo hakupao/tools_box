@@ -18,7 +18,11 @@ class RegistryTests(unittest.TestCase):
     def test_ids_unique(self) -> None:
         ids = [t.id for t in TOOLS]
         self.assertEqual(len(ids), len(set(ids)))
-        self.assertEqual(ids, ["date_convert", "width_convert"])
+        self.assertEqual(ids, ["sheet_split", "field_extract", "date_convert", "width_convert"])
+
+    def test_files_group_order(self) -> None:
+        files = [t.id for t in TOOLS if t.group is ToolGroup.FILES]
+        self.assertEqual(files, ["sheet_split", "field_extract"])
 
     def test_get_tool(self) -> None:
         spec = get_tool("date_convert")

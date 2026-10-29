@@ -25,6 +25,22 @@ class ToolSpec:
 
 TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
+        id="sheet_split",
+        name="工作表拆分",
+        description="每个工作表导出为一个 CSV",
+        group=ToolGroup.FILES,
+        icon=FluentIcon.LAYOUT,
+        page="dataforge.ui.pages.sheet_split_page:SheetSplitPage",
+    ),
+    ToolSpec(
+        id="field_extract",
+        name="获取字段",
+        description="批量读取 CSV / Excel 表头并汇总",
+        group=ToolGroup.FILES,
+        icon=FluentIcon.SEARCH,
+        page="dataforge.ui.pages.field_extract_page:FieldExtractPage",
+    ),
+    ToolSpec(
         id="date_convert",
         name="日期转换",
         description="文本中的日期转为 ISO 8601",
