@@ -208,6 +208,48 @@ class EndToEndTests(ExecuteBase):
         self.assertFalse([line for line in lines if "INVNAM" in line])
 
 
+class DuplicateColumnTests(ExecuteBase):
+    def test_duplicate_named_columns_all_processed(self):
+        profile = MaskingProfile(subject_limit=2)
+        dm = self._write(
+            "DM.csv",
+            "USUBJID,INVNAM,invnam,SITEID,siteid,AGE,age\n"
+            "S1,,Doc-1,Site-1,,40,41\n"
+            "S2,,,,Site-2,50,\n",
+        )
+        ae = self._write(
+            "AE.csv",
+            "USUBJID,SUBJID,subjid,STUDYID,StudyId\nS1,S1,X1,OLD,OLD2\nS2,S2,X2,OLD,\n",
+        )
+        report = self._scan([dm, ae], profile)
+        self._run(report, profile)
+        dm_rows = (self.out_parent / FOLDER / "DM.csv").read_bytes().decode("utf-8-sig")
+        self.assertEqual(
+            dm_rows,
+            "USUBJID,INVNAM,invnam,SITEID,siteid,AGE,age\r\n"
+            "TEST0001,,テスト医師,テスト施設,,38,39\r\n"
+            "TEST0002,,,,テスト施設,48,\r\n",
+        )
+        ae_rows = (self.out_parent / FOLDER / "AE.csv").read_bytes().decode("utf-8-sig")
+        self.assertEqual(
+            ae_rows,
+            "USUBJID,SUBJID,subjid,STUDYID,StudyId\r\n"
+            "TEST0001,,,[UAT]CIRCULATE,[UAT]CIRCULATE\r\n"
+            "TEST0002,,,[UAT]CIRCULATE,[UAT]CIRCULATE\r\n",
+        )
+
+    def test_duplicate_usubjid_column_aborts(self):
+        profile = MaskingProfile(subject_limit=2)
+        dm = self._write("DM.csv", "USUBJID\nS1\nS2\n")
+        ae = self._write("AE.csv", "USUBJID,usubjid\nS1,S1\n")
+        report = self._scan([dm, ae], profile)
+        self.assertTrue(report.processable, report.errors)
+        with self.assertRaises(DataForgeError) as cm:
+            self._run(report, profile)
+        self.assertEqual(str(cm.exception), "AE.csv：USUBJID 列重复")
+        self.assertEqual(list(self.out_parent.iterdir()), [])
+
+
 class PlanTests(ExecuteBase):
     def test_describe_plan_lines(self):
         profile = MaskingProfile()

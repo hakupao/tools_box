@@ -53,7 +53,7 @@ tests/golden/<tool_id>/<case>/
 ## 取消规则
 
 - `Cancelled` 继承自 `BaseException`，这样逐文件的 `except Exception` 不会吞掉取消。
-- 工具代码不得捕获 `BaseException`（也不要写裸 `except:`）。
+- 工具代码不得捕获 `BaseException`（也不要写裸 `except:`）。唯一例外：只为清理临时文件/文件夹而捕获，并且清理后立即原样重新抛出（`except BaseException: 清理; raise`），例如 `atomic_path` 和数据模糊化的输出文件夹。
 - 在方便的位置（例如每个文件开始前）调用 `cancel.raise_if_cancelled()`。
 
 ## 编码规则

@@ -160,10 +160,19 @@ def _folder_name(parent: Path, now: datetime) -> str:
     return name
 
 
-def _set_cells(rows: list[list[str]], index: int, value: str, only_non_blank: bool) -> None:
+def _find_columns(header: Sequence[str], name: str) -> list[int]:
+    """Indexes of every column equal to ``name`` ignoring case (spaces are not stripped)."""
+    target = name.lower()
+    return [index for index, column in enumerate(header) if column.lower() == target]
+
+
+def _set_cells(
+    rows: list[list[str]], indexes: Sequence[int], value: str, only_non_blank: bool
+) -> None:
     for row in rows:
-        if not only_non_blank or not is_blank(row[index]):
-            row[index] = value
+        for index in indexes:
+            if not only_non_blank or not is_blank(row[index]):
+                row[index] = value
 
 
 class _Run:
@@ -181,19 +190,19 @@ class _Run:
         except (DataForgeError, OSError) as exc:  # EncodingError is a DataForgeError
             raise DataForgeError(f"{fs.file_name}：读取失败，请重新扫描（{exc}）") from exc
         header = table.header
-        uid = find_column(header, "USUBJID")
-        if uid is None:
+        uids = _find_columns(header, "USUBJID")
+        if not uids:
             raise DataForgeError(f"{fs.file_name}：读取失败，请重新扫描（缺少 USUBJID 列）")
+        if len(uids) > 1:
+            raise DataForgeError(f"{fs.file_name}：USUBJID 列重复")
+        uid = uids[0]
         rows = [r for r in table.rows if r[uid].strip() in mapping]
         for row in rows:
             row[uid] = mapping[row[uid].strip()]
 
-        subjid = find_column(header, "SUBJID")
-        if p.include_subjid and subjid is not None:
-            _set_cells(rows, subjid, "", only_non_blank=False)
-        studyid = find_column(header, "STUDYID")
-        if studyid is not None:
-            _set_cells(rows, studyid, p.studyid_value, only_non_blank=False)
+        if p.include_subjid:
+            _set_cells(rows, _find_columns(header, "SUBJID"), "", only_non_blank=False)
+        _set_cells(rows, _find_columns(header, "STUDYID"), p.studyid_value, only_non_blank=False)
 
         date_fields = set(fs.date_fields)
         for col, column in enumerate(header):
@@ -224,22 +233,20 @@ class _Run:
         self.result.count("rows", len(rows))
         return target
 
-    def _dm_column(self, header: list[str], name: str) -> int | None:
-        return find_column(header, name) if _has_values(self.dm, name) else None
+    def _dm_columns(self, header: list[str], name: str) -> list[int]:
+        """Every column named ``name``, provided one of them had values in DM at scan time."""
+        return _find_columns(header, name) if _has_values(self.dm, name) else []
 
     def _dm_overrides(self, header: list[str], rows: list[list[str]]) -> None:
         p = self.profile
         if p.doctor_replace_enabled:
             for name in p.doctor_fields:
-                col = self._dm_column(header, name)
-                if col is not None:
-                    _set_cells(rows, col, p.doctor_value, only_non_blank=True)
+                cols = self._dm_columns(header, name)
+                _set_cells(rows, cols, p.doctor_value, only_non_blank=True)
         if p.site_replace_enabled:
-            col = self._dm_column(header, p.site_field)
-            if col is not None:
-                _set_cells(rows, col, p.site_value, only_non_blank=True)
-        col = self._dm_column(header, p.age_field)
-        if col is not None:
+            cols = self._dm_columns(header, p.site_field)
+            _set_cells(rows, cols, p.site_value, only_non_blank=True)
+        for col in self._dm_columns(header, p.age_field):
             for row in rows:
                 row[col] = shift_age(row[col], p.age_shift_years)
 
