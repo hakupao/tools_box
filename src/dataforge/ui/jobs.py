@@ -8,8 +8,11 @@ happen in the main thread. Job code only ever emits signals; it never touches wi
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable
 from typing import Any
+
+import time
 
 from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
 
@@ -46,6 +49,51 @@ class _Worker(QThread):
             self.outcome.emit(self.tool_id, "failed", f"内部错误：{exc}")
         else:
             self.outcome.emit(self.tool_id, "ok", result)
+
+
+_ORPHANS: set[_Worker] = set()
+_ORPHANS_LOCK = threading.Lock()
+
+
+class _OrphanReaper(QObject):
+    """Main-thread object that drops finished orphan workers from the keep-alive set."""
+
+    @Slot()
+    def reap(self) -> None:
+        worker = self.sender()
+        if isinstance(worker, _Worker) and worker.isFinished():
+            with _ORPHANS_LOCK:
+                _ORPHANS.discard(worker)
+            worker.deleteLater()
+
+
+_reaper: _OrphanReaper | None = None
+
+
+def _orphan(worker: _Worker) -> None:
+    global _reaper
+    if _reaper is None:
+        _reaper = _OrphanReaper()
+    with _ORPHANS_LOCK:
+        _ORPHANS.add(worker)
+    worker.finished.connect(_reaper.reap, _QUEUED)
+    if worker.isFinished():  # finished between wait() timing out and connecting
+        with _ORPHANS_LOCK:
+            _ORPHANS.discard(worker)
+
+
+def wait_for_orphans(timeout_ms: int) -> bool:
+    """Wait for timed-out workers; True if none are still running."""
+    with _ORPHANS_LOCK:
+        workers = list(_ORPHANS)
+    deadline = time.monotonic() + timeout_ms / 1000
+    for w in workers:
+        w.wait(max(0, int((deadline - time.monotonic()) * 1000)))
+    with _ORPHANS_LOCK:
+        for w in workers:
+            if w.isFinished():
+                _ORPHANS.discard(w)
+        return not any(w.isRunning() for w in _ORPHANS)
 
 
 class _LogBridge(QObject):
@@ -102,7 +150,7 @@ class JobRunner(QObject):
         if self._busy:
             return False
         worker = _Worker(tool_id, fn, CancelToken())
-        worker.progress.connect(self.progress, _QUEUED)
+        worker.progress.connect(self._on_progress, _QUEUED)
         worker.outcome.connect(self._on_outcome, _QUEUED)
         worker.finished.connect(self._on_thread_finished, _QUEUED)
         self._worker = worker
@@ -124,6 +172,10 @@ class JobRunner(QObject):
         worker.token.cancel()
         if worker.wait(timeout_ms):
             self._release(worker)
+        else:
+            logger.warning("Job %s did not stop within %d ms; orphaning it", worker.tool_id, timeout_ms)
+            _orphan(worker)
+            self._release(worker, delete=False)
 
     def dispose(self) -> None:
         """Remove the logging handler (idempotent)."""
@@ -132,8 +184,19 @@ class JobRunner(QObject):
             self._handler = None
 
     # -- main-thread slots -------------------------------------------------
+    def _is_current_sender(self) -> bool:
+        sender = self.sender()
+        return sender is not None and sender is self._worker
+
+    @Slot(int, int, str)
+    def _on_progress(self, current: int, total: int, label: str) -> None:
+        if self._is_current_sender():
+            self.progress.emit(current, total, label)
+
     @Slot(str, str, object)
     def _on_outcome(self, tool_id: str, kind: str, payload: Any) -> None:
+        if not self._is_current_sender():
+            return  # stale event from an earlier job
         if kind == "ok":
             self.finished.emit(tool_id, payload)
         elif kind == "cancelled":
@@ -144,15 +207,16 @@ class JobRunner(QObject):
     @Slot()
     def _on_thread_finished(self) -> None:
         worker = self._worker
-        # A stale event from an earlier (already released) thread must not clear a newer job.
-        if worker is not None and worker.isFinished():
+        # Ignore stale events from an earlier (released or orphaned) thread.
+        if worker is not None and self._is_current_sender() and worker.isFinished():
             self._release(worker)
 
-    def _release(self, worker: _Worker) -> None:
+    def _release(self, worker: _Worker, delete: bool = True) -> None:
         if self._worker is not worker:
             return
         self._worker = None
         self._tool = None
         self._busy = False
-        worker.deleteLater()
+        if delete:
+            worker.deleteLater()
         self.busy_changed.emit(False)

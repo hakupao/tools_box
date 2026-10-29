@@ -8,13 +8,14 @@ import unittest
 from dataforge.core.errors import DataForgeError
 from dataforge.core.progress import CancelToken, ProgressFn
 from dataforge.core.result import Result
-from dataforge.ui.jobs import JobRunner
+from dataforge.ui.jobs import JobRunner, wait_for_orphans
 from tests.dataforge.qt_helpers import qapp, wait_until
 
 
 class JobRunnerTests(unittest.TestCase):
     def setUp(self) -> None:
         qapp()
+        self.gates: list[threading.Event] = []
         self.runner = JobRunner()
         self.events: list[tuple] = []
         r = self.runner
@@ -27,6 +28,9 @@ class JobRunnerTests(unittest.TestCase):
         r.busy_changed.connect(lambda b: self.events.append(("busy", b)))
 
     def tearDown(self) -> None:
+        for g in self.gates:
+            g.set()
+        wait_for_orphans(3000)
         self.runner.shutdown()
         self.runner.dispose()
 
@@ -131,6 +135,43 @@ class JobRunnerTests(unittest.TestCase):
         self.runner.submit("t", fn)
         self.assertTrue(started.wait(5))
         self.runner.shutdown()
+        self.assertFalse(self.runner.is_busy())
+
+    def test_finished_delivered_before_busy_false(self):
+        self.runner.submit("t", lambda p, c: Result())
+        self._idle()
+        names = [(e[0], e[1] if e[0] == "busy" else None) for e in self.events]
+        self.assertLess(names.index(("finished", None)), names.index(("busy", False)))
+
+    def test_shutdown_timeout_orphans_job_and_ignores_late_signals(self):
+        gate = threading.Event()
+        self.gates.append(gate)
+        started = threading.Event()
+
+        def stuck(p, c):
+            started.set()
+            gate.wait(10)  # ignores the cancel token
+            return Result()
+
+        self.runner.submit("t", stuck)
+        self.assertTrue(started.wait(5))
+        with self.assertLogs("dataforge", level="WARNING"):
+            self.runner.shutdown(timeout_ms=50)
+        self.assertFalse(self.runner.is_busy())
+        self.assertIn(("busy", False), self.events)
+
+        self.assertTrue(self.runner.submit("t2", lambda p, c: Result(stats={"n": 2})))
+        self._idle()
+        self.assertEqual([e[1] for e in self.events if e[0] == "finished"], ["t2"])
+
+        gate.set()
+        self.assertTrue(wait_for_orphans(2000))
+        for _ in range(20):
+            qapp().processEvents()
+            time.sleep(0.01)
+        self.assertEqual([e[1] for e in self.events if e[0] == "finished"], ["t2"])
+        self.assertNotIn("failed", self._names())
+        self.assertNotIn("cancelled", self._names())
         self.assertFalse(self.runner.is_busy())
 
     def test_dispose_removes_handler(self):
