@@ -43,6 +43,21 @@ class RunBar(QWidget):
         self._reason.setVisible(False)
         self.set_running(False)
 
+    def primary_button(self) -> PrimaryPushButton:
+        return self._primary
+
+    def cancel_button(self) -> PushButton:
+        return self._cancel
+
+    def reason_text(self) -> str:
+        return self._reason.text() if not self._reason.isHidden() else ""
+
+    def progress_bar(self) -> ProgressBar:
+        return self._bar
+
+    def indeterminate_bar(self) -> IndeterminateProgressBar:
+        return self._indeterminate
+
     def set_primary_text(self, text: str) -> None:
         self._primary.setText(text)
 
@@ -63,7 +78,7 @@ class RunBar(QWidget):
         if total <= 0:
             self._bar.setVisible(False)
             self._indeterminate.setVisible(self._running)
-            if self._running:
+            if self._running and not self._indeterminate.isStarted():
                 self._indeterminate.start()
         else:
             self._indeterminate.stop()

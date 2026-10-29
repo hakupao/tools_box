@@ -66,6 +66,19 @@ class ResultPanel(QWidget):
         self._issues = 0
         self._refresh_labels()
 
+    def tab_text(self, key: str) -> str:
+        """Label of a tab: 'result', 'warnings' or 'log'."""
+        return self._tabs.items[key].text()
+
+    def page_text(self, key: str) -> str:
+        return self._edits[key].toPlainText()
+
+    def is_collapsed(self) -> bool:
+        return self._stack.isHidden()
+
+    def summary_button(self) -> TransparentPushButton:
+        return self._summary
+
     def summary_text(self) -> str:
         return f"{self._outputs} 个输出 · {self._issues} 个问题"
 

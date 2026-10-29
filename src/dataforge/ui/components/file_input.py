@@ -30,6 +30,9 @@ class FileInputCard(SimpleCardWidget):
         self.setAcceptDrops(True)
 
         self._list = ListWidget(self)
+        # Let drops on the list fall through to the card, which handles them.
+        self._list.setAcceptDrops(False)
+        self._list.viewport().setAcceptDrops(False)
         self._pick_files = PushButton("选择文件", self)
         self._pick_folder = PushButton("选择文件夹", self)
         self._pick_folder.setVisible(allow_folder)
@@ -57,6 +60,9 @@ class FileInputCard(SimpleCardWidget):
 
     def clear(self) -> None:
         self._apply([], [])
+
+    def is_locked(self) -> bool:
+        return self._locked
 
     def set_locked(self, locked: bool) -> None:
         self._locked = locked
@@ -87,19 +93,20 @@ class FileInputCard(SimpleCardWidget):
         self._list.addItems([str(p) for p in merged])
         self.files_changed.emit(self.files())
 
-    def _add(self, paths: list[Path]) -> None:
+    def add_paths(self, paths: list[Path]) -> None:
+        """Merge files/folders into the current list."""
         self._apply(self._files, paths)
 
     def _on_pick_files(self) -> None:
         pattern = " ".join(f"*{e}" for e in self._extensions)
         names, _ = QFileDialog.getOpenFileNames(self, "选择文件", "", f"文件 ({pattern})")
         if names:
-            self._add([Path(n) for n in names])
+            self.add_paths([Path(n) for n in names])
 
     def _on_pick_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "选择文件夹")
         if folder:
-            self._add([Path(folder)])
+            self.add_paths([Path(folder)])
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802
         if not self._locked and event.mimeData().hasUrls():
@@ -112,5 +119,5 @@ class FileInputCard(SimpleCardWidget):
             event.ignore()
             return
         urls = [u.toLocalFile() for u in event.mimeData().urls() if u.isLocalFile()]
-        self._add([Path(u) for u in urls])
+        self.add_paths([Path(u) for u in urls])
         event.acceptProposedAction()
