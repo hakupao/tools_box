@@ -49,6 +49,17 @@ CASES = [
     ("31/31/2024", None, "31/31/2024", UNPARSED),
     ("  2024-05-01  ", None, "2022-05-01", SHIFTED),
     ("05/05/2024", DAY_FIRST, "2022-05-05", SHIFTED),
+    # SDTM reduced precision: hour only, and an hour-only time zone offset
+    ("2024-06-15T13", None, "2022-06-15T13", SHIFTED),
+    ("2024-06-15T13+09", None, "2022-06-15T13+09", SHIFTED),
+    ("2024-06-15T13:30-05", None, "2022-06-15T13:30-05", SHIFTED),
+    ("2024-06-15+09", None, "2022-06-15+09", SHIFTED),
+    ("2024-06-15T13+9", None, "2024-06-15T13+9", UNPARSED),
+    ("2024-06-15T13:", None, "2024-06-15T13:", UNPARSED),
+    # known limitation: a missing middle part is not understood
+    ("2003---15", None, "2003---15", UNPARSED),
+    # mixed separators are accepted
+    ("2024-01/15", None, "2022-01-15", SHIFTED),
 ]
 
 
@@ -58,6 +69,9 @@ class DatesMaskingTests(unittest.TestCase):
             with self.subTest(text=text, order=order):
                 years = 1 if text == "9999-12-31" else -2
                 self.assertEqual(mask_date(text, years, order), (expected, outcome))
+
+    def test_unicode_digits_output_ascii(self):
+        self.assertEqual(mask_date("２０２４-０１-１５", -2, None), ("2022-01-15", SHIFTED))
 
     def test_leap_forward(self):
         self.assertEqual(mask_date("2024-02-29", 4, None)[0], "2028-02-29")

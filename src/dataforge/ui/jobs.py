@@ -132,6 +132,7 @@ class JobRunner(QObject):
         super().__init__(parent)
         self._worker: _Worker | None = None
         self._busy = False
+        self._closing = False  # set by shutdown(); no new job may start afterwards
         self._tool: str | None = None
         self._bridge = _LogBridge(self)
         self._bridge.message.connect(self.log, _QUEUED)
@@ -149,7 +150,8 @@ class JobRunner(QObject):
         return self._tool
 
     def submit(self, tool_id: str, fn: JobFn) -> bool:
-        if self._busy:
+        """Start ``fn``; False if a job is running or the runner is shutting down."""
+        if self._busy or self._closing:
             return False
         worker = _Worker(tool_id, fn, CancelToken())
         worker.progress.connect(self._on_progress, _QUEUED)
@@ -168,6 +170,8 @@ class JobRunner(QObject):
             self._worker.token.cancel()
 
     def shutdown(self, timeout_ms: int = 5000) -> None:
+        # First, so follow-up handlers woken by busy_changed(False) cannot start a job.
+        self._closing = True
         worker = self._worker
         if worker is None:
             return

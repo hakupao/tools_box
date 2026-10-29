@@ -67,7 +67,7 @@ class ParsedDate:
 _SLASH_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 _FULL_RE = re.compile(r"^(\d{4})[-/](\d{1,2})[-/](\d{1,2})")
 _SUFFIX_RE = re.compile(
-    r"^([T ]\d{1,2}:\d{1,2}(:\d{1,2}(\.\d+)?)?)?(Z|[+-]\d{2}:?\d{2})?$"
+    r"^([T ]\d{1,2}(:\d{1,2}(:\d{1,2}(\.\d+)?)?)?)?(Z|[+-]\d{2}(:?\d{2})?)?$"
 )
 _YEAR_MONTH_RE = re.compile(r"^(\d{4})[-/](\d{1,2})$")
 _YEAR_RE = re.compile(r"^\d{4}$")

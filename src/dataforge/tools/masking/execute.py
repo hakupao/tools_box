@@ -18,10 +18,15 @@ from dataforge.core.result import Result
 from dataforge.dates import DateOutcome, SlashOrder, mask_date
 from dataforge.fileio.text_io import write_csv_rows
 from dataforge.tools.masking.profile import MaskingProfile, RuleStep
-from dataforge.tools.masking.scan import AmbiguousColumn, FileScan, ScanReport, export_report
+from dataforge.tools.masking.scan import (
+    MAPPING_FILE,
+    AmbiguousColumn,
+    FileScan,
+    ScanReport,
+    export_report,
+)
 from dataforge.tools.masking.table import find_column, is_blank, read_table
 
-MAPPING_FILE = "usubjid_mapping.csv"
 REPORT_FILE = "pattern1_scan_report.json"
 FOLDER_PREFIX = "masked_output_"
 _AGE_RE = re.compile(r"^[+-]?\d+(\.\d+)?$")
@@ -137,10 +142,15 @@ def describe_plan(
     dm = _dm_scan(report)
     if profile.doctor_replace_enabled:
         doctors = [name for name in profile.doctor_fields if _has_values(dm, name)]
-        if doctors:
+        if not any(name.strip() for name in profile.doctor_fields):
+            lines.append("DM：未指定医生字段，不替换")
+        elif doctors:
             lines.append(f"DM：{'、'.join(doctors)} 改为 {profile.doctor_value}")
-    if profile.site_replace_enabled and _has_values(dm, profile.site_field):
-        lines.append(f"DM：{profile.site_field} 改为 {profile.site_value}")
+    if profile.site_replace_enabled:
+        if not profile.site_field.strip():
+            lines.append("DM：未指定施设字段，不替换")
+        elif _has_values(dm, profile.site_field):
+            lines.append(f"DM：{profile.site_field} 改为 {profile.site_value}")
     if _has_values(dm, profile.age_field):
         lines.append(f"DM：{profile.age_field} 偏移 {profile.age_shift_years:+d} 岁")
     missing = len(missing_orders(report, date_orders))
@@ -251,6 +261,10 @@ class _Run:
                 row[col] = shift_age(row[col], p.age_shift_years)
 
 
+def _folder_error(exc: OSError) -> DataForgeError:
+    return DataForgeError(f"无法创建输出文件夹（{exc}）")
+
+
 def run(
     report: ScanReport, options: MaskOptions, progress: ProgressFn, cancel: CancelToken
 ) -> Result:
@@ -273,7 +287,10 @@ def run(
         parent = dm.path.parent
     else:  # processable reports always have a DM entry
         raise DataForgeError("扫描未通过，无法执行")
-    parent.mkdir(parents=True, exist_ok=True)
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise _folder_error(exc) from exc
     name = _folder_name(parent, options.now or datetime.now())
     final = parent / name
 
@@ -281,7 +298,10 @@ def run(
     for key in ("files", "subjects", "rows", "dates_shifted", "dates_filled", "dates_unparsed"):
         result.stats[key] = 0
     work = _Run(report, options, result)
-    tmp = Path(tempfile.mkdtemp(prefix=f".{name}.", suffix=".tmp", dir=parent))
+    try:
+        tmp = Path(tempfile.mkdtemp(prefix=f".{name}.", suffix=".tmp", dir=parent))
+    except OSError as exc:
+        raise _folder_error(exc) from exc
     try:
         written: list[str] = []
         total = len(report.files)
@@ -296,7 +316,10 @@ def run(
             tmp / MAPPING_FILE,
         )
         export_report(report, tmp / REPORT_FILE, options.date_orders)
-        os.rename(tmp, final)
+        try:
+            os.rename(tmp, final)
+        except OSError as exc:
+            raise _folder_error(exc) from exc
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
         raise

@@ -151,6 +151,34 @@ class JobRunnerTests(unittest.TestCase):
         self.runner.shutdown()
         self.assertFalse(self.runner.is_busy())
 
+    def test_submit_rejected_after_shutdown(self):
+        self.runner.shutdown()
+        self.assertFalse(self.runner.submit("t", lambda p, c: Result()))
+        self.assertFalse(self.runner.is_busy())
+        self.assertNotIn("started", self._names())
+
+    def test_pending_follow_up_cannot_start_during_shutdown(self):
+        started = threading.Event()
+        follow_ups: list[bool] = []
+
+        def fn(p, c):
+            started.set()
+            while True:
+                c.raise_if_cancelled()
+                time.sleep(0.01)
+
+        def on_busy(busy: bool) -> None:
+            if not busy:
+                follow_ups.append(self.runner.submit("t2", lambda p, c: Result()))
+
+        self.runner.submit("t", fn)
+        self.assertTrue(started.wait(5))
+        self.runner.busy_changed.connect(on_busy)
+        self.runner.shutdown()
+        self.assertEqual(follow_ups, [False])
+        self.assertFalse(self.runner.is_busy())
+        self.assertIsNone(self.runner.current_tool())
+
     def test_finished_delivered_before_busy_false(self):
         self.runner.submit("t", lambda p, c: Result())
         self._idle()
@@ -174,17 +202,18 @@ class JobRunnerTests(unittest.TestCase):
         self.assertFalse(self.runner.is_busy())
         self.assertIn(("busy", False), self.events)
 
-        self.assertTrue(self.runner.submit("t2", lambda p, c: Result(stats={"n": 2})))
-        self._idle()
-        self.assertEqual([e[1] for e in self.events if e[0] == "finished"], ["t2"])
+        # A shut-down runner accepts no new job.
+        self.assertFalse(self.runner.submit("t2", lambda p, c: Result(stats={"n": 2})))
 
         gate.set()
         self.assertTrue(wait_for_orphans(2000))
         for _ in range(20):
             qapp().processEvents()
             time.sleep(0.01)
-        self.assertEqual([e[1] for e in self.events if e[0] == "finished"], ["t2"])
+        # The orphan's late outcome is ignored.
+        self.assertNotIn("finished", self._names())
         self.assertNotIn("failed", self._names())
+        self.assertEqual(self._names().count("started"), 1)
         self.assertNotIn("cancelled", self._names())
         self.assertFalse(self.runner.is_busy())
 

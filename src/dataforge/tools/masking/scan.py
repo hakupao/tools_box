@@ -20,6 +20,7 @@ from dataforge.tools.masking.table import find_column, is_blank, read_table
 
 _USUBJID = "USUBJID"
 _DM_NAME = "DM.CSV"
+MAPPING_FILE = "usubjid_mapping.csv"  # written next to the outputs by execute.run()
 
 
 @dataclass(frozen=True)
@@ -209,6 +210,9 @@ def scan(
         elif key not in reported_dupes:
             reported_dupes.add(key)
             error("", f"文件名重复：{names_seen[key]}（输出时会互相覆盖）")
+    for path in files:
+        if path.name.lower() == MAPPING_FILE:
+            error(path.name, f"{path.name}：文件名与输出文件 {MAPPING_FILE} 冲突")
 
     dm_scan: FileScan | None = None
     dm_ids_in_order: list[str] = []

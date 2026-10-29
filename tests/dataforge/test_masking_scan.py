@@ -108,6 +108,17 @@ class ScanTests(ScanBase):
             ["文件名重复：AE.csv（输出时会互相覆盖）"],
         )
 
+    def test_input_named_like_mapping_output_error(self):
+        dm = self._write("DM.csv", "USUBJID\nS1\n")
+        clash = self._write("USUBJID_Mapping.csv", "USUBJID\nS1\n")
+        res = self._scan([dm, clash])
+        self.assertEqual(
+            [(e.path, e.message) for e in res.errors],
+            [("USUBJID_Mapping.csv", "USUBJID_Mapping.csv：文件名与输出文件 usubjid_mapping.csv 冲突")],
+        )
+        self.assertFalse(res.data.processable)
+        self.assertEqual(res.data.errors, [res.errors[0].message])
+
     def test_no_csv(self):
         res = self._scan([self.dir / "x.txt"])
         self.assertEqual(res.errors[0].message, "未选择任何 CSV 文件")

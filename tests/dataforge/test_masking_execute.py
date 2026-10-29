@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest import mock
 
 from dataforge.core.errors import Cancelled, DataForgeError
 from dataforge.core.progress import CancelToken, no_progress
@@ -306,6 +307,19 @@ class PlanTests(ExecuteBase):
         )
 
 
+    def test_describe_plan_empty_override_fields(self):
+        profile = MaskingProfile(doctor_fields=[], site_field="", date_detect_min_non_empty=1)
+        dm = self._write("DM.csv", "USUBJID,INVNAM,SITEID\nS1,Doc,Site\n")
+        report = self._scan([dm], profile)
+        lines = describe_plan(report, profile, {}, None)
+        self.assertIn("DM：未指定医生字段，不替换", lines)
+        self.assertIn("DM：未指定施设字段，不替换", lines)
+        profile.doctor_replace_enabled = False
+        profile.site_replace_enabled = False
+        lines = describe_plan(report, profile, {}, None)
+        self.assertFalse([line for line in lines if "未指定" in line])
+
+
 class OrderTests(ExecuteBase):
     def _ambiguous(self):
         profile = MaskingProfile(subject_limit=1, date_detect_min_non_empty=1)
@@ -374,6 +388,9 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(shift_age("", -2), "")
         self.assertEqual(shift_age("  ", -2), "  ")
 
+    def test_shift_age_unicode_digits_output_ascii(self):
+        self.assertEqual(shift_age("４５", -2), "43")
+
 
 class OutputTests(ExecuteBase):
     def test_folder_conflict_suffix(self):
@@ -412,6 +429,27 @@ class OutputTests(ExecuteBase):
         with self.assertRaises(Cancelled):
             self._run(report, profile, progress=progress, cancel=token)
         self.assertEqual(list(self.out_parent.iterdir()), [])
+
+    def test_output_folder_errors_become_dataforge_error(self):
+        profile = MaskingProfile(subject_limit=2)
+        report = self._default(profile)
+        for target in ("os.rename", "tempfile.mkdtemp"):
+            with self.subTest(target=target):
+                with mock.patch(target, side_effect=OSError("disk full")):
+                    with self.assertRaises(DataForgeError) as cm:
+                        self._run(report, profile)
+                self.assertEqual(str(cm.exception), "无法创建输出文件夹（disk full）")
+                self.assertEqual(list(self.out_parent.iterdir()), [])
+
+    def test_output_parent_mkdir_error_becomes_dataforge_error(self):
+        profile = MaskingProfile(subject_limit=2)
+        report = self._default(profile)
+        blocker = self.dir / "blocker"
+        blocker.write_bytes(b"")
+        options = MaskOptions(profile=profile, output_parent=blocker / "sub", now=NOW)
+        with self.assertRaises(DataForgeError) as cm:
+            run(report, options, no_progress, CancelToken())
+        self.assertTrue(str(cm.exception).startswith("无法创建输出文件夹（"), str(cm.exception))
 
     def test_file_changed_after_scan_aborts(self):
         profile = MaskingProfile(subject_limit=2)

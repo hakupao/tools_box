@@ -255,6 +255,60 @@ class MaskingPageTests(unittest.TestCase):
         self.assertEqual(by_name["AE.csv"].encoding, "cp932")
         self.assertEqual(page._encodings, {str(ae): "cp932"})
 
+    def test_execute_after_encoding_rescan_when_runner_already_idle(self) -> None:
+        dm = self._write("DM.csv", DM_TEXT)
+        ae = self._write("AE.csv", "USUBJID,AETERM\nS1,テスト医師\n", encoding="cp932")
+        page = self._page()
+        page.file_input.set_files([dm, ae])
+
+        def ask(parent, questions):
+            # Like the modal dialog's nested event loop: the scan worker is released
+            # meanwhile, so the rescan takes submit_job_when_idle()'s immediate branch.
+            wait_until(lambda: not self.runner.is_busy())
+            return {str(ae): "cp932"}
+
+        with mock.patch(f"{PAGE}.ask_encodings", side_effect=ask) as asked:
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: self._text(page) == "开始处理")
+            wait_until(lambda: not self.runner.is_busy())
+        asked.assert_called_once()
+        succeeded: list = []
+        page.run_succeeded.connect(lambda s, st: succeeded.append(s))
+        self._click_and_wait(page, lambda: succeeded != [])
+        folders = self._outputs()
+        self.assertEqual(len(folders), 1)
+        rows = _rows(folders[0] / "AE.csv")
+        self.assertEqual([(r["USUBJID"], r["AETERM"]) for r in rows], [("TEST0001", "テスト医師")])
+
+    def test_execute_failure_asking_for_rescan_discards_report(self) -> None:
+        from dataforge.core.errors import DataForgeError
+
+        dm = self._write("DM.csv", DM_TEXT)
+        ae = self._write("AE.csv", AE_TEXT)
+        page = self._page()
+        page.file_input.set_files([dm, ae])
+        self._scan(page)
+        self.assertEqual(self._text(page), "开始处理")
+
+        other = DataForgeError("无法创建输出文件夹（x）")
+        with mock.patch(f"{PAGE}.execute.run", side_effect=other):
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: self.tool_bar.error.called)
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertIsNotNone(page._report)
+        self.assertEqual(self._text(page), "开始处理")
+
+        self.tool_bar.error.reset_mock()
+        stale = DataForgeError("AE.csv：读取失败，请重新扫描（x）")
+        with mock.patch(f"{PAGE}.execute.run", side_effect=stale):
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: self.tool_bar.error.called)
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(self.tool_bar.error.call_args.args[1], str(stale))
+        self.assertIsNone(page._report)
+        self.assertEqual(self._text(page), "开始扫描")
+        self.assertEqual(page.summary_lines(), ["扫描通过后显示"])
+
     def test_encoding_question_unanswered_keeps_report(self) -> None:
         dm = self._write("DM.csv", DM_TEXT)
         ae = self._write("AE.csv", "USUBJID,AETERM\nS1,テスト医師\n", encoding="cp932")

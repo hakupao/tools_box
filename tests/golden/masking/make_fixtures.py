@@ -51,15 +51,16 @@ def sequential_basic() -> None:
                 "S2,002,STUDY-X,Dr Ito,,Site-B,30.5,1994-02-28,2024-02-29T09:15\r\n"
             ).encode("utf-8"),
             # AE: plain UTF-8 with LF; dropped rows (S3, blank USUBJID), a padded " S1 ",
-            # a quoted field with comma and newline, and one unparseable date (UNKNOWN)
+            # a quoted field with comma and newline, hour-only times (T13, T08+09) and one
+            # unparseable date (UNKNOWN)
             "AE.csv": (
                 "USUBJID,SUBJID,STUDYID,AESEQ,AETERM,AESTDTC,AEENDTC\n"
-                "S1,001,STUDY-X,1,Headache,2024-06-15T13:30:00+09:00,2024-06-16\n"
+                "S1,001,STUDY-X,1,Headache,2024-06-15T13:30:00+09:00,2024-06-16T13\n"
                 "S3,003,STUDY-X,1,Nausea,2024-07-01,2024-07-02\n"
                 ",,STUDY-X,1,Orphan row,2024-08-01,2024-08-02\n"
                 ' S1 ,001,STUDY-X,2,"Rash, mild\nsecond line",2024,2024-07\n'
                 "S2,002,STUDY-X,1,Fatigue,2024-02-29,UNKNOWN\n"
-                "S2,002,STUDY-X,2,Cough,2023-12-31 08:00,2024-01-05\n"
+                "S2,002,STUDY-X,2,Cough,2023-12-31 08:00,2024-01-05T08+09\n"
             ).encode("utf-8"),
         },
     )
@@ -76,10 +77,11 @@ def sequential_basic() -> None:
             "AE.csv": BOM
             + (
                 "USUBJID,SUBJID,STUDYID,AESEQ,AETERM,AESTDTC,AEENDTC\r\n"
-                "TEST0001,,[UAT]CIRCULATE,1,Headache,2022-06-15T13:30:00+09:00,2022-06-16\r\n"
+                "TEST0001,,[UAT]CIRCULATE,1,Headache,2022-06-15T13:30:00+09:00,"
+                "2022-06-16T13\r\n"
                 'TEST0001,,[UAT]CIRCULATE,2,"Rash, mild\nsecond line",2022-01-01,2022-07-01\r\n'
                 "TEST0002,,[UAT]CIRCULATE,1,Fatigue,2022-02-28,UNKNOWN\r\n"
-                "TEST0002,,[UAT]CIRCULATE,2,Cough,2021-12-31 08:00,2022-01-05\r\n"
+                "TEST0002,,[UAT]CIRCULATE,2,Cough,2021-12-31 08:00,2022-01-05T08+09\r\n"
             ).encode("utf-8"),
             "usubjid_mapping.csv": BOM
             + b"OLD_USUBJID,NEW_USUBJID\r\nS1,TEST0001\r\nS2,TEST0002\r\n",

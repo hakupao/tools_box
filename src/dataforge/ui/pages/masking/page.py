@@ -273,6 +273,12 @@ class MaskingPage(ToolPage):
             first = report.errors[0] if report.errors else "请查看结果区"
             self._warn("扫描未通过", first)
 
+    def _on_failed(self, tool_id: str, message: str) -> None:
+        was_run = tool_id == self.spec.id and self._job_kind == "run"
+        super()._on_failed(tool_id, message)
+        if was_run and "请重新扫描" in message:
+            self._invalidate()  # the files changed since the scan; the report is stale
+
     def capture_state(self) -> dict[str, Any]:
         out_dir = self.output_field.output_dir()
         return {
