@@ -106,6 +106,11 @@ class ConfigStoreTests(unittest.TestCase):
         with patch.dict(os.environ, {"DATAFORGE_STUDIO_CONFIG_PATH": str(p)}):
             self.assertEqual(default_config_path(), p)
 
+    def test_env_var_path_expands_user(self):
+        with patch.dict(os.environ, {"DATAFORGE_STUDIO_CONFIG_PATH": "~/x.json"}):
+            self.assertEqual(default_config_path(), Path("~/x.json").expanduser())
+            self.assertNotIn("~", str(default_config_path()))
+
     def test_legacy_env_var_used_as_fallback(self):
         p = self.tmp / "tb.json"
         env = {"TOOLS_BOX_CONFIG_PATH": str(p)}

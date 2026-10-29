@@ -47,6 +47,10 @@ class WidthConvertPage(ToolPage):
 
         self.run_bar.primary_button().setText("开始转换")
         self.output_combo.currentIndexChanged.connect(self._on_output_changed)
+        self.overwrite_box.toggled.connect(self._sync_output_enabled)
+
+    def _sync_output_enabled(self, *_args) -> None:
+        self.output_combo.setEnabled(not self.overwrite_box.isChecked())
 
     # -- output folder -------------------------------------------------------
     def _set_output_dir(self, folder: str | None) -> None:
@@ -73,7 +77,7 @@ class WidthConvertPage(ToolPage):
             return None
         overwrite = self.overwrite_box.isChecked()
         if overwrite:
-            box = MessageBox("覆盖原文件", "将直接修改原文件且无法撤销，确定继续吗？", self.window())
+            box = MessageBox("覆盖原文件", "将直接修改原文件且无法撤销。覆盖后，原文件中的图表、图片、数据透视表等可能丢失。确定继续吗？", self.window())
             if not box.exec():
                 return None
         options = WidthOptions(
@@ -116,5 +120,5 @@ class WidthConvertPage(ToolPage):
 
     def set_inputs_locked(self, locked: bool) -> None:
         self.file_input.set_locked(locked)
-        self.output_combo.setEnabled(not locked)
+        self.output_combo.setEnabled(not locked and not self.overwrite_box.isChecked())
         self.overwrite_box.setEnabled(not locked)

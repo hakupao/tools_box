@@ -35,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
 
     code = app.exec()
 
+    runner.shutdown()
     runner.dispose()
     # On Windows the listener blocks inside darkdetect.listener(); it has no stop flag.
     listener.terminate()

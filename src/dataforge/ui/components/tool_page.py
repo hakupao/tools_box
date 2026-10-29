@@ -38,6 +38,7 @@ class ToolPage(QWidget):
         self.runner = runner
         self.setObjectName(spec.id)
         self._mode: LayoutMode | None = None
+        self._snapshot: tuple[str, dict[str, Any]] | None = None
 
         self.result_panel = ResultPanel(self)
         self.run_bar = RunBar(self)
@@ -146,7 +147,10 @@ class ToolPage(QWidget):
         fn = self.build_job()
         if fn is None:
             return
-        if not self.runner.submit(self.spec.id, fn):
+        if self.runner.submit(self.spec.id, fn):
+            # Snapshot at start so the recent entry matches what actually ran.
+            self._snapshot = (self.summary(), self.capture_state())
+        else:
             InfoBar.warning("无法开始", "已有任务正在运行", parent=self._info_parent(),
                             position=InfoBarPosition.TOP_RIGHT)
 
@@ -179,14 +183,20 @@ class ToolPage(QWidget):
         self._end_run()
         self.result_panel.show_result(result)
         parent = self._info_parent()
-        if result.errors:
+        pos = InfoBarPosition.TOP_RIGHT
+        if not result.outputs and result.errors:
+            InfoBar.error("失败", result.errors[0].message, parent=parent, position=pos)
+        elif not result.outputs and result.warnings:
+            InfoBar.warning("未生成文件", result.warnings[0].message, parent=parent, position=pos)
+        elif result.errors:
             InfoBar.warning("部分文件失败", f"{len(result.errors)} 个文件处理失败",
-                            parent=parent, position=InfoBarPosition.TOP_RIGHT)
+                            parent=parent, position=pos)
         else:
             InfoBar.success("完成", f"已生成 {len(result.outputs)} 个输出",
-                            parent=parent, position=InfoBarPosition.TOP_RIGHT)
+                            parent=parent, position=pos)
         if result.outputs:
-            self.run_succeeded.emit(self.summary(), self.capture_state())
+            snapshot = self._snapshot or (self.summary(), self.capture_state())
+            self.run_succeeded.emit(*snapshot)
 
     def _on_failed(self, tool_id: str, message: str) -> None:
         if tool_id != self.spec.id:

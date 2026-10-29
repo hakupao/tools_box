@@ -42,6 +42,24 @@ class CancelTokenTests(unittest.TestCase):
         with self.assertRaises(Cancelled):
             t.raise_if_cancelled()
 
+    def test_cancelled_survives_except_exception(self):
+        self.assertFalse(issubclass(Cancelled, Exception))
+        t = CancelToken()
+        t.cancel()
+        processed = []
+
+        def loop():
+            for i in range(3):
+                try:
+                    t.raise_if_cancelled()
+                    processed.append(i)
+                except Exception:  # tool-style per-file guard
+                    pass
+
+        with self.assertRaises(Cancelled):
+            loop()
+        self.assertEqual(processed, [])
+
     def test_dataforge_error_is_value_error(self):
         self.assertTrue(issubclass(DataForgeError, ValueError))
 

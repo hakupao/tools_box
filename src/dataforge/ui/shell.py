@@ -20,7 +20,7 @@ from dataforge.config.recent import RecentStore
 from dataforge.config.store import ConfigStore
 from dataforge.ui.home import HomePage
 from dataforge.ui.jobs import JobRunner
-from dataforge.ui.layout import MIN_WINDOW_WIDTH
+from dataforge.ui.layout import MIN_WINDOW_WIDTH, WIDE_MIN_WIDTH
 from dataforge.ui.registry import TOOLS, ToolGroup, ToolSpec, get_tool, load_page_class
 from dataforge.ui.settings import SettingsPage
 
@@ -40,6 +40,7 @@ class MainWindow(FluentWindow):
         self.setMinimumWidth(MIN_WINDOW_WIDTH)
         self.resize(1100, 720)
         self.setMicaEffectEnabled(True)
+        self.navigationInterface.setMinimumExpandWidth(WIDE_MIN_WIDTH)
 
         self.home = HomePage(TOOLS, recent, self.open_tool)
         self.home.setObjectName("home")
@@ -77,6 +78,9 @@ class MainWindow(FluentWindow):
         self.switchTo(container)
         page = self._ensure_page(tool_id)
         if state is None or page is None:
+            return
+        if self._runner.current_tool() == tool_id:  # inputs are locked while it runs
+            InfoBar.info(title="任务运行中，已保留当前输入", content="", parent=self)
             return
         missing = page.restore_state(state)
         if missing:

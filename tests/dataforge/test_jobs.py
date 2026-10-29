@@ -78,6 +78,20 @@ class JobRunnerTests(unittest.TestCase):
         self.assertIn(("cancelled", "t"), self.events)
         self.assertNotIn("failed", self._names())
 
+    def test_cancel_inside_except_exception_still_cancelled(self):
+        def job(progress, token):
+            token.cancel()
+            try:
+                token.raise_if_cancelled()
+            except Exception:  # per-file guard must not swallow cancellation
+                pass
+            return Result()
+
+        self.assertTrue(self.runner.submit("t", job))
+        self._idle()
+        self.assertIn(("cancelled", "t"), self.events)
+        self.assertNotIn("finished", self._names())
+
     def test_dataforge_error_maps_to_failed(self):
         def fn(p, c):
             raise DataForgeError("缺少 DM.csv")

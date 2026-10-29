@@ -247,6 +247,29 @@ class PageTests(unittest.TestCase):
             box.return_value.exec.return_value = True
             self.assertIsNotNone(page.build_job())
 
+    def test_overwrite_text_mentions_feature_loss(self) -> None:
+        a = self.dir / "a.xlsx"
+        _make_sample(a)
+        page = self._page()
+        page.file_input.set_files([a])
+        page.overwrite_box.setChecked(True)
+        with mock.patch("dataforge.ui.pages.width_convert_page.MessageBox") as box:
+            box.return_value.exec.return_value = False
+            page.build_job()
+        self.assertIn("图表", box.call_args.args[1])
+
+    def test_overwrite_disables_output_combo(self) -> None:
+        page = self._page()
+        self.assertTrue(page.output_combo.isEnabled())
+        page.overwrite_box.setChecked(True)
+        self.assertFalse(page.output_combo.isEnabled())
+        page.overwrite_box.setChecked(False)
+        self.assertTrue(page.output_combo.isEnabled())
+        page.overwrite_box.setChecked(True)
+        page.set_inputs_locked(True)
+        page.set_inputs_locked(False)
+        self.assertFalse(page.output_combo.isEnabled())
+
     def test_output_dir_choice_and_cancel(self) -> None:
         page = self._page()
         target = str(self.dir)

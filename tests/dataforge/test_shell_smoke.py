@@ -27,6 +27,8 @@ class ShellSmokeTests(unittest.TestCase):
         self.recent = RecentStore(self.config)
         self.gates: list[threading.Event] = []
         self.windows: list[MainWindow] = []
+        self.finished: list[tuple] = []
+        self.runner.finished.connect(lambda t, _r: self.finished.append(("finished", t)))
 
     def tearDown(self) -> None:
         for g in self.gates:
@@ -71,8 +73,39 @@ class ShellSmokeTests(unittest.TestCase):
         setTheme(Theme.DARK)
         for spec in TOOLS:
             w.open_tool(spec.id)
+            self.assertIsNotNone(w.page_for(spec.id), spec.id)
+        self.assertTrue(self.runner.is_busy())
+        self.assertEqual(self.runner.current_tool(), "date_convert")
         gate.set()
         wait_until(lambda: not self.runner.is_busy())
+        self.assertIn(("finished", "date_convert"), self.finished)
+
+    def test_open_running_tool_keeps_inputs(self):
+        w = self._window()
+        w.open_tool("width_convert")
+        page = w.page_for("width_convert")
+        gate, job = self._blocking_job()
+        self.assertTrue(self.runner.submit("width_convert", job))
+        with mock.patch("dataforge.ui.shell.InfoBar") as bar,                 mock.patch.object(page, "restore_state") as restore:
+            w.open_tool("width_convert", {"files": ["x.xlsx"]})
+        restore.assert_not_called()
+        bar.info.assert_called_once()
+        gate.set()
+        wait_until(lambda: not self.runner.is_busy())
+
+    def test_open_idle_tool_restores(self):
+        w = self._window()
+        w.open_tool("width_convert")
+        page = w.page_for("width_convert")
+        with mock.patch.object(page, "restore_state", return_value=[]) as restore:
+            w.open_tool("width_convert", {"files": []})
+        restore.assert_called_once()
+
+    def test_nav_collapse_breakpoint(self):
+        from dataforge.ui.layout import WIDE_MIN_WIDTH
+
+        w = self._window()
+        self.assertEqual(w.navigationInterface.panel.minimumExpandWidth, WIDE_MIN_WIDTH)
 
     def test_settings_persists_theme(self):
         w = self._window()

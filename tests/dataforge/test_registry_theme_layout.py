@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
-from qfluentwidgets import Theme
+from PySide6.QtCore import QCoreApplication, QObject
+from qfluentwidgets import PushButton, Theme, isDarkTheme
 
 from dataforge.ui.layout import MIN_WINDOW_WIDTH, LayoutMode, layout_mode_for_width
 from dataforge.ui.registry import TOOLS, ToolGroup, get_tool, load_page_class
-from dataforge.ui.theme import apply_theme_mode
+from dataforge.ui.theme import apply_theme_mode, start_system_theme_listener
 
 from .qt_helpers import qapp
 
@@ -73,6 +75,42 @@ class ThemeTests(unittest.TestCase):
         self.assertIs(apply_theme_mode("dark"), Theme.DARK)
         self.assertIs(apply_theme_mode("light"), Theme.LIGHT)
         self.assertIs(apply_theme_mode("auto"), Theme.AUTO)
+
+    def test_system_theme_change_restyles_widgets(self) -> None:
+        qapp()
+        with mock.patch("darkdetect.theme", return_value="Light"):
+            apply_theme_mode("auto")
+            btn = PushButton("x")
+            btn.show()
+            QCoreApplication.processEvents()
+            before = btn.styleSheet()
+            self.assertFalse(isDarkTheme())
+            parent = QObject()
+            listener = start_system_theme_listener(parent)
+            listener.terminate()
+            listener.wait()
+            with mock.patch("darkdetect.theme", return_value="Dark"):
+                listener._onThemeChanged("dark")
+                QCoreApplication.processEvents()
+                self.assertTrue(isDarkTheme())
+                self.assertNotEqual(btn.styleSheet(), before)
+            btn.close()
+        apply_theme_mode("auto")
+
+    def test_system_theme_change_ignored_in_fixed_mode(self) -> None:
+        qapp()
+        apply_theme_mode("light")
+        parent = QObject()
+        bridge_calls: list[int] = []
+        with mock.patch("dataforge.ui.theme.setTheme") as st:
+            listener = start_system_theme_listener(parent)
+            listener.terminate()
+            listener.wait()
+            listener.systemThemeChanged.emit()
+            QCoreApplication.processEvents()
+            bridge_calls.append(st.call_count)
+        self.assertEqual(bridge_calls, [0])
+        apply_theme_mode("auto")
 
 
 if __name__ == "__main__":

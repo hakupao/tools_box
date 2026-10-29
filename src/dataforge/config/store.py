@@ -22,7 +22,7 @@ def default_config_path() -> Path:
     for var in (ENV_CONFIG_PATH, ENV_LEGACY_CONFIG_PATH):
         value = os.environ.get(var)
         if value:
-            return Path(value)
+            return Path(value).expanduser()
     base = user_config_dir("dataforge_studio", appauthor=False, roaming=False)
     return Path(base) / "dataforge_studio_config.json"
 

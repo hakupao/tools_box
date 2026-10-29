@@ -4,6 +4,7 @@ import threading
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from qfluentwidgets import PushButton
@@ -113,6 +114,63 @@ class ToolPageTests(unittest.TestCase):
         wait_until(lambda: not self.runner.is_busy())
         self.assertEqual(page.locked, [True, False])
         self.assertTrue(page.run_bar.primary_button().isEnabled())
+
+    def test_recent_snapshot_taken_at_start(self) -> None:
+        gate = threading.Event()
+        self.gates.append(gate)
+
+        def fn(progress, token) -> Result:
+            gate.wait(5)
+            r = Result()
+            r.add_output(Path("out.csv"))
+            return r
+
+        page = self._page(fn=fn)
+        got: list[tuple] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        page.run_bar.start_requested.emit()
+        page.summary = lambda: "changed"
+        page.capture_state = lambda: {"k": 2}
+        gate.set()
+        wait_until(lambda: bool(got))
+        self.assertEqual(got[0], ("dummy", {"k": 1}))
+
+    def _finish_with(self, result: Result):
+        page = self._page(fn=lambda p, c: result)
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: bar.method_calls != [])
+        wait_until(lambda: not self.runner.is_busy())
+        return bar
+
+    def test_infobar_error_when_nothing_converted_with_errors(self) -> None:
+        r = Result()
+        r.fail("a.xlsx", "坏文件")
+        bar = self._finish_with(r)
+        bar.error.assert_called_once()
+        self.assertEqual(bar.error.call_args.args[1], "坏文件")
+        bar.success.assert_not_called()
+
+    def test_infobar_warning_when_nothing_generated(self) -> None:
+        r = Result()
+        r.warn("a.xlsx", "没有需要转换的内容")
+        bar = self._finish_with(r)
+        bar.warning.assert_called_once()
+        self.assertEqual(bar.warning.call_args.args[:2], ("未生成文件", "没有需要转换的内容"))
+        bar.success.assert_not_called()
+
+    def test_infobar_partial_failure_warning(self) -> None:
+        r = Result()
+        r.add_output(Path("o.csv"))
+        r.fail("a.xlsx", "坏文件")
+        bar = self._finish_with(r)
+        self.assertEqual(bar.warning.call_args.args[0], "部分文件失败")
+
+    def test_infobar_success(self) -> None:
+        r = Result()
+        r.add_output(Path("o.csv"))
+        bar = self._finish_with(r)
+        bar.success.assert_called_once()
 
     def test_other_tool_running_blocks(self) -> None:
         page = self._page("date_convert")

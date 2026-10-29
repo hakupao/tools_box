@@ -34,3 +34,9 @@ tests/golden/<tool_id>/<case>/
 - `.xlsx`、`.xlsm`：sheet 名称（按顺序）、两个 sheet 范围并集内每个单元格的值和 `number_format`、合并区域（排序后的区域字符串）逐项相等。
 
 其他语言的版本：把 `input/` 复制到临时目录，按 `params.json` 运行，把输出写入空目录，再按上述规则与 `expected/` 对照。
+
+## 取消规则
+
+- `Cancelled` 继承自 `BaseException`，这样逐文件的 `except Exception` 不会吞掉取消。
+- 工具代码不得捕获 `BaseException`（也不要写裸 `except:`）。
+- 在方便的位置（例如每个文件开始前）调用 `cancel.raise_if_cancelled()`。
