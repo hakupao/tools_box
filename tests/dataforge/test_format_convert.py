@@ -181,5 +181,47 @@ class FormatConvertTests(unittest.TestCase):
         )
 
 
+    def test_csv_to_xlsx_formula_text_stays_string(self):
+        f = self._csv("f.csv", b"=SUM(A1),+1\n")
+        self._run([f], ConvertMode.CSV_TO_XLSX)
+        ws = load_workbook(self.dir / "f.xlsx").active
+        self.assertEqual(ws["A1"].value, "=SUM(A1)")
+        self.assertEqual(ws["A1"].data_type, "s")
+        self.assertEqual(ws["B1"].value, "+1")
+        self.assertEqual(ws["B1"].data_type, "s")
+
+    def test_csv_to_xlsx_control_char_is_error(self):
+        f = self._csv("c.csv", b"a\nb\x01c\n")
+        r = self._run([f], ConvertMode.CSV_TO_XLSX)
+        self.assertEqual([e.message for e in r.errors], ["第 2 行含 Excel 不支持的控制字符"])
+        self.assertEqual(list(self.dir.glob("*.xlsx")), [])
+        self.assertEqual([p for p in self.dir.iterdir() if ".tmp" in p.name], [])
+
+    def test_unquote_quotes_fields_with_any_candidate_delimiter(self):
+        f = self._csv("d.csv", b'a;b,c;d,e\r\n"x,y";z;w;v\r\n')
+        r = self._run([f], ConvertMode.CSV_UNQUOTE)
+        self.assertEqual(
+            (self.dir / "d_unquoted.csv").read_bytes(),
+            BOM + b'a;"b,c";"d,e"\r\n"x,y";z;w;v\r\n',
+        )
+        messages = [w.message for w in r.warnings]
+        self.assertIn("按「分号」分隔识别", messages)
+        self.assertIn("3 个字段含分隔符、换行或以引号开头，已保留引号", messages)
+
+    def test_unquote_tab_warns_delimiter(self):
+        f = self._csv("t.csv", b'"a"\t"b"\n')
+        r = self._run([f], ConvertMode.CSV_UNQUOTE)
+        self.assertEqual([w.message for w in r.warnings], ["按「制表符」分隔识别"])
+
+    def test_stats_files_and_skipped(self):
+        ok = self._csv("ok.csv", b"a\n")
+        bom = self._csv("bom.csv", BOM + b"a\n")
+        amb = self._csv("amb.csv", AMBIGUOUS)
+        bad = self._csv("bad.csv", UNDECODABLE)
+        r = self._run([ok, bom, amb, bad], ConvertMode.CSV_TO_BOM)
+        self.assertEqual(r.stats.get("files"), 1)
+        self.assertEqual(r.stats.get("skipped"), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

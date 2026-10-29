@@ -9,6 +9,7 @@ from enum import Enum
 from pathlib import Path
 
 from openpyxl import Workbook
+from openpyxl.utils.exceptions import IllegalCharacterError
 
 from dataforge.core.errors import DataForgeError
 from dataforge.core.progress import CancelToken, ProgressFn
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 _CANCEL_CHECK_ROWS = 5000
 _SNIFF_DELIMITERS = ",\t;|"
+_DELIMITER_NAMES = {"\t": "制表符", ";": "分号", "|": "竖线"}
 
 
 class ConvertMode(str, Enum):
@@ -59,8 +61,13 @@ def _csv_to_xlsx(
     for index, row in enumerate(csv.reader(io.StringIO(text, newline="")), 1):
         if index % _CANCEL_CHECK_ROWS == 0:
             cancel.raise_if_cancelled()
-        ws.append(row)
+        try:
+            ws.append(row)
+        except IllegalCharacterError:
+            result.fail(src, f"第 {index} 行含 Excel 不支持的控制字符")
+            return
         for cell in ws[ws.max_row][: len(row)]:
+            cell.data_type = "s"  # keep "=SUM(A1)" etc. as literal text, not a formula
             cell.number_format = "@"
     target = plan_output(src, new_name=f"{src.stem}.xlsx", output_dir=options.output_dir)
     with atomic_path(target) as tmp:
@@ -88,7 +95,7 @@ def _detect_delimiter(text: str) -> str:
 
 def _format_field(value: str, delimiter: str) -> tuple[str, bool]:
     """Minimal-quote one field; returns (text, was_quoted)."""
-    if delimiter in value or "\r" in value or "\n" in value or value.startswith('"'):
+    if any(d in value for d in _SNIFF_DELIMITERS) or"\r" in value or "\n" in value or value.startswith('"'):
         return '"' + value.replace('"', '""') + '"', True
     return value, False
 
@@ -97,6 +104,8 @@ def _csv_unquote(
     text: str, src: Path, options: FormatOptions, result: Result, cancel: CancelToken
 ) -> None:
     delimiter = _detect_delimiter(text)
+    if delimiter != ",":
+        result.warn(src, f"按「{_DELIMITER_NAMES[delimiter]}」分隔识别")
     quoted = 0
     lines: list[str] = []
     for index, row in enumerate(csv.reader(io.StringIO(text, newline=""), delimiter=delimiter), 1):
@@ -165,6 +174,7 @@ def run(
             result.fail(src, "文件类型与所选模式不符")
             continue
         errors_before = len(result.errors)
+        outputs_before = len(result.outputs)
         try:
             if options.mode is ConvertMode.XLSX_TO_CSV:
                 sheet_split.export_workbook(
@@ -182,5 +192,5 @@ def run(
             logger.exception("convert failed: %s", src)
             result.fail(src, f"转换失败：{exc}")
         if len(result.errors) == errors_before:
-            result.count("files")
+            result.count("files" if len(result.outputs) > outputs_before else "skipped")
     return result

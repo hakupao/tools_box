@@ -106,6 +106,7 @@ def _assert_xlsx_equal(test: unittest.TestCase, expected: Path, actual: Path, na
                 ce, ca = ws_e.cell(r, c), ws_a.cell(r, c)
                 where = f"{name}!{sheet}!{ce.coordinate}"
                 test.assertEqual(ce.value, ca.value, f"{where}: value")
+                test.assertEqual(ce.data_type, ca.data_type, f"{where}: data_type")
                 test.assertEqual(ce.number_format, ca.number_format, f"{where}: number_format")
         test.assertEqual(
             sorted(str(m) for m in ws_e.merged_cells.ranges),

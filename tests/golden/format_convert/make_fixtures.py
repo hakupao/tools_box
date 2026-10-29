@@ -30,7 +30,7 @@ def csv_to_xlsx() -> None:
     case = _write_case(
         "csv_to_xlsx",
         {"mode": "csv_to_xlsx"},
-        {"data.csv": b'id,note\r\n007,"x\ny",extra\r\n2\r\n'},
+        {"data.csv": b'id,note\r\n007,"x\ny",extra\r\n2\r\n=SUM(A1),+1\r\n'},
     )
     wb = Workbook()
     ws = wb.active
@@ -42,8 +42,11 @@ def csv_to_xlsx() -> None:
         "B2": "x\ny",
         "C2": "extra",
         "A3": "2",
+        "A4": "=SUM(A1)",
+        "B4": "+1",
     }.items():
         ws[coord] = value
+        ws[coord].data_type = "s"
         ws[coord].number_format = "@"
     wb.save(case / "expected" / "data.xlsx")
 
