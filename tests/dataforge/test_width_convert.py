@@ -274,13 +274,13 @@ class PageTests(unittest.TestCase):
         page = self._page()
         target = str(self.dir)
         with mock.patch(
-            "dataforge.ui.pages.width_convert_page.QFileDialog.getExistingDirectory",
+            "dataforge.ui.components.output_location.QFileDialog.getExistingDirectory",
             return_value=target,
         ):
             page.output_combo.setCurrentIndex(1)
         self.assertEqual(page.capture_state()["output_dir"], target)
         with mock.patch(
-            "dataforge.ui.pages.width_convert_page.QFileDialog.getExistingDirectory",
+            "dataforge.ui.components.output_location.QFileDialog.getExistingDirectory",
             return_value="",
         ):
             page.output_combo.setCurrentIndex(0)

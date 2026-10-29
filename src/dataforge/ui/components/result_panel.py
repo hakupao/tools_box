@@ -50,8 +50,12 @@ class ResultPanel(QWidget):
             lines.append("")
             lines.extend(f"{k}: {v}" for k, v in result.stats.items())
         self._edits["result"].setPlainText("\n".join(lines))
-        issues = [*result.warnings, *result.errors]
-        self._edits["warnings"].setPlainText("\n".join(f"{i.path}: {i.message}" for i in issues))
+        issues = [
+            *(f"{i.path}: {i.message}" for i in result.warnings),
+            *(f"{i.path}: {i.message}" for i in result.errors),
+            *(f"{q.path}: 需要选择编码" for q in result.encoding_questions),
+        ]
+        self._edits["warnings"].setPlainText("\n".join(issues))
         self._outputs = len(result.outputs)
         self._issues = len(issues)
         self._refresh_labels()

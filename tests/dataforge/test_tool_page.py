@@ -224,5 +224,115 @@ class ToolPageTests(unittest.TestCase):
         self.assertFalse(self.runner.is_busy())
 
 
+class _Quiet(ToolPage):
+    """Minimal page whose first job returns one output and one encoding question."""
+
+    def __init__(self, spec, runner, parent=None) -> None:
+        super().__init__(spec, runner, parent)
+        self.state = {"k": 1}
+        self.retry_args: list[dict[str, str]] = []
+        self.carried_seen: list = []
+
+    def build_job(self) -> JobFn | None:
+        def job(progress, token) -> Result:
+            r = Result()
+            r.add_output(Path("first.csv"))
+            r.ask_encoding("amb.csv", {"cp932": "a", "gbk": "b"})
+            return r
+
+        return job
+
+    def capture_state(self) -> dict[str, Any]:
+        return dict(self.state)
+
+    def restore_state(self, state: dict[str, Any]) -> list[str]:
+        return []
+
+    def summary(self) -> str:
+        return "quiet"
+
+    def set_inputs_locked(self, locked: bool) -> None:
+        pass
+
+
+class _Retrying(_Quiet):
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        self.retry_args.append(encodings)
+        self.carried_seen.append(len(self.carried_result().outputs))
+
+        def job(progress, token) -> Result:
+            r = Result()
+            r.add_output(Path("second.csv"))
+            return r
+
+        return job
+
+
+class _ReplacingRetry(_Retrying):
+    RETRY_MERGES = False
+
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        carried = self.carried_result()
+        carried.outputs.clear()
+        return super().build_retry_job(encodings)
+
+
+class RetryFlowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        qapp()
+        self.runner = JobRunner()
+
+    def tearDown(self) -> None:
+        self.runner.shutdown()
+        self.runner.dispose()
+
+    def _run(self, cls, answers):
+        page = cls(get_tool("date_convert"), self.runner)
+        got: list[tuple] = []
+        done: list[bool] = []
+        page.run_succeeded.connect(lambda s, d: got.append((s, d)))
+        with mock.patch("dataforge.ui.components.tool_page.ask_encodings",
+                        return_value=answers) as ask, \
+                mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            page.run_bar.start_requested.emit()
+            page.state = {"k": 2}  # edited after submit: snapshot must stay {"k": 1}
+            wait_until(lambda: bar.method_calls != [])
+            wait_until(lambda: not self.runner.is_busy())
+        return page, got, ask
+
+    def test_retry_flow_merges_results(self) -> None:
+        page, got, ask = self._run(_Retrying, {"amb.csv": "gbk"})
+        ask.assert_called_once()
+        self.assertEqual(page.retry_args, [{"amb.csv": "gbk"}])
+        self.assertEqual(page.carried_seen, [1])
+        self.assertIsNone(page.carried_result())
+        self.assertEqual(page.result_panel.tab_text("result"), "结果 (2)")
+        self.assertIn("first.csv", page.result_panel.page_text("result"))
+        self.assertIn("second.csv", page.result_panel.page_text("result"))
+        self.assertEqual(got, [("quiet", {"k": 1})])
+
+    def test_retry_replaces_when_not_merging(self) -> None:
+        page, got, _ = self._run(_ReplacingRetry, {"amb.csv": "gbk"})
+        self.assertEqual(page.result_panel.tab_text("result"), "结果 (1)")
+        self.assertNotIn("first.csv", page.result_panel.page_text("result"))
+        self.assertIn("second.csv", page.result_panel.page_text("result"))
+        self.assertEqual(got, [("quiet", {"k": 1})])
+
+    def test_cancelled_dialog_warns_and_skips(self) -> None:
+        page, got, _ = self._run(_Retrying, {})
+        self.assertEqual(page.retry_args, [])
+        self.assertEqual(page.result_panel.tab_text("result"), "结果 (1)")
+        self.assertIn("amb.csv: 未选择编码，已跳过", page.result_panel.page_text("warnings"))
+        self.assertNotIn("需要选择编码", page.result_panel.page_text("warnings"))
+        self.assertEqual(len(got), 1)
+
+    def test_retry_not_offered_without_hook(self) -> None:
+        page, got, ask = self._run(_Quiet, {"amb.csv": "gbk"})
+        ask.assert_not_called()
+        self.assertEqual(page.result_panel.tab_text("warnings"), "警告 (1)")
+        self.assertIn("amb.csv: 需要选择编码", page.result_panel.page_text("warnings"))
+        self.assertEqual(len(got), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

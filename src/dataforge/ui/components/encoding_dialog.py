@@ -1,0 +1,63 @@
+"""Dialog for resolving ambiguous file encodings, plus the batch asking loop."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from pathlib import Path
+
+from PySide6.QtWidgets import QButtonGroup, QWidget
+from qfluentwidgets import CheckBox, MessageBoxBase, PlainTextEdit, RadioButton, StrongBodyLabel
+
+from dataforge.core.result import EncodingQuestion
+from dataforge.fileio.encoding import ENCODING_LABELS
+
+
+class EncodingChoiceDialog(MessageBoxBase):
+    def __init__(self, parent: QWidget, question: EncodingQuestion) -> None:
+        super().__init__(parent)
+        self.viewLayout.addWidget(StrongBodyLabel("选择编码", self))
+        self.viewLayout.addWidget(StrongBodyLabel(Path(question.path).name, self))
+        self._group = QButtonGroup(self)
+        self._radios: dict[str, RadioButton] = {}
+        for enc, preview in question.previews.items():
+            radio = RadioButton(ENCODING_LABELS.get(enc, enc), self)
+            self._group.addButton(radio)
+            self._radios[enc] = radio
+            edit = PlainTextEdit(self)
+            edit.setReadOnly(True)
+            edit.setPlainText(preview)
+            self.viewLayout.addWidget(radio)
+            self.viewLayout.addWidget(edit)
+        if self._radios:
+            next(iter(self._radios.values())).setChecked(True)
+        self._rest = CheckBox("本批其余文件也用此编码", self)
+        self.viewLayout.addWidget(self._rest)
+
+    def chosen(self) -> str:
+        for enc, radio in self._radios.items():
+            if radio.isChecked():
+                return enc
+        return next(iter(self._radios), "")
+
+    def apply_to_rest(self) -> bool:
+        return self._rest.isChecked()
+
+
+def ask_encodings(
+    parent: QWidget,
+    questions: list[EncodingQuestion],
+    dialog_factory: Callable[[QWidget, EncodingQuestion], object] = EncodingChoiceDialog,
+) -> dict[str, str]:
+    """Ask for each question's encoding; stop at the first cancel and return answers so far."""
+    answers: dict[str, str] = {}
+    sticky: str | None = None
+    for question in questions:
+        if sticky is not None and sticky in question.previews:
+            answers[question.path] = sticky
+            continue
+        dialog = dialog_factory(parent, question)
+        if not dialog.exec():
+            break
+        answers[question.path] = dialog.chosen()
+        if dialog.apply_to_rest():
+            sticky = dialog.chosen()
+    return answers

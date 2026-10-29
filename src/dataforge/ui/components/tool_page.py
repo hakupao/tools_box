@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QBoxLayout, QFrame, QVBoxLayout, QWidget
 from qfluentwidgets import (
     CaptionLabel,
@@ -16,6 +16,7 @@ from qfluentwidgets import (
 )
 
 from dataforge.core.result import Result
+from dataforge.ui.components.encoding_dialog import ask_encodings
 from dataforge.ui.components.responsive_form import ResponsiveForm
 from dataforge.ui.components.result_panel import ResultPanel
 from dataforge.ui.components.run_bar import RunBar
@@ -32,6 +33,10 @@ class ToolPage(QWidget):
 
     run_succeeded = Signal(str, dict)
 
+    # When True the retry result is merged into the first-run result; when False the
+    # retry result alone is displayed (the subclass trims carried_result() itself).
+    RETRY_MERGES: bool = True
+
     def __init__(self, spec: ToolSpec, runner: JobRunner, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.spec = spec
@@ -39,6 +44,9 @@ class ToolPage(QWidget):
         self.setObjectName(spec.id)
         self._mode: LayoutMode | None = None
         self._snapshot: tuple[str, dict[str, Any]] | None = None
+        self._carry: Result | None = None
+        self._retrying = False
+        self._retry_snapshot: tuple[str, dict[str, Any]] | None = None
 
         self.result_panel = ResultPanel(self)
         self.run_bar = RunBar(self)
@@ -136,6 +144,14 @@ class ToolPage(QWidget):
     def set_inputs_locked(self, locked: bool) -> None:
         raise NotImplementedError
 
+    def build_retry_job(self, encodings: dict[str, str]) -> JobFn | None:
+        """Job re-running the files whose encoding was ambiguous; None = retry unsupported."""
+        return None
+
+    def carried_result(self) -> Result | None:
+        """The first-run Result held while a retry is pending or running, else None."""
+        return self._carry
+
     # -- run flow ----------------------------------------------------------------
     def _is_mine(self) -> bool:
         return self.runner.current_tool() == self.spec.id
@@ -177,12 +193,63 @@ class ToolPage(QWidget):
         self.set_inputs_locked(False)
         self.run_bar.set_running(False)
         self._snapshot = None
+        self._carry = None
+        self._retrying = False
+        self._retry_snapshot = None
+
+    def _supports_retry(self) -> bool:
+        return type(self).build_retry_job is not ToolPage.build_retry_job
+
+    def _start_retry(self, result: Result) -> bool:
+        """Ask for encodings and queue the retry job. False = nothing queued."""
+        questions = list(result.encoding_questions)
+        answers = ask_encodings(self.window(), questions)
+        for question in questions:
+            if question.path not in answers:
+                result.warn(question.path, "未选择编码，已跳过")
+        result.encoding_questions = []
+        if not answers:
+            return False
+        self._carry = result
+        job = self.build_retry_job(answers)
+        if job is None:
+            self._carry = None
+            return False
+        self._retrying = True
+        self._retry_snapshot = self._snapshot
+        QTimer.singleShot(0, lambda: self._submit_retry(job))
+        return True
+
+    def _submit_retry(self, job: JobFn) -> None:
+        if not self._retrying or self._carry is None:
+            return
+        if self.runner.submit(self.spec.id, job):
+            return
+        carried, snapshot = self._carry, self._retry_snapshot
+        self._end_run()
+        carried.warn("", "重新处理未能开始（已有任务正在运行）")
+        self._complete(carried, snapshot)
 
     def _on_finished(self, tool_id: str, result: Result) -> None:
         if tool_id != self.spec.id:
             return
+        if self._retrying and self._carry is not None:
+            carried, snapshot = self._carry, self._retry_snapshot
+            if self.RETRY_MERGES:
+                carried.extend(result)
+                result = carried
+            self._end_run()
+            self._complete(result, snapshot)
+            return
+        if result.encoding_questions and self._supports_retry():
+            self.result_panel.show_result(result)
+            if self._start_retry(result):
+                return
         snapshot = self._snapshot
         self._end_run()
+        self._complete(result, snapshot)
+
+    def _complete(self, result: Result, snapshot: tuple[str, dict[str, Any]] | None) -> None:
         self.result_panel.show_result(result)
         parent = self._info_parent()
         pos = InfoBarPosition.TOP_RIGHT
@@ -204,14 +271,20 @@ class ToolPage(QWidget):
     def _on_failed(self, tool_id: str, message: str) -> None:
         if tool_id != self.spec.id:
             return
+        carried = self._carry
         self._end_run()
+        if carried is not None:
+            self.result_panel.show_result(carried)
         InfoBar.error("失败", message, parent=self._info_parent(),
                       position=InfoBarPosition.TOP_RIGHT)
 
     def _on_cancelled(self, tool_id: str) -> None:
         if tool_id != self.spec.id:
             return
+        carried = self._carry
         self._end_run()
+        if carried is not None:
+            self.result_panel.show_result(carried)
         InfoBar.info("已取消", "", parent=self._info_parent(),
                      position=InfoBarPosition.TOP_RIGHT)
 
