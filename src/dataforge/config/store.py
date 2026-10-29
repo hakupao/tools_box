@@ -42,7 +42,11 @@ class ConfigStore:
             self._legacy = legacy_path
 
     def section(self, name: str) -> dict[str, Any]:
-        value = self._load().get(name)
+        try:
+            value = self._load().get(name)
+        except OSError:
+            logger.exception("Could not read config %s", self.path)
+            return {}
         return copy.deepcopy(value) if isinstance(value, dict) else {}
 
     def update_section(self, name: str, data: dict[str, Any]) -> bool:
@@ -68,6 +72,7 @@ class ConfigStore:
             return False
 
     def _load(self) -> dict[str, Any]:
+        """Load config; raises OSError if an existing file cannot be read."""
         source = self.path
         if not source.exists():
             if self._legacy is not None and self._legacy.exists():
@@ -75,8 +80,13 @@ class ConfigStore:
             else:
                 return {}
         try:
-            data = json.loads(source.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            text = source.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return {}
+        # other OSError propagates: a read failure is not corruption
+        try:
+            data = json.loads(text)
+        except ValueError:
             logger.warning("Unreadable config file: %s", source)
             self._backup_corrupt(source)
             return {}

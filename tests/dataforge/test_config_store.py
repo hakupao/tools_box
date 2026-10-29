@@ -63,6 +63,25 @@ class ConfigStoreTests(unittest.TestCase):
         self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
         self.assertFalse(self.path.exists())
 
+    def test_read_error_does_not_back_up(self):
+        self.path.parent.mkdir(parents=True)
+        self.path.write_text('{"a": {"x": 1}}', encoding="utf-8")
+        s = ConfigStore(self.path, self.legacy)
+        with patch.object(Path, "read_text", side_effect=PermissionError):
+            self.assertEqual(s.section("a"), {})
+        self.assertEqual(list(self.path.parent.glob("*.bak")), [])
+        self.assertEqual(s.section("a"), {"x": 1})
+
+    def test_update_does_not_overwrite_unreadable_config(self):
+        self.path.parent.mkdir(parents=True)
+        text = '{"a": {"x": 1}}'
+        self.path.write_text(text, encoding="utf-8")
+        s = ConfigStore(self.path, self.legacy)
+        with patch.object(Path, "read_text", side_effect=PermissionError):
+            self.assertFalse(s.update_section("b", {"y": 2}))
+        self.assertEqual(self.path.read_text(encoding="utf-8"), text)
+        self.assertEqual(list(self.path.parent.iterdir()), [self.path])
+
     def test_env_var_overrides_path(self):
         p = self.tmp / "env.json"
         with patch.dict(os.environ, {"DATAFORGE_STUDIO_CONFIG_PATH": str(p)}):
