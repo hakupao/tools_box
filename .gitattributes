@@ -4,3 +4,4 @@
 # Golden samples must stay byte-exact (leading/trailing spaces, LF endings)
 tests/golden/**/*.txt -text
 tests/golden/**/*.csv -text
+tests/golden/**/*.json -text

@@ -30,7 +30,7 @@ tests/golden/<tool_id>/<case>/
 比较规则（`tests/dataforge/golden.py` 的 `assert_dirs_equal`）：
 
 - 文件名集合必须一致。
-- `.csv`、`.txt`：逐字节相等。
+- `.csv`、`.txt`、`.json`：逐字节相等。
 - `.xlsx`、`.xlsm`：sheet 名称（按顺序）、两个 sheet 范围并集内每个单元格的值、`data_type`、`number_format`、合并区域（排序后的区域字符串）逐项相等。
 - `expected/` 不存在或为空，表示该样例不应产生任何输出文件（例如 CSV 转 BOM 时输入已带 BOM）。
 
@@ -41,10 +41,12 @@ tests/golden/<tool_id>/<case>/
 | `mode` | format_convert | `csv_to_xlsx`、`xlsx_to_csv`、`csv_to_bom`、`csv_unquote` |
 | `all_sheets` | format_convert | `xlsx_to_csv` 时导出全部工作表，默认 `false`（只导出第一个） |
 | `encoding` | format_convert、field_extract | 统一指定编码（如 `gbk`），默认自动识别 |
-| `encodings` | format_convert、field_extract | 按文件指定编码，键是相对 `input/` 的路径（用 `/` 分隔），值是编码名；优先于 `encoding` |
+| `encodings` | format_convert、field_extract、masking | 按文件指定编码，键是相对 `input/` 的路径（用 `/` 分隔），值是编码名；优先于 `encoding` |
 | `header_row` | field_extract | 列名行号，默认 1 |
 | `include_subfolders` | field_extract | 是否包含子文件夹，默认 `false` |
 | `overwrite_source` | format_convert | 覆盖原文件；此时把被改写的输入文件当作输出，与 `expected/` 对照 |
+| `profile` | masking | 覆盖默认配置的项（键同配置 `data_masking_pattern1` 节，例如 `{"subject_limit": 2}`）；未写的项用默认值 |
+| `date_orders` | masking | 有歧义日期列的 日/月 顺序，键为 `文件名:列名`（按第一个 `:` 拆分），值为 `dmy` 或 `mdy`，例如 `{"AE.csv:AESTDTC": "dmy"}` |
 
 其他语言的版本：把 `input/` 复制到临时目录，按 `params.json` 运行，把输出写入空目录，再按上述规则与 `expected/` 对照。
 

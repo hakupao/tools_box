@@ -33,6 +33,11 @@ class GoldenTests(unittest.TestCase):
         names = {p.name for p in golden.discover("field_extract")}
         self.assertIn("stale_summary", names)
 
+    def test_masking_has_cases(self) -> None:
+        self.assertIn("masking", golden.ADAPTERS)
+        names = [p.name for p in golden.discover("masking")]
+        self.assertEqual(names, ["rule_chain_ambiguous", "sequential_basic"])
+
     def test_golden_samples(self) -> None:
         for tool_id, adapter in golden.ADAPTERS.items():
             for case in golden.discover(tool_id):

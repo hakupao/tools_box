@@ -105,12 +105,50 @@ def _run_field_extract(input_dir: Path, output_dir: Path, params: dict[str, Any]
             raise AssertionError(f"tool reported errors: {result.errors}")
 
 
+def _run_masking(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
+    from datetime import datetime
+
+    from dataforge.dates import SlashOrder
+    from dataforge.tools.masking.execute import MaskOptions, run
+    from dataforge.tools.masking.profile import MaskingProfile
+    from dataforge.tools.masking.scan import ScanSettings, scan
+
+    profile = MaskingProfile.from_dict(params.get("profile", {}))
+    orders = {}
+    for key, value in params.get("date_orders", {}).items():
+        file_name, column = key.split(":", 1)  # file names cannot contain ":"
+        orders[(file_name, column)] = SlashOrder(value)
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / "input"
+        shutil.copytree(input_dir, work)
+        files = sorted(p for p in work.iterdir() if p.suffix.lower() == ".csv")
+        encodings = _map_encodings(params.get("encodings", {}), work)
+        settings = ScanSettings.from_profile(profile)
+        scanned = scan(files, settings, None, encodings, no_progress, CancelToken())
+        if scanned.errors:
+            raise AssertionError(f"scan reported errors: {scanned.errors}")
+        parent = Path(tmp) / "out"
+        options = MaskOptions(
+            profile=profile,
+            output_parent=parent,
+            date_orders=orders,
+            now=datetime(2026, 1, 2, 3, 4, 5),
+        )
+        result = run(scanned.data, options, no_progress, CancelToken())
+        folders = [p.name for p in parent.iterdir()]
+        if folders != ["masked_output_20260102_030405"]:
+            raise AssertionError(f"unexpected output folders: {folders}")
+        for out in result.outputs:
+            shutil.copy2(out, output_dir / out.name)
+
+
 ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "width_convert": _run_width_convert,
     "date_convert": _run_date_convert,
     "sheet_split": _run_sheet_split,
     "format_convert": _run_format_convert,
     "field_extract": _run_field_extract,
+    "masking": _run_masking,
 }
 
 
@@ -155,7 +193,7 @@ def assert_dirs_equal(test: unittest.TestCase, expected: Path, actual: Path) -> 
     for name in names_e:
         path_e, path_a = expected / name, actual / name
         suffix = path_e.suffix.lower()
-        if suffix in (".csv", ".txt"):
+        if suffix in (".csv", ".txt", ".json"):
             test.assertEqual(path_e.read_bytes(), path_a.read_bytes(), f"{name}: bytes differ")
         elif suffix in (".xlsx", ".xlsm"):
             _assert_xlsx_equal(test, path_e, path_a, name)

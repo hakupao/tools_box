@@ -1,0 +1,63 @@
+{
+  "dm_file": "DM.csv",
+  "dm_first_usubjid": "S3",
+  "subject_count": 3,
+  "subjects": [
+    "S1",
+    "S2",
+    "S3"
+  ],
+  "date_detect": {
+    "sample_size": 200,
+    "min_non_empty": 1,
+    "ratio": 0.8
+  },
+  "files": [
+    {
+      "file_name": "AE.csv",
+      "encoding": "utf-8",
+      "row_count": 6,
+      "unique_usubjid_count": 3,
+      "non_empty_fields": [
+        "USUBJID",
+        "SUBJID",
+        "STUDYID",
+        "AESEQ",
+        "AETERM",
+        "AESTDTC",
+        "AEENDTC"
+      ],
+      "empty_fields": [],
+      "date_fields": [
+        "AESTDTC",
+        "AEENDTC"
+      ]
+    },
+    {
+      "file_name": "DM.csv",
+      "encoding": "utf-8-sig",
+      "row_count": 3,
+      "unique_usubjid_count": 3,
+      "non_empty_fields": [
+        "USUBJID",
+        "SUBJID",
+        "STUDYID",
+        "INVNAM",
+        "SITEID",
+        "AGE",
+        "BRTHDTC",
+        "RFSTDTC"
+      ],
+      "empty_fields": [
+        "ICINVNAM"
+      ],
+      "date_fields": [
+        "BRTHDTC",
+        "RFSTDTC"
+      ]
+    }
+  ],
+  "ambiguous_date_columns": [],
+  "errors": [],
+  "warnings": []
+}

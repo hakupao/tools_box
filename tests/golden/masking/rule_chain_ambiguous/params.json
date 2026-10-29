@@ -1,0 +1,21 @@
+{
+  "profile": {
+    "usubjid_mode": "rule_chain",
+    "rule_chain_steps": [
+      {
+        "op": "remove_prefix",
+        "value": 4
+      },
+      {
+        "op": "prepend",
+        "value": "SKLT"
+      }
+    ],
+    "include_subjid": false,
+    "doctor_replace_enabled": false,
+    "date_detect_min_non_empty": 1
+  },
+  "date_orders": {
+    "AE.csv:AESTDTC": "dmy"
+  }
+}

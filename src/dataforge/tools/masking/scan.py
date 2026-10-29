@@ -286,7 +286,11 @@ def scan(
     return result
 
 
-def export_report(report: ScanReport, target: Path) -> Path:
+def export_report(
+    report: ScanReport,
+    target: Path,
+    date_orders: Mapping[tuple[str, str], SlashOrder] | None = None,
+) -> Path:
     if target.suffix.lower() == ".csv":
         rows = [
             [
@@ -311,7 +315,7 @@ def export_report(report: ScanReport, target: Path) -> Path:
             )
         write_csv_rows(rows, target)
     else:
-        text = json.dumps(report.to_dict(), ensure_ascii=False, indent=2) + "\n"
+        text = json.dumps(report.to_dict(date_orders), ensure_ascii=False, indent=2) + "\n"
         with atomic_path(target) as tmp:
             with open(tmp, "w", encoding="utf-8", newline="\n") as f:
                 f.write(text)

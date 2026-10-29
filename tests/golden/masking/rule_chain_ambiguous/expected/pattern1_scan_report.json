@@ -1,0 +1,66 @@
+{
+  "dm_file": "DM.csv",
+  "dm_first_usubjid": "CIRC0102",
+  "subject_count": 2,
+  "subjects": [
+    "CIRC0101",
+    "CIRC0102"
+  ],
+  "date_detect": {
+    "sample_size": 200,
+    "min_non_empty": 1,
+    "ratio": 0.8
+  },
+  "files": [
+    {
+      "file_name": "AE.csv",
+      "encoding": "cp932",
+      "row_count": 3,
+      "unique_usubjid_count": 2,
+      "non_empty_fields": [
+        "USUBJID",
+        "STUDYID",
+        "AETERM",
+        "AESTDTC"
+      ],
+      "empty_fields": [],
+      "date_fields": [
+        "AESTDTC"
+      ]
+    },
+    {
+      "file_name": "DM.csv",
+      "encoding": "utf-8-sig",
+      "row_count": 2,
+      "unique_usubjid_count": 2,
+      "non_empty_fields": [
+        "USUBJID",
+        "SUBJID",
+        "STUDYID",
+        "INVNAM",
+        "SITEID",
+        "AGE",
+        "RFSTDTC"
+      ],
+      "empty_fields": [],
+      "date_fields": [
+        "RFSTDTC"
+      ]
+    }
+  ],
+  "ambiguous_date_columns": [
+    {
+      "file_name": "AE.csv",
+      "column": "AESTDTC",
+      "ambiguous": 1,
+      "day_first_only": 1,
+      "month_first_only": 0,
+      "order": "dmy"
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "自动识别为 日文 (cp932)",
+    "AESTDTC 列有 1 个日期无法判断是 日/月 还是 月/日，请选择顺序"
+  ]
+}

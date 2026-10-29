@@ -1,0 +1,6 @@
+{
+  "profile": {
+    "subject_limit": 2,
+    "date_detect_min_non_empty": 1
+  }
+}
