@@ -25,6 +25,10 @@ class GoldenTests(unittest.TestCase):
         self.assertIn("format_convert", golden.ADAPTERS)
         self.assertEqual(len(golden.discover("format_convert")), 4)
 
+    def test_field_extract_has_cases(self) -> None:
+        self.assertIn("field_extract", golden.ADAPTERS)
+        self.assertTrue(golden.discover("field_extract"))
+
     def test_golden_samples(self) -> None:
         for tool_id, adapter in golden.ADAPTERS.items():
             for case in golden.discover(tool_id):

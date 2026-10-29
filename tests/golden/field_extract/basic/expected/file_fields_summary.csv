@@ -1,0 +1,11 @@
+﻿文件名,字段名
+a.csv,id
+a.csv,name
+a.csv,id
+a.csv,
+b.xlsx,S1: x
+b.xlsx,S1: y
+b.xlsx,S2: z
+sub/c.csv,姓名
+sub/c.csv,年龄
+sub/empty.csv,

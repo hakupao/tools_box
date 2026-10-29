@@ -74,11 +74,28 @@ def _run_format_convert(input_dir: Path, output_dir: Path, params: dict[str, Any
             raise AssertionError(f"tool reported errors: {result.errors}")
 
 
+def _run_field_extract(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
+    from dataforge.tools.field_extract import FieldOptions, run
+
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / "input"
+        shutil.copytree(input_dir, work)
+        options = FieldOptions(
+            header_row=params.get("header_row", 1),
+            include_subfolders=params.get("include_subfolders", False),
+            output_dir=output_dir,
+        )
+        result = run(work, options, no_progress, CancelToken())
+        if result.errors:
+            raise AssertionError(f"tool reported errors: {result.errors}")
+
+
 ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "width_convert": _run_width_convert,
     "date_convert": _run_date_convert,
     "sheet_split": _run_sheet_split,
     "format_convert": _run_format_convert,
+    "field_extract": _run_field_extract,
 }
 
 
