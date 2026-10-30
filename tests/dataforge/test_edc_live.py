@@ -48,6 +48,27 @@ class OpenLivePortsTests(unittest.TestCase):
                     raise RuntimeError("boom")
         uninit.assert_called_once()
 
+    def test_close_before_uninitialize(self):
+        order: list[str] = []
+        original_close = LiveExcel.close
+
+        def close(self_):
+            order.append("close")
+            original_close(self_)
+
+        with mock.patch("pythoncom.CoInitialize"), mock.patch(
+            "pythoncom.CoUninitialize", side_effect=lambda: order.append("uninit")
+        ), mock.patch("win32com.client.GetActiveObject", return_value=object()), \
+                mock.patch.object(LiveExcel, "close", close):
+            with open_live_ports():
+                pass
+        self.assertEqual(order, ["close", "uninit"])
+
+    def test_close_releases_app(self):
+        excel = LiveExcel(object())
+        excel.close()
+        self.assertIsNone(excel._app)
+
     def test_ports_wired(self):
         with mock.patch("pythoncom.CoInitialize"), mock.patch("pythoncom.CoUninitialize"), \
                 mock.patch("win32com.client.GetActiveObject", return_value=object()):

@@ -263,6 +263,25 @@ class EdcPageTests(unittest.TestCase):
         )
         self.assertIn("—— 从 A3 继续 ——", self._log(page))
 
+    def test_redo_then_continuation_fails_records_row(self) -> None:
+        self.fake.fail = [{"call": "screen.click", "nth": 8, "message": "点击失败"}]
+        self.choices = [StopChoice.REDO]
+        calls = {"n": 0}
+        real = self.open_ports.side_effect
+
+        def open_ports():
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise DataForgeError("Excel 已关闭")
+            return real()
+
+        self.open_ports.side_effect = open_ports
+        page = self._page()
+        self._run(page)
+        self.assertEqual(self.ask.call_count, 1)
+        self.assertIn("failed: 1", page.result_panel.page_text("result"))
+        self.assertIn("重做未完成：Excel 已关闭", page.result_panel.page_text("warnings"))
+
     def test_cancel_button_is_soft_stop(self) -> None:
         reached = self._block_first_click()
         self.choices = [StopChoice.END]

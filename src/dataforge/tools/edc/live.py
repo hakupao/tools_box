@@ -22,6 +22,9 @@ class LiveExcel:
     def __init__(self, app: Any) -> None:
         self._app: Any = app
 
+    def close(self) -> None:
+        self._app = None
+
     def selection(self) -> CellRef:
         selection = getattr(self._app, "Selection", None)
         cells = getattr(selection, "Cells", None) if selection is not None else None
@@ -100,6 +103,9 @@ def open_live_ports() -> Iterator[EdcPorts]:
         yield ports
     finally:
         if ports is not None:
+            close = getattr(ports.excel, "close", None)
+            if callable(close):
+                close()
             ports.excel = None  # type: ignore[assignment]
         ports = None
         app = None

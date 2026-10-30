@@ -31,7 +31,14 @@ from dataforge.tools.edc.config import (
     save_config,
 )
 from dataforge.tools.edc.live import open_live_ports
-from dataforge.tools.edc.loop import CellRef, EdcSession, Segment, StopChoice, run_segment
+from dataforge.tools.edc.loop import (
+    CellRef,
+    EdcSession,
+    RowStop,
+    Segment,
+    StopChoice,
+    run_segment,
+)
 from dataforge.tools.edc.windows import (
     WindowInfo,
     activate_window,
@@ -76,6 +83,7 @@ class EdcPage(ToolPage):
         self._store = config if config is not None else ConfigStore()
         self._cfg: EdcConfig = load_config(self._store, legacy_files())
         self._session: EdcSession | None = None
+        self._pending_redo: RowStop | None = None
         self._stop_event: threading.Event | None = None
         self._overlay: Any = None
         self._recording_hooks: tuple[Any, ...] = ()
@@ -345,6 +353,7 @@ class EdcPage(ToolPage):
             self._warn("找不到目标窗口", f"{target.title}（{target.process}）未打开，请重新选择窗口")
             return None
         self._session = None
+        self._pending_redo = None
         return self._segment_job(None, None)
 
     def _on_started(self, tool_id: str) -> None:
@@ -360,6 +369,7 @@ class EdcPage(ToolPage):
         if not isinstance(seg, Segment):
             self._stop_event = None
             return
+        self._pending_redo = None  # the continuation segment came back normally
         if self._session is None:
             self._session = EdcSession.begin(seg)
         else:
@@ -373,6 +383,8 @@ class EdcPage(ToolPage):
             choice: StopChoice = ask_stop_choice(window, seg.stop)
             nxt = session.resolve(seg.stop, choice)
             if nxt is not None:
+                if choice is StopChoice.REDO:
+                    self._pending_redo = seg.stop
                 self.keep_log_for_next_start(f"—— 从 {nxt.address()} 继续 ——")
                 self.submit_job_when_idle(self._segment_job(nxt, session.end_row), _KIND)
                 return
@@ -393,10 +405,15 @@ class EdcPage(ToolPage):
         else:
             self._warn("已结束", f"成功 {ok} 行，跳过 {skipped} 行，出错 {failed} 行")
 
-    def _drop_session(self) -> None:
+    def _drop_session(self, reason: str) -> None:
         self._stop_event = None
         session, self._session = self._session, None
+        pending, self._pending_redo = self._pending_redo, None
         if session is not None:
+            if pending is not None:  # the redo never ran: the row has no result otherwise
+                session.failed.append(
+                    dataclasses.replace(pending, reason=f"重做未完成：{reason}", by_user=False)
+                )
             self.result_panel.show_result(session.to_result())
 
     def _on_failed(self, tool_id: str, message: str) -> None:
@@ -405,7 +422,7 @@ class EdcPage(ToolPage):
             return
         self.esc_hook.stop()
         super()._on_failed(tool_id, message)
-        self._drop_session()
+        self._drop_session(message)
 
     def _on_cancelled(self, tool_id: str) -> None:
         if tool_id != self.spec.id:
@@ -413,7 +430,7 @@ class EdcPage(ToolPage):
             return
         self.esc_hook.stop()
         super()._on_cancelled(tool_id)
-        self._drop_session()
+        self._drop_session("已取消")
 
     # -- ToolPage hooks ----------------------------------------------------------------
     def capture_state(self) -> dict[str, Any]:

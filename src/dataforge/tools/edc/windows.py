@@ -13,7 +13,8 @@ import win32process
 
 from dataforge.core.errors import DataForgeError
 
-_PROCESS_QUERY_AND_READ = 0x0410  # PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
+_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000  # works across privilege levels
+_MAX_PATH_CHARS = 32768
 _GA_ROOT = 2
 _SW_RESTORE = 9
 
@@ -27,10 +28,12 @@ class WindowInfo:
 
 def find_target(target: WindowInfo, candidates: Sequence[WindowInfo]) -> WindowInfo | None:
     proc = target.process.lower()
-    same_proc = [c for c in candidates if c.process.lower() == proc]
-    for c in same_proc:
-        if c.hwnd == target.hwnd:
+    for c in candidates:
+        if c.process.lower() == proc and c.hwnd == target.hwnd:
             return c
+    if not proc:  # unknown process name (e.g. elevated): only the exact window may match
+        return None
+    same_proc = [c for c in candidates if c.process.lower() == proc]
     for c in same_proc:
         if c.title == target.title:
             return c
@@ -43,13 +46,28 @@ def _pid_of(hwnd: int) -> int:
     return win32process.GetWindowThreadProcessId(hwnd)[1]
 
 
+def _image_path(handle: object) -> str:
+    import ctypes
+    from ctypes import wintypes
+
+    query = ctypes.windll.kernel32.QueryFullProcessImageNameW
+    query.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
+                      ctypes.POINTER(wintypes.DWORD)]
+    query.restype = wintypes.BOOL
+    buffer = ctypes.create_unicode_buffer(_MAX_PATH_CHARS)
+    size = wintypes.DWORD(_MAX_PATH_CHARS)
+    if not query(int(handle), 0, buffer, ctypes.byref(size)):
+        return ""
+    return buffer.value
+
+
 def _process_name_for_pid(pid: int) -> str:
     try:
-        handle = win32api.OpenProcess(_PROCESS_QUERY_AND_READ, False, pid)
+        handle = win32api.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     except Exception:
         return ""
     try:
-        return PureWindowsPath(win32process.GetModuleFileNameEx(handle, 0)).name.lower()
+        return PureWindowsPath(_image_path(handle)).name.lower()
     except Exception:
         return ""
     finally:

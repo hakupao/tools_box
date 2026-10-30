@@ -43,6 +43,15 @@ class FindTargetTests(unittest.TestCase):
         self.assertIsNone(find_target(target, []))
 
 
+class EmptyProcessTests(unittest.TestCase):
+    def test_find_target_empty_process(self):
+        target = WindowInfo(10, "EDC", "")
+        self.assertIsNone(find_target(target, [WindowInfo(11, "EDC", "")]))
+        self.assertIsNone(find_target(target, [WindowInfo(11, "EDC", "chrome.exe")]))
+        same = WindowInfo(10, "other", "")
+        self.assertIs(find_target(target, [WindowInfo(11, "EDC", ""), same]), same)
+
+
 class ActivateTests(unittest.TestCase):
     def test_invalid_hwnd_raises(self):
         with self.assertRaises(DataForgeError) as ctx:
@@ -86,6 +95,9 @@ class WindowSmokeTests(unittest.TestCase):
         self.assertFalse(any(i.title == "edc-probe" for i in list_windows()))
         self.assertEqual(process_name(self.hwnd), found[0].process)
         self.assertEqual(process_name(0), "")
+
+    def test_process_name_own_process(self):
+        self.assertTrue(process_name(self.hwnd).startswith("python"))
 
     def test_window_at_own_window_is_none(self):
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
