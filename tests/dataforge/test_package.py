@@ -11,7 +11,7 @@ BACKEND_DIRS = ("core", "fileio", "config", "tools")
 
 class PackageTests(unittest.TestCase):
     def test_version(self) -> None:
-        self.assertEqual(dataforge.__version__, "3.0.0.dev0")
+        self.assertEqual(dataforge.__version__, "3.0.0")
 
     def test_backend_has_no_qt_imports(self) -> None:
         files = [p for d in BACKEND_DIRS for p in (PKG / d).glob("**/*.py")]

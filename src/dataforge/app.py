@@ -6,18 +6,35 @@ import os
 import sys
 
 from PySide6.QtCore import QLocale
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from qfluentwidgets import FluentTranslator
 
 from dataforge.config.recent import RecentStore
 from dataforge.config.store import ConfigStore
-from dataforge.core.logs import setup_logging
+from dataforge.core.logs import default_log_dir, setup_logging
+from dataforge.selfcheck import self_check
 from dataforge.ui.gc_guard import MainThreadGarbageCollector
 from dataforge.ui.jobs import JobRunner, wait_for_orphans
+from dataforge.ui.resources import app_icon_path
 from dataforge.ui.shell import MainWindow
 from dataforge.ui.theme import apply_theme_mode, start_system_theme_listener
 
 logger = logging.getLogger(__name__)
+
+SELF_CHECK_FLAG = "--self-check"
+
+
+def run_self_check() -> int:
+    """Import-check the bundle and write ``self_check.txt`` to the log dir (no window)."""
+    failures = self_check()
+    for failure in failures:
+        logger.error("Self-check failed: %s", failure)
+    log_dir = default_log_dir()
+    log_dir.mkdir(parents=True, exist_ok=True)
+    text = "\n".join(failures) if failures else "OK"
+    (log_dir / "self_check.txt").write_text(text + "\n", encoding="utf-8")
+    return 1 if failures else 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,7 +44,14 @@ def main(argv: list[str] | None = None) -> int:
         logging.basicConfig(level=logging.INFO)
         logger.exception("File logging unavailable; logging to stderr")
 
-    app = QApplication(sys.argv if argv is None else argv)
+    args = sys.argv if argv is None else argv
+    if SELF_CHECK_FLAG in args:
+        return run_self_check()
+
+    app = QApplication(args)
+    icon_path = app_icon_path()
+    if icon_path is not None:
+        app.setWindowIcon(QIcon(str(icon_path)))
     translator = FluentTranslator(QLocale("zh_CN"))  # Chinese button texts in fluent dialogs
     app.installTranslator(translator)  # ``translator`` stays referenced until main() returns
     gc_guard = MainThreadGarbageCollector(app)

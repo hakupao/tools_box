@@ -46,7 +46,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [InstallDelete]
-Type: filesandordirs; Name: "{app}\*"
+Type: filesandordirs; Name: "{app}\_internal"
+Type: files; Name: "{app}\{#MyAppExeName}"
 
 [Icons]
 Name: "{autoprograms}\DataForge Studio"; Filename: "{app}\{#MyAppExeName}"

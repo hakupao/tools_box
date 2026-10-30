@@ -12,6 +12,7 @@ class AppMainTests(unittest.TestCase):
         runner = order.runner
         with mock.patch.object(app, "setup_logging"), \
                 mock.patch.object(app, "QApplication") as qapp, \
+                mock.patch.object(app, "QIcon"), \
                 mock.patch.object(app, "MainThreadGarbageCollector") as guard_cls, \
                 mock.patch.object(app, "ConfigStore"), \
                 mock.patch.object(app, "apply_theme_mode"), \
@@ -32,6 +33,7 @@ class AppMainTests(unittest.TestCase):
     def test_fluent_translator_installed_and_kept_alive(self) -> None:
         with mock.patch.object(app, "setup_logging"), \
                 mock.patch.object(app, "QApplication") as qapp, \
+                mock.patch.object(app, "QIcon"), \
                 mock.patch.object(app, "FluentTranslator") as translator_cls, \
                 mock.patch.object(app, "MainThreadGarbageCollector"), \
                 mock.patch.object(app, "ConfigStore"), \

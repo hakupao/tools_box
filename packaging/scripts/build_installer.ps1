@@ -11,7 +11,7 @@ $buildOnedirScript = Join-Path $scriptDir "build_onedir.ps1"
 $installerScript = Join-Path $projectRoot "packaging\\installer\\tools_box.iss"
 $sourceDir = Join-Path $projectRoot "dist\\DataForgeStudio"
 $outputDir = Join-Path $projectRoot "dist_installer"
-$versionFile = Join-Path $projectRoot "src\\version.py"
+$versionFile = Join-Path $projectRoot "src\\dataforge\\__init__.py"
 $appIcon = Join-Path $projectRoot "assets\\icons\\favicon.ico"
 
 if (-not $SkipBuild) {
@@ -31,18 +31,18 @@ if (-not $qtPlugin) {
     throw "missing Qt platform plugin: qwindows.dll"
 }
 
-$tkdndDir = Get-ChildItem -Path $sourceDir -Recurse -Directory -Filter "tkdnd" -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $tkdndDir) {
-    throw "missing tkdnd payload directory"
+$bundledIcon = Join-Path $sourceDir "_internal\assets\icons\favicon.ico"
+if (-not (Test-Path $bundledIcon)) {
+    throw "missing bundled icon: $bundledIcon"
 }
 
 if (-not (Test-Path $appIcon)) {
     throw "missing app icon: $appIcon"
 }
 
-$versionMatch = Select-String -Path $versionFile -Pattern 'VERSION\s*=\s*"([^"]+)"' | Select-Object -First 1
+$versionMatch = Select-String -Path $versionFile -Pattern '__version__\s*=\s*"([^"]+)"' | Select-Object -First 1
 if (-not $versionMatch) {
-    throw "failed to parse VERSION from $versionFile"
+    throw "failed to parse __version__ from $versionFile"
 }
 $version = $versionMatch.Matches[0].Groups[1].Value
 

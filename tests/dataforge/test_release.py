@@ -41,5 +41,30 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("darkdetect", names)
 
 
+    def test_version_consistent(self):
+        import dataforge
+
+        self.assertEqual(dataforge.__version__, "3.0.0")
+        text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), "3.0.0")
+
+    def test_spec_has_no_removed_imports(self):
+        spec = (ROOT / "packaging/pyinstaller/tools_box_onedir.spec").read_text(encoding="utf-8")
+        # Names may appear only in the ``excludes=[...]`` list (e.g. pandas is excluded).
+        spec = re.sub(r"excludes=\[.*?\]", "", spec, flags=re.DOTALL)
+        for banned in ("tkinterdnd2", "pygetwindow", "requests", "bs4", "pandas", "src/main.py"):
+            self.assertNotIn(banned, spec)
+
+    def test_installer_keeps_side_files(self):
+        text = (ROOT / "packaging/installer/tools_box.iss").read_text(encoding="utf-8")
+        match = re.search(r"^\[InstallDelete\]\s*$(.*?)(?=^\[|\Z)", text, re.MULTILINE | re.DOTALL)
+        self.assertIsNotNone(match)
+        section = match.group(1)
+        self.assertNotIn(r"{app}\*", section)
+        self.assertIn(r"{app}\_internal", section)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,119 +1,39 @@
 # -*- mode: python ; coding: utf-8 -*-
-import platform
-import shutil
+# DataForge Studio v3 onedir build. Run via packaging/scripts/build_onedir.ps1.
 from pathlib import Path
 
-import tkinterdnd2
+from PyInstaller.utils.hooks import collect_submodules
 
-
-PROJECT_ROOT = Path.cwd()
-TEMP_TKDND_DIR = PROJECT_ROOT / "temp_tkdnd" / "tkdnd"
+PROJECT_ROOT = Path(SPECPATH).resolve().parents[1]
+SRC_DIR = PROJECT_ROOT / "src"
 APP_ICON = PROJECT_ROOT / "assets" / "icons" / "favicon.ico"
 
-
-def get_platform_dirs():
-    if platform.system() == "Windows":
-        arch = platform.architecture()[0]
-        machine = platform.machine().lower()
-        is_64 = "64" in arch or machine.endswith("64")
-        return [
-            "win-x64" if is_64 else "win-x86",
-            "win64" if is_64 else "win32",
-            "windows-x64" if is_64 else "windows-x86",
-        ]
-    return [platform.system().lower()]
-
-
-def setup_tkdnd_files():
-    possible_platform_dirs = set(get_platform_dirs())
-    tkdnd_source = Path(tkinterdnd2.__file__).parent / "tkdnd"
-
-    if TEMP_TKDND_DIR.exists():
-        shutil.rmtree(TEMP_TKDND_DIR)
-    TEMP_TKDND_DIR.mkdir(parents=True, exist_ok=True)
-
-    print(f"正在查找 tkdnd 源目录: {tkdnd_source}")
-    if not tkdnd_source.exists():
-        print(f"警告: tkdnd 源目录不存在: {tkdnd_source}")
-        return
-
-    for item in tkdnd_source.glob("*"):
-        if item.is_file():
-            shutil.copy2(item, TEMP_TKDND_DIR)
-            continue
-
-        if item.name in possible_platform_dirs:
-            print(f"找到平台目录: {item.name}")
-            for platform_file in item.glob("*"):
-                if platform_file.is_file():
-                    shutil.copy2(platform_file, TEMP_TKDND_DIR)
-            continue
-
-        shutil.copytree(item, TEMP_TKDND_DIR / item.name, dirs_exist_ok=True)
-
-
-def collect_data_files():
-    return [
-        (str(TEMP_TKDND_DIR), "tkdnd"),
-    ]
-
-
-setup_tkdnd_files()
 block_cipher = None
+
+# Pages are loaded lazily via importlib ("module:Class" in the registry), and the EDC
+# automation libraries are imported inside functions, so declare them explicitly.
+hidden_imports = (
+    collect_submodules("dataforge")
+    + collect_submodules("keyboard")
+    + collect_submodules("mouse")
+    + [
+        "pythoncom",
+        "pywintypes",
+        "win32com.client",
+        "win32gui",
+        "win32process",
+        "win32api",
+        "win32con",
+    ]
+)
 
 
 a = Analysis(
-    [str(PROJECT_ROOT / "src/main.py")],
-    pathex=[str(PROJECT_ROOT), str(PROJECT_ROOT / "src")],
+    [str(SRC_DIR / "dataforge" / "__main__.py")],
+    pathex=[str(SRC_DIR)],
     binaries=[],
-    datas=collect_data_files(),
-    hiddenimports=[
-        "tkinter",
-        "tkinterdnd2",
-        "tkinterdnd2.TkinterDnD",
-        "PySide6",
-        "PySide6.QtCore",
-        "PySide6.QtGui",
-        "PySide6.QtWidgets",
-        "PySide6.QtSvg",
-        "PySide6.QtSvgWidgets",
-        "qfluentwidgets",
-        "pandas",
-        "numpy",
-        "openpyxl",
-        "pyautogui",
-        "pygetwindow",
-        "pygetwindow._pygetwindow_win",
-        "pywintypes",
-        "pythoncom",
-        "win32api",
-        "win32con",
-        "win32com",
-        "win32com.client",
-        "win32gui",
-        "mouse",
-        "mouse._winmouse",
-        "keyboard",
-        "requests",
-        "bs4",
-        "json",
-        "pathlib",
-        "shutil",
-        "backports.tarfile",
-        "pkg_resources",
-        "jaraco.text",
-        "platformdirs",
-        # 懒加载页面模块（importlib 动态导入，需显式声明）
-        "src.gui.widgets.date_converter_page",
-        "src.gui.widgets.file_format_converter_page",
-        "src.gui.widgets.spec_workflow_page",
-        "src.gui.widgets.file_field_extractor_page",
-        "src.gui.widgets.dead_link_checker_page",
-        "src.gui.widgets.data_masking_page",
-        "src.gui.widgets.edc_site_adder_page",
-        "src.gui.widgets.fullwidth_halfwidth_converter_page",
-        "src.gui.widgets.xlsx_sheet_splitter_page",
-    ],
+    datas=[(str(APP_ICON), "assets/icons")],
+    hiddenimports=hidden_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -132,7 +52,9 @@ a = Analysis(
         "zmq",
         "docutils",
         "pytest",
-        "unittest",
+        "tkinter",
+        "pandas",
+        "numpy",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
