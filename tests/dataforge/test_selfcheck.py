@@ -80,6 +80,28 @@ class SelfCheckTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(text.splitlines(), ["pyautogui: boom", "mouse: bad"])
 
+    def test_main_self_check_result_file_unwritable(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            mock.patch.object(app, "setup_logging"),
+            mock.patch.object(app, "default_log_dir", return_value=Path(tmp)),
+            mock.patch.object(app, "self_check", return_value=[]),
+            mock.patch.object(Path, "write_text", side_effect=OSError("disk full")),
+            self.assertLogs("dataforge.app", level="ERROR"),
+        ):
+            code = app.main(["x", "--self-check"])
+        self.assertEqual(code, 1)
+
+    def test_main_self_check_log_dir_unavailable(self) -> None:
+        with (
+            mock.patch.object(app, "setup_logging"),
+            mock.patch.object(app, "default_log_dir", side_effect=OSError("denied")),
+            mock.patch.object(app, "self_check", return_value=[]),
+            self.assertLogs("dataforge.app", level="ERROR"),
+        ):
+            code = app.main(["x", "--self-check"])
+        self.assertEqual(code, 1)
+
     def test_main_sets_window_icon(self) -> None:
         with (
             mock.patch.object(app, "setup_logging"),

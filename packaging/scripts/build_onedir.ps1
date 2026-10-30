@@ -28,6 +28,12 @@ if ($Clean) {
     Remove-Item -Path (Join-Path $projectRoot "dist") -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# Fail fast, before the slow build, if dataforge is not installed in this interpreter.
+$logDir = "$(& $python -c "from dataforge.core.logs import default_log_dir; print(default_log_dir())")".Trim()
+if ($LASTEXITCODE -ne 0 -or -not $logDir) {
+    throw "failed to resolve dataforge log directory"
+}
+
 Push-Location $projectRoot
 try {
     Write-Host "[build] PyInstaller onedir build"
@@ -47,11 +53,7 @@ if (-not (Test-Path $outputExe)) {
 Write-Host "[ok] build output: $outputExe"
 
 # Self-check: the windowed exe has no stdout, so it writes self_check.txt to the log dir
-# (dataforge.core.logs.default_log_dir()).
-$logDir = (& $python -c "from dataforge.core.logs import default_log_dir; print(default_log_dir())").Trim()
-if ($LASTEXITCODE -ne 0 -or -not $logDir) {
-    throw "failed to resolve dataforge log directory"
-}
+# (dataforge.core.logs.default_log_dir(), resolved above before the build).
 $resultFile = Join-Path $logDir "self_check.txt"
 Remove-Item -Path $resultFile -Force -ErrorAction SilentlyContinue
 

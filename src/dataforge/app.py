@@ -30,10 +30,15 @@ def run_self_check() -> int:
     failures = self_check()
     for failure in failures:
         logger.error("Self-check failed: %s", failure)
-    log_dir = default_log_dir()
-    log_dir.mkdir(parents=True, exist_ok=True)
     text = "\n".join(failures) if failures else "OK"
-    (log_dir / "self_check.txt").write_text(text + "\n", encoding="utf-8")
+    try:
+        log_dir = default_log_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        (log_dir / "self_check.txt").write_text(text + "\n", encoding="utf-8")
+    except OSError:
+        # A windowed exe has no console: report via the exit code instead of crashing.
+        logger.exception("Could not write self_check.txt")
+        return 1
     return 1 if failures else 0
 
 
