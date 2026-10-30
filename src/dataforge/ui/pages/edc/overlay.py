@@ -91,6 +91,7 @@ class RecordingOverlay(QWidget):
             self._esc_hook.start()
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        self._done = True
         self._stop_hooks()
         super().closeEvent(event)
 
@@ -104,7 +105,12 @@ class RecordingOverlay(QWidget):
         self._recording = True
         self._start_btn.hide()
         self._show_prompt()
-        QTimer.singleShot(300, self._mouse_hook.start)
+        QTimer.singleShot(300, self._start_mouse)
+
+    def _start_mouse(self) -> None:
+        if self._done or not self.isVisible():
+            return
+        self._mouse_hook.start()
 
     def _show_prompt(self) -> None:
         n = len(self._steps)

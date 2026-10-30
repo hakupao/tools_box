@@ -76,17 +76,18 @@ class WindowPickerDialog(MessageBoxBase):
         self.viewLayout.addWidget(self.list_widget)
         self.yesButton.setText("确定")
         self.cancelButton.setText("取消")
-        self.list_widget.currentRowChanged.connect(self._refresh)
+        self.list_widget.itemSelectionChanged.connect(self._refresh)
         match = find_target(current, self._windows) if current is not None else None
         if match is not None:
             self.list_widget.setCurrentRow(self._windows.index(match))
         self._refresh()
 
     def _refresh(self, *_: object) -> None:
-        self.yesButton.setEnabled(self.list_widget.currentRow() >= 0)
+        self.yesButton.setEnabled(bool(self.list_widget.selectedItems()))
 
     def selected(self) -> WindowInfo | None:
-        row = self.list_widget.currentRow()
+        items = self.list_widget.selectedItems()
+        row = self.list_widget.row(items[0]) if items else -1
         return self._windows[row] if 0 <= row < len(self._windows) else None
 
 

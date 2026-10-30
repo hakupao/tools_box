@@ -86,6 +86,23 @@ class OverlayTests(unittest.TestCase):
         self.assertFalse(self.esc.is_active())
         self.assertFalse(self.overlay.isVisible())
 
+    def test_cancel_before_deferred_mouse_start_leaks_no_hook(self) -> None:
+        pending = []
+
+        class _Deferred:
+            @staticmethod
+            def singleShot(ms, fn) -> None:
+                pending.append(fn)
+
+        self.overlay.show()
+        with mock.patch.object(overlay, "QTimer", _Deferred):
+            self.overlay._start_btn.click()
+        self.esc.pressed.emit()
+        for fn in pending:
+            fn()
+        self.assertFalse(self.mouse.is_active())
+        self.assertEqual(self.ms.hooked, [])
+
     def test_recording_esc_cancels(self) -> None:
         cancelled = []
         self.overlay.cancelled.connect(lambda: cancelled.append(True))
@@ -136,6 +153,9 @@ class DialogTests(unittest.TestCase):
         self.assertIn("第 5 步「点击【查找】」", d.body_label.text())
         self.assertIn("boom", d.body_label.text())
         self.assertEqual(d.choice(), StopChoice.END)
+        texts = [d.buttonLayout.itemAt(i).widget().text() for i in range(d.buttonLayout.count())
+                 if d.buttonLayout.itemAt(i).widget() is not None]
+        self.assertEqual(texts, ["重做本行", "跳到下一行", "结束"])
         d.skipButton.click()
         self.assertEqual(d.choice(), StopChoice.SKIP)
         d.yesButton.click()
