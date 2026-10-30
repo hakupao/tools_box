@@ -60,7 +60,7 @@ python -m venv .venv
 
 ## 界面规则
 
-以下写法在 `src/dataforge/ui/` 中禁止出现（第 6 阶段验收用 grep 检查）：
+以下写法在 `src/dataforge/ui/` 中禁止出现（发版前用 grep 检查）：
 
 - 禁止 `setStyleSheet`、QSS 字符串、hex 颜色（`#RRGGBB`）。原因：它们不随主题切换，v2 就是靠几百行 QSS 强制浅色。
 - 禁止 `setTextColor(x, x)` 这种亮暗同值的写法；确实需要语义色时用 `setTextColor(亮色, 暗色)` 成对写，并集中在一个模块里定义。

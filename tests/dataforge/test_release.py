@@ -59,6 +59,23 @@ class ReleaseTests(unittest.TestCase):
         for banned in ("tkinterdnd2", "pygetwindow", "requests", "bs4", "pandas", "src/main.py"):
             self.assertNotIn(banned, spec)
 
+    def test_docs_not_stale(self):
+        self.maxDiff = None
+        stale = ("src/main.py", "src/utils", "src/gui", "tkinterdnd2", "pandas", "processEvents")
+        exempt = ("禁止", "不用", "不得", "不再", "移除")
+        paths = [ROOT / "README.md", ROOT / "AGENTS.md", ROOT / "packaging/README.md"]
+        paths += sorted((ROOT / "docs").glob("*.md"))
+        hits = []
+        for path in paths:
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for lineno, line in enumerate(lines, 1):
+                if any(word in line for word in exempt):
+                    continue
+                for term in stale:
+                    if term in line:
+                        hits.append(f"{path.relative_to(ROOT)}:{lineno}: {term}")
+        self.assertEqual(hits, [])
+
     def test_installer_keeps_side_files(self):
         text = (ROOT / "packaging/installer/tools_box.iss").read_text(encoding="utf-8")
         match = re.search(r"^\[InstallDelete\]\s*$(.*?)(?=^\[|\Z)", text, re.MULTILINE | re.DOTALL)

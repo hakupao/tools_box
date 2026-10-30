@@ -1,289 +1,128 @@
-# DataForge Studio UI 界面规范（Qt / QFluentWidgets）
+# DataForge Studio 界面规范
 
-本文档基于当前仓库已实现页面总结，可作为后续新增页面的直接参考模板。  
-覆盖范围：`src/gui/main_window.py`、`src/gui/qt_common.py`、`src/gui/widgets/*_page.py`。
-适用版本：`v2.0.2`（2026-03-24）。
+适用版本：3.0.0。
 
-## 1. 全局基线
+本规范适用于 `src/dataforge/ui/` 下的全部界面代码。它取代 v2 的界面规范：v2 那份把"强制浅色主题、hex 调色板、靠 processEvents 维持界面响应"写成了规范，v3 全部反过来，原因见各条。v2 的写法不再适用，不要参照。
 
-### 1.1 主题与字体
-- 全局固定浅色主题：`setTheme(Theme.LIGHT)`（`src/main.py`）
-- 全局禁用原生文件对话框：`QApplication.setAttribute(Qt.AA_DontUseNativeDialogs, True)`（`src/main.py`）
-- 全局字体：`app.setFont(QFont(font_family, 10))`（`src/main.py`）
-- 优先字体顺序：`Segoe UI Variable Text` -> `Segoe UI Variable Display` -> `Segoe UI` -> `Microsoft YaHei UI`
-- 等宽字体（日志/大文本）：统一用 `mono_font()`（`src/gui/qt_common.py`）
+一句话原则：**外观交给 QFluentWidgets 和系统，页面只管排版和交互。**
 
-### 1.2 颜色基线（现有项目事实标准）
-- 页面背景：`#F5F6F8`（主页、数据模糊化、EDC 配置弹窗）
-- 主卡片背景：`#FFFFFF`
-- 次级卡片 / 输入区域浅底：`#F8FAFC`、`#FBFCFE`
-- 主边框：`#E3E8EF`
-- 次边框：`#E8EDF4`、`#DCE3ED`
-- 主文本：`#0F172A` / `#1F2937` / `#334155`
-- 次文本：`#6B7280` / `#7A8190` / `#64748B`
-- 说明蓝（字段提示）：`#2563EB`（`dmFieldHint`）
-- 强调蓝（选中）：`#DDEBFF`
-- 强调青（提示）：`#0E7490`
-- 风险红：`#DC2626`
+## 1. 主题
 
-### 1.3 通用列表控件（文件列表）
-- 使用 `FileListWidget`（`src/gui/qt_common.py`）
-- 样式：
-  - 背景 `#F8FAFC`
-  - 边框 `1px solid #E3E8EF`
-  - 圆角 `10px`
-  - 选中背景 `#DDEBFF`
-- 支持拖拽文件/文件夹，支持按后缀过滤（`allowed_exts`）
+- 默认 `Theme.AUTO`，跟随 Windows 的浅色 / 深色设置。设置页可以改为"浅色"或"深色"，选择保存在配置的 `app.theme` 中。
+  - 原因：同事的系统有浅色也有深色，强制浅色在深色系统下非常刺眼，也和标题栏、文件对话框不一致。
+- 切换主题统一调用 `dataforge.ui.theme.apply_theme_mode(mode)`，`mode` 为 `auto`、`light`、`dark`。不要在别处直接调用 `setTheme`。
+- 跟随系统由 `start_system_theme_listener` 负责：守护线程监听系统主题，变化时只发信号，主线程重新应用主题。
+- 主窗口开启 Mica 效果（`setMicaEffectEnabled(True)`），在 Windows 11 上背景透出淡淡的桌面色调。
+- 文件 / 文件夹选择一律使用系统原生对话框。
+  - 原因：原生对话框自带最近位置、收藏夹、网络路径，样式也自动跟随系统主题。
+- 所有控件使用 Fluent 组件，它们会随主题自动换色：`SmoothScrollArea`、`SimpleCardWidget`、`CardWidget`、`PlainTextEdit`、`TableWidget`、`ListWidget`、`ComboBox`、`SpinBox`、`CheckBox`、`RadioButton`、`SegmentedWidget`、`MessageBoxBase`、`InfoBar`，以及 `BodyLabel`、`CaptionLabel`、`StrongBodyLabel`、`SubtitleLabel`、`TitleLabel` 等文字标签。
 
-### 1.4 滚动条样式规范（已落地）
-- 适用页面：
-  - 主界面：`src/gui/main_window.py` 中 `QWidget#home QScrollBar*`
-  - 数据模糊化：`src/gui/widgets/data_masking_page.py` 中 `QWidget#data_masking QScrollBar*`
-  - 仕样书工作流：`src/gui/widgets/spec_workflow_page.py` 中 `QWidget#spec_workflow QScrollBar*`
-- 视觉规则（两页面共用）：
-  - 轨道背景：`transparent`
-  - 滚动条厚度：纵向 `10px`、横向 `10px`
-  - 滑块圆角：`5px`
-  - 滑块颜色：默认 `#C7D3E3`、悬停 `#A9BCD6`、按下 `#92ABC9`
-  - 隐藏箭头按钮：`add-line/sub-line` 尺寸设为 `0`
-  - 分页区：`add-page/sub-page` 使用 `transparent`
-- 页面差异（保持现状）：
-  - 主界面滑块最小尺寸：`56`；纵向边距 `8 4 8 0`，横向边距 `0 8 4 8`
-  - 数据模糊化滑块最小尺寸：`52`；纵向边距 `6 3 6 0`，横向边距 `0 6 3 6`
-  - 仕样书工作流滑块最小尺寸：`52`；纵向边距 `6 3 6 0`，横向边距 `0 6 3 6`
-- 实现原则：滚动条 QSS 必须使用页面对象名作用域（如 `QWidget#home` / `QWidget#data_masking` / `QWidget#spec_workflow`），避免全局污染其它工具页
+## 2. 禁用清单
 
-### 1.5 弹窗与文件对话框规范（本轮修正重点）
-- 统一入口：
-  - 普通提示弹窗只允许使用 `show_info/show_warning/show_error/ask_yes_no`（`src/gui/qt_common.py`）
-  - 文件选择弹窗只允许使用 `select_open_file/select_open_files/select_existing_directory/select_save_file`（`src/gui/qt_common.py`）
-- 禁止项：
-  - 页面代码中直接调用 `QMessageBox.*`
-  - 页面代码中直接调用 `QFileDialog.getOpenFileName/getOpenFileNames/getExistingDirectory/getSaveFileName`
-- 弹窗统一浅色策略：
-  - 所有弹窗创建后必须执行 `_apply_light_dialog_style(...)`
-  - 同时调用 `ensure_light_title_bar(...)` 强制 Windows 标题栏浅色
-  - 全局安装 `LightTitleBarEventFilter` 作为兜底（`QEvent.Show/WinIdChange`）
-- 文件对话框样式最低要求：
-  - 项目树/列表/表格必须有可见选中态：选中背景 `#DDEBFF`、文字 `#0F172A`
-  - 分割条（`QSplitter::handle`）必须是浅色，避免深色竖条
-  - 滚动条分页区（`add-page/sub-page`）必须透明，避免深色块
-  - 角落区（`QTableCornerButton::section`）必须与表头同色
-- 图标可用性规则：
-  - `QFileDialog` 顶部导航按钮（后退/前进/上一级/新建/视图切换）必须显示图标
-  - 不要为弹窗强制切换全局样式引擎（如强制 `Fusion`），否则可能导致工具按钮图标丢失
-  - 若需美化工具按钮，仅对 `QFileDialog QToolButton` 做局部 QSS，不覆盖图标来源
+以下写法在 `src/dataforge/ui/` 中禁止出现，发版前用 grep 检查。与 [AGENTS.md](../AGENTS.md) 的"界面规则"一致。
 
-## 2. 页面布局规则（通用型页面）
+| 禁止的写法 | 原因 |
+| --- | --- |
+| 禁止 `setStyleSheet`、QSS 字符串、hex 颜色（`#RRGGBB`） | 写死的样式不会随主题切换。v2 正是靠几百行 QSS 才把界面强制成浅色，换到深色就全乱了。 |
+| 禁止 `setTextColor(x, x)` 这种亮色、暗色同值的写法 | 同一个颜色在浅色和深色背景下总有一边看不清。需要语义色时见第 3 节。 |
+| 禁止 `setFixedWidth`（图标尺寸除外）和按像素写死的宽度 | 工具页要在宽 / 中 / 窄三档宽度下自动排版，写死宽度会在窄窗口里被截断或出现横向滚动条。 |
+| 禁止 `processEvents` | 它会在事件处理中途重入，引起难以复现的问题；耗时操作一律放进后台任务（见第 6 节），界面自然保持响应。 |
+| 禁止 `AA_DontUseNativeDialogs`、`DontUseNativeDialog` 和标题栏 DWM 补丁 | 使用原生对话框，主题交给 QFluentWidgets 和系统。v2 为了强制浅色才关掉原生对话框、修改标题栏。 |
+| 禁止强制某一种主题 | 默认跟随系统，由用户在设置页决定；切换统一走 `apply_theme_mode`。 |
+| 禁止调用 keyboard 的 `unhook_all` | 它会清掉程序里所有键盘监听。EDC 的 ESC 热键只注销自己注册的那一个。 |
+| 不得混用会脱离主题的原生 Qt 控件（如 `QLabel`、`QTextEdit`、`QScrollArea`、`QMessageBox`） | 原生控件不读取 Fluent 的主题色，在深色主题下会露出浅色底或黑字。用第 1 节列出的 Fluent 组件代替。 |
 
-以下模式适用于绝大多数工具页（如 `file_format`、`spec_workflow`、`xlsx_sheet_splitter`、`file_field_extractor` 等）：
+**唯一例外：EDC 录制浮层和回放标记。** 它们是自绘的置顶半透明窗口，盖在浏览器上，与程序主题无关，必须在任何背景上都清楚可见，因此使用固定配色：
 
-### 2.1 根布局
-- `QVBoxLayout(self)`
-- 推荐边距：`(32, 28, 32, 28)`  
-  - 现有特例：`data_masking` 用 `(32, 24, 32, 24)`，`edc_site_adder` 用 `(32, 20, 32, 24)`
-- 推荐间距：`16`  
-  - 现有特例：`data_masking` 用 `14`，`edc_site_adder` 用 `12`
-- 首屏留白控制：
-  - Header 区不应挤占中上部大量空白
-  - 推荐结构：`header stretch=0`，主内容区 `stretch=1`
+- 只能用 `QColor(r, g, b, a)`，写在 `paintEvent` 或控件调色板里；
+- 仍然不得写 hex 颜色，不得调用 `setStyleSheet`；
+- 代码位置：`ui/pages/edc/overlay.py`。
 
-### 2.2 Header 区（页面头）
-- 结构：`QHBoxLayout`
-  - 左：`QVBoxLayout(title + subtitle + stretch)`
-  - 右：返回按钮（通常 `PushButton("返回主页")`）
-- 标题：
-  - 主标题：`TitleLabel`
-  - 副标题：`BodyLabel` 或 `CaptionLabel`
-  - 副标题颜色：`#6B7280`
-- 对齐：返回按钮 `Qt.AlignRight | Qt.AlignTop`
+## 3. 语义色
 
-### 2.3 操作区顺序（标准处理页）
-1. 操作按钮行（选文件 / 选文件夹 / 清空）
-2. 文件列表（`FileListWidget`，`stretch=1`）
-3. 输出路径行（左标题 + 中说明 + 右按钮）
-4. 进度条 + 进度文案
-5. 主动作按钮（`PrimaryPushButton`，左对齐）
-6. 状态文案（`CaptionLabel`）
+- 成功、警告、错误这类状态，优先用 `InfoBar.success / warning / error` 表达，不给文字上色。目前所有页面都是这样做的，没有定义任何自定义颜色。
+- 以后确实需要给文字上语义色时：
+  - 用 `setTextColor(亮色, 暗色)` 成对写，分别给浅色主题和深色主题；
+  - 颜色常量集中定义在 `src/dataforge/ui/theme.py`，页面只引用常量名，不在页面里写颜色值。
+- 主题强调色用 QFluentWidgets 自带的 `themeColor()`，不要自己写。
 
-### 2.4 对齐规则
-- 行内控件默认左对齐；尾部留白统一 `addStretch(1)`
-- 主动作按钮靠左，不居中
-- 次要按钮集中在对应行，不分散到多行
+## 4. 布局
 
-## 3. 控件语义与按钮规则
+### 4.1 外壳
 
-### 3.1 按钮层级
-- `PrimaryPushButton`：单步流程的关键动作（开始处理/转换/扫描/保存）
-- `PushButton`：导航、选择文件、清空、取消、导出等次级动作
-- 异常：`file_field_extractor_page.py` 中部分次级动作用了 `PrimaryPushButton`，建议后续新页不要沿用该例外
+- `FluentWindow`。侧边栏依次是"主页"、文件处理 / 业务 / 小工具三组工具，底部是"设置"。工具顺序和名称全部来自 `ui/registry.py` 的 `TOOLS`。
+- 页面延迟加载：第一次进入某个工具时才创建页面。页面不提供"返回主页"按钮，侧边栏已经承担这个作用。
+- 窗口最小宽度 640 px；宽度小于 1100 px 时侧边栏自动收成图标。
 
-### 3.2 文本控件
-- 日志/预览：`TextEdit` 或 `QPlainTextEdit` + `setReadOnly(True)`
-- 说明/提示：`CaptionLabel`，颜色统一次文本
-- 大段文本建议使用等宽字体增强可读性
+### 4.2 三档宽度
 
-### 3.3 进度反馈
-- 统一组合：`ProgressBar + CaptionLabel`
-- 每次处理循环中调用 `QApplication.processEvents()` 保持 UI 响应
+断点定义在 `ui/layout.py`，页面不要另写数值：
 
-## 4. 交互状态规则
+| 档位 | 窗口宽度 | 工具页的排法 |
+| --- | --- | --- |
+| 宽 | ≥ 1100 px | 左侧"输入 + 参数"卡片，右侧结果区（约 55 : 45），底部操作条 |
+| 中 | 750–1100 px | 上下排列：输入 → 参数 → 结果，底部操作条 |
+| 窄 | < 750 px | 单列；参数表单改为标签在上、输入在下；结果区折叠成一行摘要（"N 个输出 · M 个问题"），点击展开 |
 
-### 4.1 处理过程按钮状态
-- 开始执行前：禁用主动作按钮（必要时连同扫描按钮一起禁用）
-- 结束（成功/失败）后：恢复按钮可用
+`ToolPage` 在窗口尺寸变化时自动切换档位，页面不需要处理 `resizeEvent`。
 
-### 4.2 校验顺序
-- 先校验输入（文件、参数）
-- 再校验依赖条件（如规则文件、扫描结果）
-- 失败用 `show_warning/show_error`，成功用 `show_info`
+### 4.3 参数表单：ResponsiveForm
 
-### 4.3 拖拽规则
-- 支持拖拽的页面必须实现：
-  - `setAcceptDrops(True)`
-  - `dragEnterEvent`
-  - `dropEvent`
-- 复杂页面（如 `data_masking`）需要按当前模式限制拖拽生效区域
+- 所有参数用 `ResponsiveForm.add_row(标签, 控件, 提示)` 添加，不要自己写 `QGridLayout` 或 `QFormLayout`。
+- 宽、中两档是"标签 | 输入"两列，提示文字在输入下方；窄档改为单列。
+- 某个参数只在特定条件下有效时，用 `set_row_visible(控件, 是否显示)` 整行显示或隐藏。
 
-## 5. DataMasking 页面专项规范
+### 4.4 结果区：三个标签页
 
-文件：`src/gui/widgets/data_masking_page.py`  
-该页面是项目内“复杂多模块页”的标准参考。
+结果区固定为三个标签页，由 `ResultPanel` 提供：
 
-### 5.1 页面结构分层
-- 顶层：Header + Mode Row + ScrollArea
-- 中层：`QStackedWidget(dmPatternStack)` 切换 Pattern1/Pattern2
-- Pattern1：5 个步骤卡片串联（输入 -> 扫描 -> 配置 -> 执行 -> 预览）
-- Pattern2：占位说明卡片（只读）
+| 标签页 | 内容 |
+| --- | --- |
+| 结果 (N) | 生成的文件路径，以及统计数字 |
+| 警告 (N) | 警告、出错的文件，以及需要选择编码的文件 |
+| 日志 | 运行期间的日志，实时追加 |
 
-### 5.2 样式命名与对象命名规则
-- 页面级样式挂在根组件：`QWidget#data_masking`
-- 滚动条样式同样使用页面作用域：`QWidget#data_masking QScrollBar*`
-- 卡片命名：
-  - 主卡片：`dmCard`
-  - 子卡片：`dmSubCard`
-- 文本语义命名：
-  - `dmSectionTitle`（区块标题）
-  - `dmFormLabel` / `dmSubFormLabel`（表单标签）
-  - `dmMuted`（弱文本）
-  - `dmFieldHint`（字段提示，蓝色）
-  - `dmAlertNote` / `dmRequired`（警示文本）
-  - `dmSubtle` / `dmAccent`（强调提示）
+### 4.5 滚动区
 
-### 5.3 尺寸与表单对齐硬规则
-- `FORM_LABEL_WIDTH = 120`
-- `FORM_FIELD_WIDTH = 180`
-- 表单控件最小高度：`34`
-- `QFormLayout`：
-  - Label 左对齐
-  - Form 左上对齐
-  - 水平间距 `10`
-  - 垂直间距 `8`
-- 标签固定宽度（min=max=120），保证多卡片横向齐线
-- 输入域统一固定宽度（默认 `180`），备注文本在其右侧
-- DM 双字段并排行（人名/施设）额外规则：
-  - `DM_PAIR_LEFT_LABEL_WIDTH = FORM_LABEL_WIDTH + 2`（首个输入框起始位与普通行对齐）
-  - `DM_PAIR_RIGHT_LABEL_OFFSET = 40`（`人名替换值/施设替换值` 标签整体右移）
-  - `DM_PAIR_FIELD_WIDTH = FORM_FIELD_WIDTH`（两侧 textbox 与“年龄字段”等宽）
-  - 尾部 `启用替换` 复选框使用 `addStretch(1)` 后右对齐
+- 用 `SmoothScrollArea`。
+- `setWidget()` 会打开内容控件的 `autoFillBackground`，放进滚动区后要对内容控件和 `viewport()` 调用 `setAutoFillBackground(False)`，否则深色主题下会露出浅色底。
 
-### 5.4 可复用构建方法（新增复杂页建议复用同思路）
-- `_create_card(title, subtitle)`：统一主卡片外观与标题层
-- `_style_form_layout(form)`：统一表单间距与对齐
-- `_form_label(text, submodule=False)`：统一标签宽度/字体/缩进
-- `_input_with_note(widget, note, required=False, ...)`：输入+提示+必填标识
-- `_paired_dm_fields(...)`：DM 专属双字段并排行（字段 + 替换值 + 启用开关）
-- `_checkbox_field(checkbox, note=None)`：复选框与输入行对齐
+## 5. 交互
 
-### 5.5 步骤化流程状态机规则
-- 文件或扫描参数改动后必须 `_invalidate_scan()`：
-  - 清空扫描结果
-  - 禁用执行按钮
-  - 更新状态提示
-- 执行前必须校验：
-  1. 文件存在
-  2. 已扫描且无错误
-  3. 当前配置签名与扫描时一致（防止“扫后改参直接跑”）
-- `process_btn` 默认禁用，仅在扫描通过后可用
+- **结果提示一律用 InfoBar**，显示在窗口右上角（`InfoBarPosition.TOP_RIGHT`），父对象用页面所在的窗口。完成、部分失败、未生成文件、失败、已取消都用 InfoBar，不弹模态框。
+- **模态对话框只用于需要用户做决定的场景**：
+  - 勾选"覆盖原文件"后开始运行前的二次确认；
+  - 编码有歧义时选择编码；
+  - EDC 某一行停下后选择"重做本行 / 跳到下一行 / 结束"；
+  - 任务运行中关闭窗口时的确认。
+- 对话框用 Fluent 的 `MessageBox` / `MessageBoxBase`。`MessageBox` 先经过 `components/confirm.py` 的 `use_chinese_buttons()` 把按钮改为"确定 / 取消"。用完在 `exec()` 返回后调用 `deleteLater()`。
+- **运行时锁定输入**：任务开始时 `ToolPage` 调用页面的 `set_inputs_locked(True)`，输入区和参数区不可编辑；结束后解锁。切换侧边栏不受限制，任务在后台继续。
+- 全局同一时间只运行一个任务。其他工具在运行时，本页主按钮不可用，并显示"<工具名> 正在运行"。
+- 主按钮写具体动作，例如"开始转换"、"开始拆分"，用 `run_bar.primary_button().setText()` 设置。
+- 输入不全时（例如没选文件），用 `InfoBar.warning` 说明缺什么，不开始运行。
+- 文件输入用 `FileInputCard`（支持拖放、选择文件、选择文件夹、清空），文件夹输入用 `FolderPicker`，输出位置用 `OutputLocationField`，编码选择用 `EncodingField`。
 
-### 5.6 防误操作细节（复杂表单推荐）
-- `NoWheelSpinBox/NoWheelDoubleSpinBox/NoWheelComboBox`：禁用滚轮改值
-- 高风险字段用红色提示（`dmAlertNote` + `dmRequired`）
-- 高级参数默认折叠（“显示扫描参数”）
-- DM 专属设置中：
-  - `人名字段 + 人名替换值` 与 `施设字段 + 施设替换值` 同行展示
-  - 每行尾部有 `启用替换` 复选框（默认勾选）
-  - 取消勾选后即使 DM 对应字段非空也不替换，输出原值
+## 6. 后台任务与线程
 
-## 6. EDC 页面专项规范（当前实现）
+- 所有耗时工作通过全局唯一的 `JobRunner` 提交，不得自己创建线程或 `QThread`，也禁止用 `processEvents` 代替后台任务。
+- 任务函数里不得创建 QObject、不得操作控件、不得调用 `gc.collect()`，只能通过返回值和进度回调把结果带回主线程。
+- 每个 QObject 都要有父对象，或者显式 `deleteLater()`。
+- 系统钩子线程（EDC 的鼠标、键盘监听，跟随系统主题的监听）里的回调只发信号，不直接改界面。
 
-文件：`src/gui/widgets/edc_site_adder_page.py`
+详细机制见 [开发文档的"后台任务"](开发文档.md#5-后台任务)。
 
-- 页面布局：
-  - 顶部更紧凑边距 `(32, 20, 32, 24)`
-  - 主内容左右比例 `3:1`（即 75% : 25%，使用说明 : 处理日志）
-  - 降低顶部留白，优先保证“使用说明”主体尽早进入可视区域
-- 配置弹窗：
-  - 使用浅色风格（`QDialog#edcConfigDialog`）
-  - 表格、表头、选中态、行号区统一浅色
-  - 表格支持交替行底色
+## 7. 新页面检查清单
 
-## 7. 新增页面落地清单（直接照做）
+提交新页面或修改页面前逐项检查：
 
-1. 新建 `src/gui/widgets/<tool>_page.py`，类名 `<Tool>Page(QWidget)`  
-2. `setObjectName("<tool_id>")`，与主窗口注册 ID 保持一致  
-3. 用“通用型页面布局”搭建：Header -> Action Row -> FileList -> Output Row -> Progress -> Primary Action -> Status  
-4. 副标题和状态说明使用 `#6B7280/#7A8190` 这组弱文本色  
-5. 文件列表优先使用 `FileListWidget`（不要重复造样式）  
-6. 主动作只保留一个 `PrimaryPushButton`  
-7. 处理期间禁用主动作按钮，结束后恢复  
-8. 需要拖拽时实现 `setAcceptDrops + dragEnterEvent + dropEvent`  
-9. 注册到 `src/gui/main_window.py` 的 `TOOL_PAGE_REGISTRY`  
-10. 如页面复杂度接近 `data_masking`，按“卡片 + 子卡片 + 固定表单宽度 + 步骤状态机”实现
-11. 页面存在滚动区域时，按“1.4 滚动条样式规范”添加作用域化滚动条 QSS
-12. 涉及弹窗/文件选择时，严格按“1.5 弹窗与文件对话框规范”走 `qt_common` 封装
-
-## 8. 回归检查清单（弹窗/对话框）
-
-每次修改弹窗或文件对话框样式后，至少手工验证以下场景：
-1. 数据模糊化页点击“保存配置”，弹窗标题栏浅色、文字对齐正常、无卡死
-2. 数据模糊化页点击“选择文件/选择文件夹/选择输出路径”，文件对话框为浅色
-3. 文件对话框中选中一行时，高亮明显（`#DDEBFF`）且文字可读
-4. 文件对话框顶部导航按钮图标可见，不出现“只有按钮轮廓无图标”
-5. 文件对话框滚动条、分割条、角落区无深色块
-6. Windows 深色系统主题下运行时，以上表现保持一致
-
-## 9. 推荐模板（简版骨架）
-
-```python
-class NewToolPage(QWidget):
-    def __init__(self, main_window) -> None:
-        super().__init__()
-        self.setObjectName("new_tool")
-        self.main_window = main_window
-        self._build_ui()
-
-    def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(16)
-
-        header = QHBoxLayout()
-        left = QVBoxLayout()
-        left.addWidget(TitleLabel("新工具"))
-        subtitle = BodyLabel("一句话描述")
-        subtitle.setTextColor("#6B7280", "#6B7280")
-        left.addWidget(subtitle)
-        left.addStretch(1)
-        back_btn = PushButton("返回主页")
-        back_btn.clicked.connect(lambda: self.main_window.switch_to(self.main_window.home_interface))
-        header.addLayout(left, stretch=1)
-        header.addWidget(back_btn, alignment=Qt.AlignRight | Qt.AlignTop)
-        layout.addLayout(header)
-
-        # 其余区域按“操作行 -> 文件列表 -> 输出 -> 进度 -> 主动作 -> 状态”扩展
-```
-
----
-
-如后续要做统一视觉重构，建议先把本规范里的颜色和尺寸提取到单独 `theme.py`（Qt 版本）再让页面按 token 引用，避免散落硬编码。
+- [ ] 在 `ui/registry.py` 的 `TOOLS` 中登记，名称、简介只写在这里。
+- [ ] 文件类工具继承 `ToolPage`，输入、参数用 `add_section()` 放进卡片，参数用 `ResponsiveForm`。
+- [ ] 窗口拉到 640、900、1300 px 宽时排版都正常，没有横向滚动条，没有被截断的控件。
+- [ ] 浅色、深色两种主题下都看一遍，没有浅色底块、看不清的文字。
+- [ ] `grep` 检查本页没有禁用清单中的写法：`setStyleSheet`、`#` 开头的颜色值、`setFixedWidth`、`processEvents`（此项禁止）、`DontUseNativeDialog`、`unhook_all`。
+- [ ] 没有原生 Qt 控件（EDC 浮层除外）。
+- [ ] 结果和错误都用 InfoBar 提示；模态对话框只用于需要确认的场景，用完 `deleteLater()`。
+- [ ] 运行时输入区、参数区被锁定，结束后解锁。
+- [ ] 耗时工作都在 `build_job()` 返回的任务函数里，任务函数不碰控件。
+- [ ] `capture_state()` / `restore_state()` 能恢复"最近使用"中的输入和参数；输入文件已不存在时只恢复参数。
+- [ ] `test_shell_smoke.py` 和本页的页面测试通过。

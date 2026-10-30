@@ -2,6 +2,18 @@
 
 每个工具一份规则说明（`docs/tools/<tool_id>.md`），写法与语言无关，以后 C#/Rust 版本可直接照着实现，并用同一组标准样例对照。
 
+| tool_id | 工具 | 规则说明 | 标准样例 |
+| --- | --- | --- | --- |
+| `format_convert` | 格式转换 | [format_convert.md](format_convert.md) | `tests/golden/format_convert/` |
+| `sheet_split` | 工作表拆分 | [sheet_split.md](sheet_split.md) | `tests/golden/sheet_split/` |
+| `field_extract` | 获取字段 | [field_extract.md](field_extract.md) | `tests/golden/field_extract/` |
+| `masking` | 数据模糊化 | [masking.md](masking.md) | `tests/golden/masking/` |
+| `edc` | EDC 站点添加 | [edc_site_adder.md](edc_site_adder.md) | `tests/golden/edc/` |
+| `date_convert` | 日期转换 | [date_convert.md](date_convert.md) | `tests/golden/date_convert/` |
+| `width_convert` | 全角转半角 | [width_convert.md](width_convert.md) | `tests/golden/width_convert/` |
+
+接口签名见 [API 文档](../API文档.md)。
+
 ## 规则说明模板
 
 1. 输入：支持的文件类型、读取方式。
