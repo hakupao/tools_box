@@ -57,6 +57,14 @@ TOOLS: tuple[ToolSpec, ...] = (
         page="dataforge.ui.pages.masking.page:MaskingPage",
     ),
     ToolSpec(
+        id="edc",
+        name="EDC 站点添加",
+        description="录制点击位置，从 Excel 逐行回放",
+        group=ToolGroup.BUSINESS,
+        icon=FluentIcon.ROBOT,
+        page="dataforge.ui.pages.edc.page:EdcPage",
+    ),
+    ToolSpec(
         id="date_convert",
         name="日期转换",
         description="文本中的日期转为 ISO 8601",

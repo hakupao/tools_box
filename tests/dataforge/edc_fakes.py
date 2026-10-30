@@ -9,6 +9,7 @@ exact format:
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from dataforge.tools.edc.loop import CellRef, EdcPorts
@@ -89,11 +90,13 @@ class FakePorts:
         start_row: int,
         fail: list[dict[str, Any]] | None = None,
         esc_after: int | None = None,
+        on_call: Callable[[str], None] | None = None,
     ) -> None:
         self.cells = dict(cells)
         self.start_row = start_row
         self.fail = list(fail or [])
         self.esc_after = esc_after
+        self.on_call = on_call  # called with the action name before each recorded call
         self.trace: list[str] = []
         self._counts: dict[str, int] = {}
         self._ports = EdcPorts(
@@ -114,6 +117,8 @@ class FakePorts:
         self._record("sleep", f"sleep {format(seconds, 'g')}")
 
     def _record(self, call: str, line: str) -> None:
+        if self.on_call is not None:
+            self.on_call(call)
         self.trace.append(line)
         n = self._counts.get(call, 0) + 1
         self._counts[call] = n

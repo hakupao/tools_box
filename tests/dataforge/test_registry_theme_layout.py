@@ -25,6 +25,7 @@ class RegistryTests(unittest.TestCase):
                 "sheet_split",
                 "field_extract",
                 "masking",
+                "edc",
                 "date_convert",
                 "width_convert",
             ],
@@ -36,12 +37,17 @@ class RegistryTests(unittest.TestCase):
 
     def test_business_group(self) -> None:
         business = [t for t in TOOLS if t.group is ToolGroup.BUSINESS]
-        self.assertEqual([t.id for t in business], ["masking"])
+        self.assertEqual([t.id for t in business], ["masking", "edc"])
         spec = business[0]
         self.assertEqual(spec.name, "数据模糊化")
         self.assertEqual(spec.description, "SDTM Pattern1：扫描 → 配置 → 执行")
         self.assertIs(spec.icon, FluentIcon.HIDE)
         self.assertEqual(spec.page, "dataforge.ui.pages.masking.page:MaskingPage")
+        edc = business[1]
+        self.assertEqual(edc.name, "EDC 站点添加")
+        self.assertEqual(edc.description, "录制点击位置，从 Excel 逐行回放")
+        self.assertIs(edc.icon, FluentIcon.ROBOT)
+        self.assertEqual(edc.page, "dataforge.ui.pages.edc.page:EdcPage")
 
     def test_get_tool(self) -> None:
         spec = get_tool("date_convert")

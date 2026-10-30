@@ -481,6 +481,32 @@ class AuxJobTests(unittest.TestCase):
         self.assertEqual(bar.warning.call_args.args[:2], ("无法开始", "已有任务正在运行"))
         self.assertEqual(page._job_kind, "run")
 
+    def test_refused_submit_drops_keep_log_separator(self) -> None:
+        gate = threading.Event()
+        self.gates.append(gate)
+
+        def blocker(progress, token) -> Result:
+            gate.wait(5)
+            return Result()
+
+        page = _AuxPage(get_tool("date_convert"), self.runner)
+        page.keep_log_for_next_start("—— 继续 ——")
+        self.assertTrue(self.runner.submit("width_convert", blocker))
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar"):
+            self.assertFalse(page.submit_job(blocker, "scan"))
+        self.assertIsNone(page._keep_log_separator)
+        gate.set()
+        wait_until(lambda: not self.runner.is_busy())
+        page.result_panel.append_log("旧行")
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar"):
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: len(page.aux_calls) == 1)
+            wait_until(lambda: not self.runner.is_busy())
+        log = page.result_panel.page_text("log")
+        self.assertNotIn("—— 继续 ——", log)
+        self.assertNotIn("旧行", log)
+        shiboken6.delete(page)
+
     def test_hook_can_queue_next_job_when_idle(self) -> None:
         for _ in range(10):
             page = _AuxPage(get_tool("date_convert"), self.runner)

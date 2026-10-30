@@ -211,6 +211,7 @@ class ToolPage(QWidget):
                 self._snapshot = (self.summary(), self.capture_state())
             return True
         self._job_kind = previous
+        self._keep_log_separator = None  # must not leak into a later, unrelated start
         InfoBar.warning("无法开始", "已有任务正在运行", parent=self._info_parent(),
                         position=InfoBarPosition.TOP_RIGHT)
         return False
