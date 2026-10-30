@@ -63,7 +63,8 @@ class ReleaseTests(unittest.TestCase):
         self.maxDiff = None
         stale = ("src/main.py", "src/utils", "src/gui", "tkinterdnd2", "pandas", "processEvents")
         exempt = ("禁止", "不用", "不得", "不再", "移除")
-        paths = [ROOT / "README.md", ROOT / "AGENTS.md", ROOT / "packaging/README.md"]
+        paths = [ROOT / "README.md", ROOT / "README_CN.md", ROOT / "AGENTS.md"]
+        paths.append(ROOT / "packaging/README.md")
         paths += sorted((ROOT / "docs").glob("*.md"))
         hits = []
         for path in paths:
