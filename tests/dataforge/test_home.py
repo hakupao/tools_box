@@ -38,6 +38,13 @@ class HomePageTests(unittest.TestCase):
         self.page = HomePage(TOOLS, self.recent, lambda i, s: self.opened.append((i, s)))
         self.addCleanup(self.page.deleteLater)
 
+    def test_scroll_body_does_not_paint_background(self):
+        # autoFill would paint the light palette under white dark-theme text.
+        from qfluentwidgets import SmoothScrollArea
+
+        scroll = self.page.findChild(SmoothScrollArea)
+        self.assertFalse(scroll.widget().autoFillBackground())
+
     def test_unknown_tool_entries_hidden(self):
         self.recent.add("dead_link", "x", {})
         self.recent.add("date_convert", "y", {"a": 1})

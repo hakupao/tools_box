@@ -60,6 +60,8 @@ class HomePage(QWidget):
         scroll.enableTransparentBackground()  # before setWidget: keeps cards opaque
         body = QWidget()
         scroll.setWidget(body)
+        # setWidget() turns autoFill on, which paints the light palette under dark-theme text.
+        body.setAutoFillBackground(False)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
