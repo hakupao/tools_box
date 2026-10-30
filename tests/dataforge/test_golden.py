@@ -38,6 +38,14 @@ class GoldenTests(unittest.TestCase):
         names = [p.name for p in golden.discover("masking")]
         self.assertEqual(names, ["rule_chain_ambiguous", "sequential_basic"])
 
+    def test_edc_has_cases(self) -> None:
+        self.assertIn("edc", golden.ADAPTERS)
+        names = [p.name for p in golden.discover("edc")]
+        self.assertEqual(
+            names,
+            ["basic_three_rows", "esc_then_end", "failure_skip_then_redo", "limit_and_whitespace"],
+        )
+
     def test_golden_samples(self) -> None:
         for tool_id, adapter in golden.ADAPTERS.items():
             for case in golden.discover(tool_id):

@@ -1,0 +1,15 @@
+excel.selection -> A2
+excel.text A2
+excel.text A3
+excel.text A4
+excel.text A2
+clipboard.copy SITE-1
+sleep 0.1
+window.activate
+sleep 0.1
+screen.click 241 212
+sleep 0.3
+screen.click 1137 460
+sleep 0.3
+== stop A2 step 6: 已按 ESC 停止 -> end
+failed A2 step 6

@@ -142,6 +142,60 @@ def _run_masking(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> N
             shutil.copy2(out, output_dir / out.name)
 
 
+def _run_edc(input_dir: Path, output_dir: Path, params: dict[str, Any]) -> None:
+    """Drive run_segment + EdcSession with FakePorts and write the action trace."""
+    import threading
+
+    from dataforge.tools.edc.config import EdcConfig
+    from dataforge.tools.edc.loop import (
+        CellRef,
+        EdcSession,
+        Segment,
+        StopChoice,
+        StopFlag,
+        run_segment,
+    )
+    from dataforge.tools.edc.windows import WindowInfo
+    from tests.dataforge.edc_fakes import FakePorts
+
+    fake = FakePorts(
+        {int(row): text for row, text in params["cells"].items()},
+        params["start_row"],
+        fail=params.get("fail"),
+        esc_after=params.get("esc_after"),
+    )
+    config = EdcConfig(
+        max_loops=params["max_loops"],
+        step_delay=params["step_delay"],
+        target_window=WindowInfo(1, "EDC", "chrome.exe"),
+    )
+    choices = iter(params.get("choices", []))
+
+    def segment(start: CellRef | None, end_row: int | None, stop: StopFlag) -> Segment:
+        result = run_segment(config, fake.ports(), start, end_row, stop, no_progress, CancelToken())
+        return result.data
+
+    seg = segment(None, None, fake.stop_flag())  # esc_after only applies to the first segment
+    session = EdcSession.begin(seg)
+    while seg.stop is not None:
+        choice = next(choices, "end")
+        stop = seg.stop
+        fake.trace.append(
+            f"== stop {stop.cell.address()} step {stop.step}: {stop.reason} -> {choice}"
+        )
+        nxt = session.resolve(stop, StopChoice(choice))
+        if nxt is None:
+            break
+        seg = segment(nxt, session.end_row, threading.Event())
+        session.absorb(seg)
+
+    lines = list(fake.trace)
+    lines += [f"succeeded {d.cell.address()} {d.value}" for d in session.done]
+    lines += [f"skipped {s.cell.address()} step {s.step}" for s in session.skipped]
+    lines += [f"failed {s.cell.address()} step {s.step}" for s in session.failed]
+    (output_dir / "trace.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+
+
 ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "width_convert": _run_width_convert,
     "date_convert": _run_date_convert,
@@ -149,6 +203,7 @@ ADAPTERS: dict[str, Callable[[Path, Path, dict], None]] = {
     "format_convert": _run_format_convert,
     "field_extract": _run_field_extract,
     "masking": _run_masking,
+    "edc": _run_edc,
 }
 
 

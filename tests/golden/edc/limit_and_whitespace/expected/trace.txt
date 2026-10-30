@@ -1,0 +1,51 @@
+excel.selection -> A2
+excel.text A2
+excel.text A3
+excel.text A2
+clipboard.copy SITE-1
+sleep 0.1
+window.activate
+sleep 0.1
+screen.click 241 212
+sleep 0.5
+screen.click 1137 460
+sleep 0.5
+screen.click 817 409
+sleep 0.05
+screen.paste
+sleep 0.5
+screen.click 1040 406
+sleep 0.5
+screen.click 699 471
+sleep 0.5
+screen.click 1121 758
+sleep 0.5
+screen.click 1038 728
+sleep 0.5
+excel.focus A3
+sleep 0.1
+excel.text A3
+clipboard.copy SITE-2
+sleep 0.1
+window.activate
+sleep 0.1
+screen.click 241 212
+sleep 0.5
+screen.click 1137 460
+sleep 0.5
+screen.click 817 409
+sleep 0.05
+screen.paste
+sleep 0.5
+screen.click 1040 406
+sleep 0.5
+screen.click 699 471
+sleep 0.5
+screen.click 1121 758
+sleep 0.5
+screen.click 1038 728
+sleep 0.5
+excel.focus A4
+sleep 0.1
+succeeded A2 SITE-1
+succeeded A3 SITE-2

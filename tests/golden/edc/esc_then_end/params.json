@@ -1,0 +1,14 @@
+{
+  "cells": {
+    "2": "SITE-1",
+    "3": "SITE-2"
+  },
+  "start_row": 2,
+  "max_loops": 100,
+  "step_delay": 0.3,
+  "fail": null,
+  "esc_after": 12,
+  "choices": [
+    "end"
+  ]
+}

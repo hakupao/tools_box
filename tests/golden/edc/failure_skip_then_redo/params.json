@@ -1,0 +1,29 @@
+{
+  "cells": {
+    "1": "SITE-1",
+    "2": "SITE-2",
+    "3": "SITE-3"
+  },
+  "start_row": 1,
+  "max_loops": 100,
+  "step_delay": 0.3,
+  "fail": [
+    {
+      "call": "screen.click",
+      "nth": 12,
+      "message": "boom",
+      "exc": null
+    },
+    {
+      "call": "window.activate",
+      "nth": 3,
+      "message": "找不到目标窗口：EDC（chrome.exe）",
+      "exc": "DataForgeError"
+    }
+  ],
+  "esc_after": null,
+  "choices": [
+    "skip",
+    "redo"
+  ]
+}

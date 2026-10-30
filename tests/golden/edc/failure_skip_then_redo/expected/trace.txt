@@ -1,0 +1,81 @@
+excel.selection -> A1
+excel.text A1
+excel.text A2
+excel.text A3
+excel.text A4
+excel.text A1
+clipboard.copy SITE-1
+sleep 0.1
+window.activate
+sleep 0.1
+screen.click 241 212
+sleep 0.3
+screen.click 1137 460
+sleep 0.3
+screen.click 817 409
+sleep 0.05
+screen.paste
+sleep 0.3
+screen.click 1040 406
+sleep 0.3
+screen.click 699 471
+sleep 0.3
+screen.click 1121 758
+sleep 0.3
+screen.click 1038 728
+sleep 0.3
+excel.focus A2
+sleep 0.1
+excel.text A2
+clipboard.copy SITE-2
+sleep 0.1
+window.activate
+sleep 0.1
+screen.click 241 212
+sleep 0.3
+screen.click 1137 460
+sleep 0.3
+screen.click 817 409
+sleep 0.05
+screen.paste
+sleep 0.3
+screen.click 1040 406
+sleep 0.3
+screen.click 699 471
+== stop A2 step 8: boom -> skip
+excel.text A3
+excel.text A4
+excel.text A3
+clipboard.copy SITE-3
+sleep 0.1
+window.activate
+== stop A3 step 3: 找不到目标窗口：EDC（chrome.exe） -> redo
+excel.text A3
+excel.text A4
+excel.text A3
+clipboard.copy SITE-3
+sleep 0.1
+window.activate
+sleep 0.1
+screen.click 241 212
+sleep 0.3
+screen.click 1137 460
+sleep 0.3
+screen.click 817 409
+sleep 0.05
+screen.paste
+sleep 0.3
+screen.click 1040 406
+sleep 0.3
+screen.click 699 471
+sleep 0.3
+screen.click 1121 758
+sleep 0.3
+screen.click 1038 728
+sleep 0.3
+excel.focus A4
+sleep 0.1
+excel.text A4
+succeeded A1 SITE-1
+succeeded A3 SITE-3
+skipped A2 step 8

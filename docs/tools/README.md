@@ -47,6 +47,9 @@ tests/golden/<tool_id>/<case>/
 | `overwrite_source` | format_convert | 覆盖原文件；此时把被改写的输入文件当作输出，与 `expected/` 对照 |
 | `profile` | masking | 覆盖默认配置的项（键同配置 `data_masking_pattern1` 节，例如 `{"subject_limit": 2}`）；未写的项用默认值 |
 | `date_orders` | masking | 有歧义日期列的 日/月 顺序，键为 `文件名:列名`（按第一个 `:` 拆分），值为 `dmy` 或 `mdy`，例如 `{"AE.csv:AESTDTC": "dmy"}` |
+| `cells`、`start_row`、`max_loops`、`step_delay`、`fail`、`esc_after`、`choices` | edc | EDC 站点添加的模拟运行参数，含义见 [edc_site_adder.md 的"动作序列格式"](edc_site_adder.md#动作序列格式) |
+
+EDC 站点添加（tool_id `edc`，规则说明 `edc_site_adder.md`）会实际操作鼠标和键盘，标准样例不用真实屏幕：没有 `input/`，用假执行接口按 `params.json` 模拟 Excel 单元格、出错和 ESC，期望输出 `expected/trace.txt` 是完整的动作序列加汇总。
 
 其他语言的版本：把 `input/` 复制到临时目录，按 `params.json` 运行，把输出写入空目录，再按上述规则与 `expected/` 对照。
 
