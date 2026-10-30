@@ -32,7 +32,13 @@ from dataforge.tools.edc.config import (
 )
 from dataforge.tools.edc.live import open_live_ports
 from dataforge.tools.edc.loop import CellRef, EdcSession, Segment, StopChoice, run_segment
-from dataforge.tools.edc.windows import WindowInfo, find_target, list_windows, window_at
+from dataforge.tools.edc.windows import (
+    WindowInfo,
+    activate_window,
+    find_target,
+    list_windows,
+    window_at,
+)
 from dataforge.ui.components.responsive_form import ResponsiveForm
 from dataforge.ui.components.tool_page import ToolPage
 from dataforge.ui.jobs import JobFn, JobRunner
@@ -74,6 +80,7 @@ class EdcPage(ToolPage):
         self._overlay: Any = None
         self._recording_hooks: tuple[Any, ...] = ()
         self._first_capture = False
+        self._restore_maximized = False
         self._markers: list[Any] = []
         self.esc_hook = EscHook(parent=self)
 
@@ -227,8 +234,18 @@ class EdcPage(ToolPage):
         self._success("已恢复默认值", "目标窗口未改变")
 
     # -- recording ---------------------------------------------------------------------
+    def _bring_to_front(self) -> None:
+        """Raise the main window and ask Windows to focus it (the foreground lock may refuse)."""
+        window = self.window()
+        window.raise_()
+        try:
+            activate_window(int(window.winId()))
+        except Exception:
+            pass
+
     def _start_recording(self, keys: Sequence[str]) -> None:
-        if self._overlay is not None:
+        # Two live ESC hooks share keyboard's per-key state, so never record during a run.
+        if self._overlay is not None or self._running_here():
             return
         mouse_hook = MouseClickHook(parent=self)
         esc_hook = EscHook(parent=self)
@@ -239,7 +256,9 @@ class EdcPage(ToolPage):
         overlay.captured.connect(self._on_captured)
         overlay.finished.connect(self._on_recording_finished)
         overlay.cancelled.connect(self._on_recording_cancelled)
-        self.window().showMinimized()
+        window = self.window()
+        self._restore_maximized = window.isMaximized()
+        window.showMinimized()
         overlay.show()
 
     def _on_captured(self, key: str, x: int, y: int) -> None:
@@ -265,8 +284,11 @@ class EdcPage(ToolPage):
         if overlay is not None:
             overlay.deleteLater()
         window = self.window()
-        window.showNormal()
-        window.activateWindow()
+        if self._restore_maximized:
+            window.showMaximized()
+        else:
+            window.showNormal()
+        self._bring_to_front()
 
     def _on_recording_finished(self) -> None:
         self._end_recording()
@@ -309,6 +331,9 @@ class EdcPage(ToolPage):
         return _KIND
 
     def build_job(self) -> JobFn | None:
+        if self._overlay is not None:
+            self._warn("正在录制", "请先完成或取消录制")
+            return None
         target = self._cfg.target_window
         if target is None:
             self._warn(
@@ -342,9 +367,9 @@ class EdcPage(ToolPage):
         session = self._session
         if seg.stop is not None:
             window = self.window()
-            window.showNormal()
-            window.raise_()
-            window.activateWindow()
+            if window.isMinimized():
+                window.showNormal()
+            self._bring_to_front()
             choice: StopChoice = ask_stop_choice(window, seg.stop)
             nxt = session.resolve(seg.stop, choice)
             if nxt is not None:

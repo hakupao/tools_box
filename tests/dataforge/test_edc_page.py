@@ -79,6 +79,7 @@ class EdcPageTests(unittest.TestCase):
         mock.patch(f"{PAGE}.list_windows", return_value=[TARGET]).start()
         self.window_at = mock.patch(f"{PAGE}.window_at", return_value=None).start()
         self.ask = mock.patch(f"{PAGE}.ask_stop_choice", side_effect=ask).start()
+        self.activate = mock.patch(f"{PAGE}.activate_window").start()
         mock.patch(f"{PAGE}.EscHook", _FakeEsc).start()
         mock.patch(f"{PAGE}.MouseClickHook", _FakeMouse).start()
         self.bar = mock.patch(f"{PAGE}.InfoBar").start()
@@ -105,8 +106,11 @@ class EdcPageTests(unittest.TestCase):
         if target is not None:
             save_config(self.config, EdcConfig(target_window=target))
         page = EdcPage(get_tool("edc"), self.runner, config=self.config)
-        for name in ("showMinimized", "showNormal", "activateWindow", "raise_"):
+        for name in ("showMinimized", "showNormal", "showMaximized", "activateWindow", "raise_"):
             setattr(page, name, mock.Mock(name=name))
+        page.isMinimized = mock.Mock(return_value=False)
+        page.isMaximized = mock.Mock(return_value=False)
+        page.winId = mock.Mock(return_value=4242)
         self._pages.append(page)
         return page
 
@@ -228,9 +232,21 @@ class EdcPageTests(unittest.TestCase):
             ["excel.selection -> A2"],
         )
         self.assertEqual(self.open_ports.call_count, 2)
-        page.showNormal.assert_called()
-        page.activateWindow.assert_called()
+        page.showNormal.assert_not_called()  # not minimized: keep the window state
+        page.raise_.assert_called()
+        self.activate.assert_called_with(4242)
         self.assertFalse(page.esc_hook.is_active())
+
+    def test_stop_restores_minimized_window(self) -> None:
+        self.fake.fail = [{"call": "screen.click", "nth": 8, "message": "点击失败"}]
+        self.choices = [StopChoice.END]
+        page = self._page()
+        page.isMinimized.return_value = True
+        self.activate.side_effect = DataForgeError("无法激活目标窗口")  # refused: still asks
+        self._run(page)
+        page.showNormal.assert_called_once()
+        self.activate.assert_called_once_with(4242)
+        self.assertEqual(self.ask.call_count, 1)
 
     def test_redo_then_end(self) -> None:
         self.fake.fail = [
@@ -352,8 +368,10 @@ class EdcPageTests(unittest.TestCase):
                          {"hwnd": 7, "title": "EDC", "process": "chrome.exe"})
         self.assertIn("EDC", page.target_label.text())
         self.window_at.assert_called_once_with(100, 200)
-        page.showNormal.assert_called()
-        page.activateWindow.assert_called()
+        page.showNormal.assert_called_once()
+        page.showMaximized.assert_not_called()
+        page.raise_.assert_called()
+        self.activate.assert_called_with(4242)
         self.assertEqual(self.bar.success.call_args.args[:2], ("录制完成", ""))
         self.assertIsNone(page._overlay)
 
@@ -371,6 +389,58 @@ class EdcPageTests(unittest.TestCase):
         page.showNormal.assert_called()
         self.assertEqual(self.bar.info.call_args.args[:2], ("已取消录制", ""))
         self.assertIsNone(page._overlay)
+
+    def test_recording_restores_maximized_window(self) -> None:
+        overlays: list[_FakeOverlay] = []
+
+        def make(*args):
+            overlays.append(_FakeOverlay(*args))
+            return overlays[-1]
+
+        mock.patch(f"{PAGE}.RecordingOverlay", side_effect=make).start()
+        page = self._page()
+        page.isMaximized.return_value = True
+        page.record_button.click()
+        page.isMaximized.return_value = False  # minimized now
+        page.isMinimized.return_value = True
+        overlays[0].finished.emit()
+        page.showMaximized.assert_called_once()
+        page.showNormal.assert_not_called()
+        self.activate.assert_called_with(4242)
+
+    def test_run_blocked_while_recording(self) -> None:
+        overlays: list[_FakeOverlay] = []
+
+        def make(*args):
+            overlays.append(_FakeOverlay(*args))
+            return overlays[-1]
+
+        mock.patch(f"{PAGE}.RecordingOverlay", side_effect=make).start()
+        page = self._page()
+        page.record_button.click()
+        page.run_bar.start_requested.emit()
+        self.assertFalse(self.runner.is_busy())
+        self.open_ports.assert_not_called()
+        self.assertIsNone(page._stop_event)
+        self.assertEqual(self.bar.warning.call_args.args[:2], ("正在录制", "请先完成或取消录制"))
+        self.assertFalse(page.esc_hook.is_active())
+        overlays[0].cancelled.emit()
+
+    def test_recording_refused_while_running(self) -> None:
+        make = mock.Mock(side_effect=_FakeOverlay)
+        mock.patch(f"{PAGE}.RecordingOverlay", make).start()
+        reached = self._block_first_click()
+        self.choices = [StopChoice.END]
+        page = self._page()
+        page.run_bar.start_requested.emit()
+        wait_until(reached.is_set)
+        self.assertFalse(page.record_button.isEnabled())
+        page._start_recording(STEP_KEYS)  # bypassing the locked buttons is still refused
+        make.assert_not_called()
+        self.assertIsNone(page._overlay)
+        page.run_bar.cancel_button().click()
+        self._release()
+        wait_until(lambda: self._ended(page))
 
     def test_single_step_rerecord_only_that_step(self) -> None:
         overlays: list[_FakeOverlay] = []

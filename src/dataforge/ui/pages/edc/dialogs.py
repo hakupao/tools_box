@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QWidget
 from qfluentwidgets import (
     BodyLabel,
@@ -52,6 +54,13 @@ class StopDialog(MessageBoxBase):
 
     def choice(self) -> StopChoice:
         return self._choice
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        # ESC is also the run's stop key: a second press must not silently choose END.
+        if event.key() == Qt.Key.Key_Escape:
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 def ask_stop_choice(parent: QWidget, stop: RowStop) -> StopChoice:

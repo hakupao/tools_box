@@ -206,7 +206,22 @@ class RunSegmentTests(unittest.TestCase):
     def test_esc_before_first_step(self):
         fake = FakePorts({2: "A"}, start_row=2, esc_after=1)
         seg = _run(fake, stop=fake.stop_flag())
-        self.assertEqual(seg.stop, RowStop(_cell(2), "", 1, "已按 ESC 停止", True))
+        # step 1 reads the cell before honouring ESC, so the stop carries the value
+        self.assertEqual(seg.stop, RowStop(_cell(2), "A", 1, "已按 ESC 停止", True))
+        self.assertEqual(fake.trace[-1], "excel.text A2")
+
+    def test_esc_during_last_row_ends_on_empty_cell(self):
+        fake = FakePorts({2: "SITE-1"}, start_row=2)
+
+        class _AfterFocus:
+            def is_set(self) -> bool:
+                return any(line.startswith("excel.focus") for line in fake.trace)
+
+        seg = _run(fake, stop=_AfterFocus())
+        self.assertEqual(seg.reached, "empty")
+        self.assertIsNone(seg.stop)
+        self.assertEqual(seg.done, [RowDone(_cell(2), "SITE-1")])
+        self.assertEqual(fake.trace[-1], "excel.text A3")
 
     def test_hard_cancel_raises(self):
         fake = FakePorts({2: "A"}, start_row=2)

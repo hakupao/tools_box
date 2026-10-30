@@ -166,13 +166,17 @@ def _process_row(
         except Exception as exc:
             raise _RowStopped(RowStop(cell, value, number, _reason(exc), False)) from exc
 
-    def read() -> None:
-        nonlocal value
+    # Step 1 reads before honouring ESC: an empty cell ends the segment even after an ESC
+    # pressed during the previous row, and a non-empty stop carries the value.
+    cancel.raise_if_cancelled()
+    try:
         value = ports.excel.text(cell).strip()
-
-    step(1, read)
+    except Exception as exc:
+        raise _RowStopped(RowStop(cell, value, 1, _reason(exc), False)) from exc
     if not value:
         return ""
+    if stop.is_set():
+        raise _RowStopped(RowStop(cell, value, 1, ESC_REASON, True))
     addr = cell.address()
     progress(index, total, f"Excel {addr}：{value}")
     logger.info("EDC 第 %d/%d 行 Excel %s：%s", index, total, addr, value)

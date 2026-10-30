@@ -166,6 +166,29 @@ class DialogTests(unittest.TestCase):
         self.assertEqual(err.title_label.text(), "处理出错")
         drain_deleted(d, err)
 
+    def test_stop_dialog_ignores_escape(self) -> None:
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        class _Recording(StopDialog):
+            def __init__(self, *args) -> None:
+                super().__init__(*args)
+                self.done_codes: list[int] = []
+
+            def done(self, code: int) -> None:  # record instead of fading out
+                self.done_codes.append(code)
+
+        d = _Recording(self.parent, self.stop)
+        d.show()
+        QTest.keyClick(d, Qt.Key.Key_Escape)
+        QTest.keyClick(d.yesButton, Qt.Key.Key_Escape)  # bubbles up from a focused child
+        self.assertEqual(d.done_codes, [])
+        self.assertEqual(d.choice(), StopChoice.END)
+        d.cancelButton.click()  # the explicit 结束 button still closes the dialog
+        self.assertEqual(len(d.done_codes), 1)
+        self.assertEqual(d.choice(), StopChoice.END)
+        drain_deleted(d)
+
     def test_window_picker(self) -> None:
         w1 = WindowInfo(1, "Mail", "outlook.exe")
         w2 = WindowInfo(2, "EDC", "chrome.exe")
