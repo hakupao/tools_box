@@ -49,6 +49,8 @@ class ReleaseTests(unittest.TestCase):
         match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
         self.assertIsNotNone(match)
         self.assertEqual(match.group(1), "3.0.0")
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [3.0.0]", changelog)
 
     def test_spec_has_no_removed_imports(self):
         spec = (ROOT / "packaging/pyinstaller/tools_box_onedir.spec").read_text(encoding="utf-8")
