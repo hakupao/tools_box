@@ -48,6 +48,7 @@ class ToolPage(QWidget):
         self._retrying = False
         self._retry_snapshot: tuple[str, dict[str, Any]] | None = None
         self._job_kind = "run"
+        self._keep_log_separator: str | None = None
 
         self.result_panel = ResultPanel(self)
         self.run_bar = RunBar(self)
@@ -182,6 +183,10 @@ class ToolPage(QWidget):
 
         self.runner.busy_changed.connect(on_busy_changed)
 
+    def keep_log_for_next_start(self, separator: str) -> None:
+        """Next job start keeps the result panel and appends ``separator`` to the log."""
+        self._keep_log_separator = separator
+
     # -- run flow ----------------------------------------------------------------
     def _is_mine(self) -> bool:
         return self.runner.current_tool() == self.spec.id
@@ -219,7 +224,10 @@ class ToolPage(QWidget):
             return
         self.set_inputs_locked(True)
         self.run_bar.set_running(True)
-        if self._retrying:
+        separator, self._keep_log_separator = self._keep_log_separator, None
+        if separator is not None:
+            self.result_panel.append_log(separator)
+        elif self._retrying:
             self.result_panel.append_log("—— 重新处理编码有歧义的文件 ——")
         else:
             self.result_panel.clear()

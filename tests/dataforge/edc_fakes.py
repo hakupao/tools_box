@@ -123,3 +123,41 @@ class FakePorts:
                 name = entry.get("exc")
                 exc_type = type(name, (Exception,), {}) if name else RuntimeError
                 raise exc_type(message)
+
+
+class FakeKeyboardBackend:
+    """Records on_press_key/unhook and keeps the callback; deliberately no unhook_all."""
+
+    def __init__(self) -> None:
+        self.registered: list[str] = []
+        self.unhooked: list[Any] = []
+        self.callback: Any = None
+
+    def on_press_key(self, key: str, callback: Any) -> object:
+        self.registered.append(key)
+        self.callback = callback
+        return object()
+
+    def unhook(self, handle: Any) -> None:
+        self.unhooked.append(handle)
+
+
+class FakeMouseBackend:
+    """Records hook/unhook and keeps the callback; get_position is configurable."""
+
+    def __init__(self, position: tuple[int, int] = (10, 20)) -> None:
+        self.position = position
+        self.hooked: list[Any] = []
+        self.unhooked: list[Any] = []
+        self.callback: Any = None
+
+    def hook(self, callback: Any) -> Any:
+        self.hooked.append(callback)
+        self.callback = callback
+        return callback
+
+    def unhook(self, handle: Any) -> None:
+        self.unhooked.append(handle)
+
+    def get_position(self) -> tuple[int, int]:
+        return self.position

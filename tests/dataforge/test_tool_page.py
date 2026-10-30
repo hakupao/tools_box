@@ -119,6 +119,27 @@ class ToolPageTests(unittest.TestCase):
         self.assertEqual(page.locked, [True, False])
         self.assertTrue(page.run_bar.primary_button().isEnabled())
 
+    def test_keep_log_for_next_start(self) -> None:
+        def fn(progress, token) -> Result:
+            logging.getLogger("dataforge.test").info("旧行")
+            return Result()
+
+        page = self._page(fn=fn)
+        page.run_bar.start_requested.emit()
+        wait_until(lambda: "旧行" in page.result_panel.page_text("log"))
+        wait_until(lambda: not self.runner.is_busy())
+        page.keep_log_for_next_start("—— 继续 ——")
+        page.run_bar.start_requested.emit()
+        wait_until(lambda: "—— 继续 ——" in page.result_panel.page_text("log"))
+        wait_until(lambda: not self.runner.is_busy())
+        text = page.result_panel.page_text("log")
+        self.assertIn("旧行", text)
+        self.assertIn("—— 继续 ——", text)
+        page.run_bar.start_requested.emit()
+        wait_until(lambda: "—— 继续 ——" not in page.result_panel.page_text("log"))
+        wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(page.result_panel.page_text("log").count("旧行"), 1)
+
     def test_recent_snapshot_taken_at_start(self) -> None:
         gate = threading.Event()
         self.gates.append(gate)
