@@ -176,6 +176,8 @@ class ToolPage(QWidget):
             if busy:
                 return
             self.runner.busy_changed.disconnect(on_busy_changed)
+            if self.runner.is_closing():
+                return  # the app is exiting; dropping the follow-up is silent by design
             self.submit_job(fn, kind)  # warns if another tool grabbed the runner first
 
         self.runner.busy_changed.connect(on_busy_changed)

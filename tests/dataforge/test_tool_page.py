@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 import unittest
 from pathlib import Path
 from typing import Any
@@ -480,6 +481,32 @@ class AuxJobTests(unittest.TestCase):
             self.assertEqual(bar.method_calls, [])
             self.assertEqual(page.locked[-1], False)
             shiboken6.delete(page)  # stale pages would also hear the next runs
+
+    def test_when_idle_follow_up_dropped_on_shutdown(self) -> None:
+        page = _AuxPage(get_tool("date_convert"), self.runner)
+        started = threading.Event()
+        follow_ups: list[int] = []
+
+        def blocker(progress, token) -> Result:
+            started.set()
+            while True:
+                token.raise_if_cancelled()
+                time.sleep(0.01)
+
+        def follow(progress, token) -> Result:
+            follow_ups.append(1)
+            return Result()
+
+        with mock.patch("dataforge.ui.components.tool_page.InfoBar") as bar:
+            self.assertTrue(self.runner.submit("date_convert", blocker))
+            self.assertTrue(started.wait(5))
+            page.submit_job_when_idle(follow, "scan")
+            self.runner.shutdown()
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(bar.method_calls, [])
+        self.assertEqual(follow_ups, [])
+        self.assertFalse(self.runner.is_busy())
+        shiboken6.delete(page)
 
     def test_aux_then_run_emits_run_succeeded_once(self) -> None:
         page = _AuxPage(get_tool("date_convert"), self.runner)

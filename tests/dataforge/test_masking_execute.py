@@ -461,6 +461,37 @@ class OutputTests(ExecuteBase):
         self.assertTrue(str(cm.exception).startswith("AE.csv：读取失败"))
         self.assertEqual(list(self.out_parent.iterdir()), [])
 
+    def test_stale_scan_error_type(self):
+        from dataforge.tools.masking.execute import StaleScanError
+
+        profile = MaskingProfile(subject_limit=2)
+        report = self._default(profile)
+        (self.dir / "AE.csv").unlink()
+        with self.assertRaises(StaleScanError) as cm:
+            self._run(report, profile)
+        self.assertIsInstance(cm.exception, DataForgeError)
+        self.assertIn("请重新扫描", str(cm.exception))
+
+    def test_write_oserror_wrapped(self):
+        from dataforge.tools.masking import execute as execute_mod
+
+        profile = MaskingProfile(subject_limit=2)
+        report = self._default(profile)
+        real = execute_mod.write_csv_rows
+        calls: list[int] = []
+
+        def flaky(rows, target):
+            calls.append(1)
+            if len(calls) == 2:
+                raise PermissionError("denied")
+            return real(rows, target)
+
+        with mock.patch.object(execute_mod, "write_csv_rows", side_effect=flaky):
+            with self.assertRaises(DataForgeError) as cm:
+                self._run(report, profile)
+        self.assertTrue(str(cm.exception).startswith("无法写入输出文件"), str(cm.exception))
+        self.assertEqual(list(self.out_parent.iterdir()), [])
+
     def test_validation_errors(self):
         profile = MaskingProfile(subject_limit=0)
         report = self._default(profile)

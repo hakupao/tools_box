@@ -40,6 +40,18 @@ class ScanBase(unittest.TestCase):
         )
 
 
+class SelectFilesTests(ScanBase):
+    def test_select_files_filters_and_dedups(self):
+        from dataforge.tools.masking.scan import select_files
+
+        a = self._write("a.CSV", "USUBJID\nS1\n")
+        b = self._write("b.txt", "x")
+        missing = self.dir / "不存在.csv"
+        folder = self.dir / "文件夹.csv"
+        folder.mkdir()
+        self.assertEqual(select_files([a, a, b, missing, folder]), [a])
+
+
 class TableTests(ScanBase):
     def test_helpers(self):
         self.assertTrue(is_blank("  "))

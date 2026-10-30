@@ -282,6 +282,7 @@ class MaskingPageTests(unittest.TestCase):
 
     def test_execute_failure_asking_for_rescan_discards_report(self) -> None:
         from dataforge.core.errors import DataForgeError
+        from dataforge.tools.masking.execute import StaleScanError
 
         dm = self._write("DM.csv", DM_TEXT)
         ae = self._write("AE.csv", AE_TEXT)
@@ -299,7 +300,7 @@ class MaskingPageTests(unittest.TestCase):
         self.assertEqual(self._text(page), "开始处理")
 
         self.tool_bar.error.reset_mock()
-        stale = DataForgeError("AE.csv：读取失败，请重新扫描（x）")
+        stale = StaleScanError("AE.csv：读取失败，请重新扫描（x）")
         with mock.patch(f"{PAGE}.execute.run", side_effect=stale):
             page.run_bar.start_requested.emit()
             wait_until(lambda: self.tool_bar.error.called)
@@ -308,6 +309,44 @@ class MaskingPageTests(unittest.TestCase):
         self.assertIsNone(page._report)
         self.assertEqual(self._text(page), "开始扫描")
         self.assertEqual(page.summary_lines(), ["扫描通过后显示"])
+
+    def test_stale_detected_by_type(self) -> None:
+        from dataforge.tools.masking.execute import StaleScanError
+
+        dm = self._write("DM.csv", DM_TEXT)
+        ae = self._write("AE.csv", AE_TEXT)
+        page = self._page()
+        page.file_input.set_files([dm, ae])
+        self._scan(page)
+        self.assertEqual(self._text(page), "开始处理")
+        with mock.patch(f"{PAGE}.execute.run", side_effect=StaleScanError("x")):
+            page.run_bar.start_requested.emit()
+            wait_until(lambda: self.tool_bar.error.called)
+            wait_until(lambda: not self.runner.is_busy())
+        self.assertIsNone(page._report)
+        self.assertEqual(self._text(page), "开始扫描")
+
+    def test_restore_defaults_feedback(self) -> None:
+        page = self._page()
+        page.restore_defaults_button.click()
+        self.bar.success.assert_called_once()
+        self.assertEqual(self.bar.success.call_args.args[:2], ("已恢复默认值", "下次执行时保存"))
+
+    def test_orders_kept_on_rescan(self) -> None:
+        from dataforge.dates import SlashOrder
+
+        dm = self._write("DM.csv", DM_TEXT)
+        ae = self._write("AE.csv", AE_AMBIGUOUS_TEXT)
+        page = self._page()
+        page.file_input.set_files([dm, ae])
+        self._scan(page)
+        page.view.order_combos()[0][1].setCurrentIndex(1)
+        first = page._report
+        page.view.rescan_button.click()
+        wait_until(lambda: page._report is not first and page._report is not None)
+        wait_until(lambda: not self.runner.is_busy())
+        self.assertEqual(page.view.orders(), {("AE.csv", "AESTDTC"): SlashOrder.DAY_FIRST})
+        self.assertNotIn("还有 1 个日期列需要选择 日/月 顺序", page.summary_lines())
 
     def test_encoding_question_unanswered_keeps_report(self) -> None:
         dm = self._write("DM.csv", DM_TEXT)

@@ -1,6 +1,7 @@
 """Data masking tool page: scan the SDTM files, configure, then execute."""
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,12 @@ from dataforge.config.store import ConfigStore
 from dataforge.core.errors import DataForgeError
 from dataforge.core.result import Result
 from dataforge.tools.masking import execute
-from dataforge.tools.masking.execute import MaskOptions, describe_plan, missing_orders
+from dataforge.tools.masking.execute import (
+    MaskOptions,
+    StaleScanError,
+    describe_plan,
+    missing_orders,
+)
 from dataforge.tools.masking.profile import (
     LEGACY_FILE_NAME,
     MaskingProfile,
@@ -25,6 +31,7 @@ from dataforge.tools.masking.scan import (
     export_report,
     scan,
     scan_signature,
+    select_files,
 )
 from dataforge.ui.components.encoding_dialog import ask_encodings
 from dataforge.ui.components.encoding_field import EncodingField
@@ -57,6 +64,7 @@ class MaskingPage(ToolPage):
         self._config = config if config is not None else ConfigStore()
         self._report: ScanReport | None = None
         self._encodings: dict[str, str] = {}
+        self._stale_event: threading.Event | None = None  # set by the current run job
 
         self.file_input = FileInputCard("SDTM CSV 文件", (".csv",), parent=self)
         self.add_section("输入", self.file_input)
@@ -117,11 +125,7 @@ class MaskingPage(ToolPage):
     # -- state helpers ---------------------------------------------------------------
     def _scan_paths(self) -> list[Path]:
         """The files scan() will read (same filter), so signatures compare like for like."""
-        paths: list[Path] = []
-        for path in self.file_input.files():
-            if path.suffix.lower() == ".csv" and path.is_file() and path not in paths:
-                paths.append(path)
-        return paths
+        return select_files(self.file_input.files())
 
     def _scan_inputs(self) -> tuple[list[Path], ScanSettings, str | None, dict[str, str]]:
         settings = ScanSettings.from_profile(self.profile_form.profile())
@@ -170,6 +174,8 @@ class MaskingPage(ToolPage):
 
     def _on_restore_defaults(self) -> None:
         self.profile_form.set_profile(MaskingProfile())
+        InfoBar.success("已恢复默认值", "下次执行时保存", parent=self._info_parent(),
+                        position=InfoBarPosition.TOP_RIGHT)
 
     def _on_rescan_requested(self) -> None:
         job = self._build_scan_job()
@@ -224,8 +230,15 @@ class MaskingPage(ToolPage):
             self._warn("配置未保存", "配置保存失败，本次仍按当前设置执行")
         options = MaskOptions(profile, self.output_field.output_dir(), dict(orders))
 
+        stale = threading.Event()
+        self._stale_event = stale
+
         def job(progress, token):
-            return execute.run(report, options, progress, token)
+            try:
+                return execute.run(report, options, progress, token)
+            except StaleScanError:
+                stale.set()
+                raise
 
         return job
 
@@ -275,8 +288,9 @@ class MaskingPage(ToolPage):
 
     def _on_failed(self, tool_id: str, message: str) -> None:
         was_run = tool_id == self.spec.id and self._job_kind == "run"
+        stale = self._stale_event
         super()._on_failed(tool_id, message)
-        if was_run and "请重新扫描" in message:
+        if was_run and stale is not None and stale.is_set():
             self._invalidate()  # the files changed since the scan; the report is stale
 
     def capture_state(self) -> dict[str, Any]:

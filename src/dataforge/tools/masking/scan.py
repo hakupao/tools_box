@@ -157,6 +157,17 @@ def _is_date_column(values: list[str], settings: ScanSettings) -> bool:
     return hits / len(sample) >= threshold
 
 
+def select_files(paths: Sequence[Path]) -> list[Path]:
+    """The existing ``.csv`` files among ``paths``, de-duplicated, in the given order."""
+    files: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path.suffix.lower() == ".csv" and path.is_file() and path not in seen:
+            seen.add(path)
+            files.append(path)
+    return files
+
+
 def scan(
     paths: Sequence[Path],
     settings: ScanSettings,
@@ -177,12 +188,7 @@ def scan(
         warnings.append(message)
         result.warn(name, message)
 
-    files: list[Path] = []
-    seen: set[Path] = set()
-    for path in paths:
-        if path.suffix.lower() == ".csv" and path.is_file() and path not in seen:
-            seen.add(path)
-            files.append(path)
+    files = select_files(paths)
 
     report = ScanReport(
         files=[],

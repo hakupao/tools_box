@@ -157,6 +157,11 @@ class JobRunnerTests(unittest.TestCase):
         self.assertFalse(self.runner.is_busy())
         self.assertNotIn("started", self._names())
 
+    def test_is_closing_after_shutdown(self):
+        self.assertFalse(self.runner.is_closing())
+        self.runner.shutdown()
+        self.assertTrue(self.runner.is_closing())
+
     def test_pending_follow_up_cannot_start_during_shutdown(self):
         started = threading.Event()
         follow_ups: list[bool] = []

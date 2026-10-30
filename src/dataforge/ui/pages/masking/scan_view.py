@@ -67,14 +67,18 @@ class ScanResultView(QWidget):
 
     # -- public API ------------------------------------------------------------------
     def show_report(self, report: ScanReport | None) -> None:
+        kept = self._choices()
         self._report = report
         self._fill_status(report)
         self._fill_table(report)
-        self._fill_orders(report)
+        self._fill_orders(report, kept)
         self._refresh_enabled()
 
     def report(self) -> ScanReport | None:
         return self._report
+
+    def _choices(self) -> dict[tuple[str, str], int]:
+        return {key: combo.currentIndex() for key, _, combo in self._orders}
 
     def orders(self) -> dict[tuple[str, str], SlashOrder]:
         chosen: dict[tuple[str, str], SlashOrder] = {}
@@ -128,7 +132,9 @@ class ScanResultView(QWidget):
                 self.table.setItem(row, col, QTableWidgetItem(value))
         self.table.setVisible(bool(files))
 
-    def _fill_orders(self, report: ScanReport | None) -> None:
+    def _fill_orders(
+        self, report: ScanReport | None, kept: dict[tuple[str, str], int] | None = None
+    ) -> None:
         while self._orders_layout.count():
             item = self._orders_layout.takeAt(0)
             widget = item.widget()
@@ -141,6 +147,9 @@ class ScanResultView(QWidget):
             label = f"{column.file_name} · {column.column}（{column.ambiguous} 个无法判断）"
             combo = ComboBox(row)
             combo.addItems([text for text, _ in _ORDER_CHOICES])
+            previous = (kept or {}).get((column.file_name, column.column), 0)
+            if previous > 0:  # same file/column as before: keep the choice, emit nothing
+                combo.setCurrentIndex(previous)
             combo.currentIndexChanged.connect(self._on_order_changed)
             line = QHBoxLayout(row)
             line.setContentsMargins(0, 0, 0, 0)

@@ -185,6 +185,17 @@ def _set_cells(
                 row[index] = value
 
 
+class StaleScanError(DataForgeError):
+    """A scanned file changed or vanished after the scan; the report must be redone."""
+
+
+def _write_output(rows: Sequence[Sequence[str]], target: Path) -> None:
+    try:
+        write_csv_rows(rows, target)
+    except OSError as exc:
+        raise DataForgeError(f"无法写入输出文件 {target.name}（{exc}）") from exc
+
+
 class _Run:
     def __init__(self, report: ScanReport, options: MaskOptions, result: Result) -> None:
         self.report = report
@@ -198,11 +209,11 @@ class _Run:
         try:
             table = read_table(fs.path, fs.encoding)
         except (DataForgeError, OSError) as exc:  # EncodingError is a DataForgeError
-            raise DataForgeError(f"{fs.file_name}：读取失败，请重新扫描（{exc}）") from exc
+            raise StaleScanError(f"{fs.file_name}：读取失败，请重新扫描（{exc}）") from exc
         header = table.header
         uids = _find_columns(header, "USUBJID")
         if not uids:
-            raise DataForgeError(f"{fs.file_name}：读取失败，请重新扫描（缺少 USUBJID 列）")
+            raise StaleScanError(f"{fs.file_name}：读取失败，请重新扫描（缺少 USUBJID 列）")
         if len(uids) > 1:
             raise DataForgeError(f"{fs.file_name}：USUBJID 列重复")
         uid = uids[0]
@@ -239,7 +250,7 @@ class _Run:
             self._dm_overrides(header, rows)
 
         target = folder / fs.file_name
-        write_csv_rows([header, *rows], target)
+        _write_output([header, *rows], target)
         self.result.count("rows", len(rows))
         return target
 
@@ -311,11 +322,14 @@ def run(
             written.append(work.mask_file(fs, mapping, tmp).name)
             result.count("files")
         cancel.raise_if_cancelled()
-        write_csv_rows(
+        _write_output(
             [["OLD_USUBJID", "NEW_USUBJID"], *([old, mapping[old]] for old in subjects)],
             tmp / MAPPING_FILE,
         )
-        export_report(report, tmp / REPORT_FILE, options.date_orders)
+        try:
+            export_report(report, tmp / REPORT_FILE, options.date_orders)
+        except OSError as exc:
+            raise DataForgeError(f"无法写入输出文件 {REPORT_FILE}（{exc}）") from exc
         try:
             os.rename(tmp, final)
         except OSError as exc:

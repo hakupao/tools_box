@@ -146,6 +146,10 @@ class JobRunner(QObject):
     def is_busy(self) -> bool:
         return self._busy
 
+    def is_closing(self) -> bool:
+        """True once shutdown() has been called; no job can start any more."""
+        return self._closing
+
     def current_tool(self) -> str | None:
         return self._tool
 
