@@ -107,6 +107,15 @@ class EdcConfigTests(unittest.TestCase):
         self.assertEqual(self._section()["max_loops"], 12)
         self.assertEqual(legacy.read_bytes(), before)
 
+    def test_save_keeps_other_sections(self):
+        self.path.write_text(
+            json.dumps({"data_masking_pattern1": {"studyid_value": "BASE"}}), encoding="utf-8"
+        )
+        self.assertTrue(save_config(self.store, EdcConfig(max_loops=123)))
+        data = json.loads(self.path.read_text(encoding="utf-8"))
+        self.assertEqual(data["data_masking_pattern1"], {"studyid_value": "BASE"})
+        self.assertEqual(data[CONFIG_SECTION]["max_loops"], 123)
+
     def test_legacy_files_candidates(self):
         names = [p.as_posix() for p in legacy_files()]
         self.assertTrue(any(n.endswith("src/gui/widgets/" + LEGACY_FILE_NAME) for n in names))
