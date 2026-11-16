@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- 16 和 32 像素专用：只有四个色块，坐标在 16 和 32 下都落在整像素上。颜色与 app_icon.svg 一致。 -->
+  <!-- 16 和 32 像素专用：只有四个色块，坐标在 16 和 32 下都落在整像素上。颜色与 app_icon.svg 一致。改完运行 scripts/build_icon.py 重新生成 favicon.ico。 -->
   <rect x="2" y="2" width="12" height="12" rx="3" fill="#2B7DE9"/>
   <rect x="18" y="2" width="12" height="12" rx="3" fill="#18A3A0"/>
   <rect x="2" y="18" width="12" height="12" rx="3" fill="#6C5CE7"/>
