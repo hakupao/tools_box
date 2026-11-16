@@ -25,7 +25,7 @@
 | --- | --- |
 | 禁止 `setStyleSheet`、QSS 字符串、hex 颜色（`#RRGGBB`） | 写死的样式不会随主题切换。v2 正是靠几百行 QSS 才把界面强制成浅色，换到深色就全乱了。 |
 | 禁止 `setTextColor(x, x)` 这种亮色、暗色同值的写法 | 同一个颜色在浅色和深色背景下总有一边看不清。需要语义色时见第 3 节。 |
-| 禁止 `setFixedWidth`和按像素写死的宽度（图标尺寸除外：图标用 `setFixedSize` 固定大小，见 `ui/home.py`） | 工具页要在宽 / 中 / 窄三档宽度下自动排版，写死宽度会在窄窗口里被截断或出现横向滚动条。 |
+| 禁止 `setFixedWidth` 和按像素写死的宽度（图标尺寸除外：图标用 `setFixedSize` 固定大小，见 `ui/home.py`） | 工具页要在宽 / 中 / 窄三档宽度下自动排版，写死宽度会在窄窗口里被截断或出现横向滚动条。 |
 | 禁止 `processEvents` | 它会在事件处理中途重入，引起难以复现的问题；耗时操作一律放进后台任务（见第 6 节），界面自然保持响应。 |
 | 禁止 `AA_DontUseNativeDialogs`、`DontUseNativeDialog` 和标题栏 DWM 补丁 | 使用原生对话框，主题交给 QFluentWidgets 和系统。v2 为了强制浅色才关掉原生对话框、修改标题栏。 |
 | 禁止强制某一种主题 | 默认跟随系统，由用户在设置页决定；切换统一走 `apply_theme_mode`。 |
