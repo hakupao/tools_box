@@ -25,7 +25,7 @@
 | --- | --- |
 | 禁止 `setStyleSheet`、QSS 字符串、hex 颜色（`#RRGGBB`） | 写死的样式不会随主题切换。v2 正是靠几百行 QSS 才把界面强制成浅色，换到深色就全乱了。 |
 | 禁止 `setTextColor(x, x)` 这种亮色、暗色同值的写法 | 同一个颜色在浅色和深色背景下总有一边看不清。需要语义色时见第 3 节。 |
-| 禁止 `setFixedWidth`（图标尺寸除外）和按像素写死的宽度 | 工具页要在宽 / 中 / 窄三档宽度下自动排版，写死宽度会在窄窗口里被截断或出现横向滚动条。 |
+| 禁止 `setFixedWidth`和按像素写死的宽度（图标尺寸除外：图标用 `setFixedSize` 固定大小，见 `ui/home.py`） | 工具页要在宽 / 中 / 窄三档宽度下自动排版，写死宽度会在窄窗口里被截断或出现横向滚动条。 |
 | 禁止 `processEvents` | 它会在事件处理中途重入，引起难以复现的问题；耗时操作一律放进后台任务（见第 6 节），界面自然保持响应。 |
 | 禁止 `AA_DontUseNativeDialogs`、`DontUseNativeDialog` 和标题栏 DWM 补丁 | 使用原生对话框，主题交给 QFluentWidgets 和系统。v2 为了强制浅色才关掉原生对话框、修改标题栏。 |
 | 禁止强制某一种主题 | 默认跟随系统，由用户在设置页决定；切换统一走 `apply_theme_mode`。 |
@@ -85,20 +85,24 @@
 ### 4.5 滚动区
 
 - 用 `SmoothScrollArea`。
-- `setWidget()` 会打开内容控件的 `autoFillBackground`，放进滚动区后要对内容控件和 `viewport()` 调用 `setAutoFillBackground(False)`，否则深色主题下会露出浅色底。
+- `setWidget()` 会打开内容控件的 `autoFillBackground`，放进滚动区后要对内容控件调用 `setAutoFillBackground(False)`，否则深色主题下会露出浅色底。
+- 滚动区本身的背景有两种做法：
+  - 工具页（`ToolPage`）再对 `viewport()` 调用 `setAutoFillBackground(False)`；
+  - 主页（`ui/home.py`）调用 QFluentWidgets 自带的 `enableTransparentBackground()`，必须在 `setWidget()` 之前调用，否则卡片也会变透明。
 
 ## 5. 交互
 
-- **结果提示一律用 InfoBar**，显示在窗口右上角（`InfoBarPosition.TOP_RIGHT`），父对象用页面所在的窗口。完成、部分失败、未生成文件、失败、已取消都用 InfoBar，不弹模态框。
+- **结果提示一律用 InfoBar**，显示在窗口右上角（`InfoBarPosition.TOP_RIGHT`），父对象用页面所在的窗口。完成、部分失败、未生成文件、失败、已取消都用 InfoBar，不弹模态框。例外：日期转换页的"已复制"提示显示在页面顶部（`InfoBarPosition.TOP`，父对象是页面本身）。
 - **模态对话框只用于需要用户做决定的场景**：
   - 勾选"覆盖原文件"后开始运行前的二次确认；
   - 编码有歧义时选择编码；
   - EDC 某一行停下后选择"重做本行 / 跳到下一行 / 结束"；
+  - EDC 点"选择窗口…"后从列表中选择目标窗口；
   - 任务运行中关闭窗口时的确认。
 - 对话框用 Fluent 的 `MessageBox` / `MessageBoxBase`。`MessageBox` 先经过 `components/confirm.py` 的 `use_chinese_buttons()` 把按钮改为"确定 / 取消"。用完在 `exec()` 返回后调用 `deleteLater()`。
 - **运行时锁定输入**：任务开始时 `ToolPage` 调用页面的 `set_inputs_locked(True)`，输入区和参数区不可编辑；结束后解锁。切换侧边栏不受限制，任务在后台继续。
-- 全局同一时间只运行一个任务。其他工具在运行时，本页主按钮不可用，并显示"<工具名> 正在运行"。
-- 主按钮写具体动作，例如"开始转换"、"开始拆分"，用 `run_bar.primary_button().setText()` 设置。
+- 全局同一时间只运行一个任务。其他工具在运行时，本页主按钮不可用，按钮旁边显示"<工具名> 正在运行"。
+- 主按钮写具体动作，例如"开始转换"、"开始拆分"，用 `run_bar.set_primary_text()`（或 `run_bar.primary_button().setText()`）设置。
 - 输入不全时（例如没选文件），用 `InfoBar.warning` 说明缺什么，不开始运行。
 - 文件输入用 `FileInputCard`（支持拖放、选择文件、选择文件夹、清空），文件夹输入用 `FolderPicker`，输出位置用 `OutputLocationField`，编码选择用 `EncodingField`。
 

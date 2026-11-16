@@ -17,7 +17,7 @@
 ## 通用约定
 
 - 文件类工具的入口统一为 `run(inputs, options, progress, cancel) -> Result`。
-- 后端不导入 Qt，不读应用配置，不用 `print`，日志用 `logging.getLogger(__name__)`。
+- 后端不导入 Qt，不用 `print`，日志用 `logging.getLogger(__name__)`。工具入口不读应用配置：数据模糊化和 EDC 的配置由页面调用 `load_profile` / `load_config` 读出后作为参数传入。
 - 参数非法（例如没有选文件）时抛 `DataForgeError`，整次运行不开始。
 - 单个文件出错时记入 `Result.errors`，然后继续处理下一个文件。
 - 在每个文件之间、或每处理一批行之后调用 `cancel.raise_if_cancelled()`。取消时抛 `Cancelled`，已经写完的文件保留，正在写的文件不留下半成品。
@@ -133,7 +133,7 @@ def detect_encoding(data: bytes, forced: str | None = None) -> EncodingDecision:
 ```
 
 - `detect_encoding` 按 [编码规则](tools/README.md#编码规则) 判断编码：BOM → UTF-8 → cp932 / GBK，不用 latin1 兜底。
-- `forced` 是页面上手动指定的编码，此时跳过自动识别。
+- `forced` 是页面上手动指定的编码，此时跳过自动识别。例外：文件带 UTF-8 BOM 时 BOM 优先——指定 `utf-8` 按 `utf-8-sig` 处理；指定 `cp932` / `gbk` 时仍返回 `utf-8-sig`，并在 `note` 中说明"文件带 UTF-8 BOM，已忽略手动指定的编码"。
 - 返回的 `note` 是需要提示用户的说明（例如"自动识别为 中文 (GBK)"），工具一般把它记成一条警告；不需要提示时为 `None`。
 - 两种旧编码都能解码时抛 `AmbiguousEncodingError`，其 `previews` 用于构造 `EncodingQuestion`；工具捕获后调用 `result.ask_encoding(path, exc.previews)`，跳过这个文件。
 - 无法识别或无法按指定编码解码时抛 `EncodingError`。
@@ -272,7 +272,7 @@ def run(
 - `encoding` 对全部 CSV 统一指定编码；`encodings` 按文件指定（键是 `str(文件路径)`），优先于 `encoding`。获取字段的 `FieldOptions` 同样如此。
 - `all_sheets` 只对 `XLSX_TO_CSV` 有效。
 - `files` 为空时抛 `DataForgeError`。扩展名与模式不符的文件记一条错误后跳过。
-- `stats`：`files`（成功处理的文件数）。
+- `stats`：`files`（有输出的文件数）、`skipped`（既没有输出也没有出错的文件数，例如 CSV 转 UTF-8 BOM 时输入已经带 BOM）。等待选择编码的文件两者都不计入。
 - 规则：[format_convert.md](tools/format_convert.md)。
 
 ### 工作表拆分：`dataforge.tools.sheet_split`
@@ -289,7 +289,7 @@ def run(
 ) -> Result: ...
 ```
 
-- 每个工作表导出为一个 CSV。格式转换的 `XLSX_TO_CSV` 模式也复用这里的导出逻辑。
+- 每个工作表导出为一个 CSV。格式转换的 `XLSX_TO_CSV` 模式也复用这里的导出逻辑：调用同一模块的 `export_workbook(src, *, all_sheets, output_dir, result, cancel)`，输出和错误记入传入的 `result`。
 - `stats`：`sheets`（导出的工作表数）、`files`（没有出错的工作簿数）。
 - 规则：[sheet_split.md](tools/sheet_split.md)。
 
@@ -310,7 +310,7 @@ class FieldOptions:
 def run(folder: Path, options: FieldOptions, progress: ProgressFn, cancel: CancelToken) -> Result: ...
 ```
 
-- 输入是一个文件夹，不是文件列表。`folder` 不是文件夹或 `header_row < 1` 时抛 `DataForgeError`。
+- 输入是一个文件夹，不是文件列表。`folder` 不是文件夹、`header_row < 1`，或文件夹中没有可处理的 CSV / Excel 文件时抛 `DataForgeError`。
 - 已有的汇总文件（`file_fields_summary.csv`、`file_fields_summary_1.csv`……）不作为输入。
 - 编码重跑时不合并两次的 `Result`：界面带上选定的 `encodings` 对整个文件夹再运行一次，生成完整的新汇总，再替换第一次的汇总。
 - `stats`：`files`、`fields`。
@@ -469,7 +469,8 @@ def run(
 ```
 
 - `profile` 必填。`date_orders` 的键是 `(文件名, 列名)`。
-- `run` 的输入是扫描报告，不是文件列表。以下情况抛 `DataForgeError`：扫描未通过、还有日期列没选顺序、`subject_limit < 1`、无法创建输出文件夹。
+- `run` 的输入是扫描报告，不是文件列表。以下情况抛 `DataForgeError`：扫描未通过、还有日期列没选顺序、`subject_limit < 1`、新 USUBJID 为空或重复、某个文件的 USUBJID 列重复、无法创建输出文件夹、无法写入输出文件。扫描之后文件读不了或缺少 USUBJID 列时抛它的子类 `StaleScanError`，界面据此要求重新扫描。
+- 同一模块的 `transform_subject_id(subject, profile, index) -> str` 按 `usubjid_mode` 算出一个新 USUBJID，界面用它显示预览；`masking.scan.select_files(paths)` 从输入中取出要处理的 CSV 文件，扫描和界面计算签名时都用它。
 - 输出是一个新文件夹，全部写完后才整体改名为最终名称；出错或取消时不留下任何输出。`Result.data` 是这个输出文件夹的 `Path`，`outputs` 是其中的各个文件。
 - `describe_plan` 生成界面"执行摘要"中的说明文字，每行一条。
 - `stats`：`files`、`subjects`、`rows`、`dates_shifted`、`dates_filled`、`dates_unparsed`。

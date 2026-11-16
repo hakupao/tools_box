@@ -37,7 +37,7 @@ tests/golden/<tool_id>/<case>/
 
 - 样例数据必须是虚构的。
 - 期望输出由手写字面值生成，不得用被测代码生成。
-- `tests/golden/width_convert/make_fixtures.py` 是 Excel 样例的生成脚本，在仓库根目录运行即可重新生成。
+- 除 date_convert 外，各工具目录下的 `tests/golden/<tool_id>/make_fixtures.py` 是该工具样例的生成脚本（内容全部是手写字面值，不调用被测代码），在仓库根目录运行即可重新生成。
 
 比较规则（`tests/dataforge/golden.py` 的 `assert_dirs_equal`）：
 
@@ -46,7 +46,7 @@ tests/golden/<tool_id>/<case>/
 - `.xlsx`、`.xlsm`：sheet 名称（按顺序）、两个 sheet 范围并集内每个单元格的值、`data_type`、`number_format`、合并区域（排序后的区域字符串）逐项相等。
 - `expected/` 不存在或为空，表示该样例不应产生任何输出文件（例如 CSV 转 BOM 时输入已带 BOM）。
 
-`params.json` 的键（都可省略，未写按默认值）：
+`params.json` 的键（format_convert 的 `mode` 和 edc 的 `cells`、`start_row`、`max_loops`、`step_delay` 必填，其余都可省略，未写按默认值）：
 
 | 键 | 适用工具 | 含义 |
 | --- | --- | --- |

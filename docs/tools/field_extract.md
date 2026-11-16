@@ -44,3 +44,5 @@
 ## 标准样例
 
 `tests/golden/field_extract/basic/`：含子文件夹的一组文件——重复列名与空列名的 CSV、两个工作表的 xlsx、GBK 编码的 CSV、空 CSV，对照汇总文件。
+
+`tests/golden/field_extract/stale_summary/`：输入文件夹里已有旧的 `file_fields_summary.csv`，它不作为输入，新汇总只含其他文件的字段。

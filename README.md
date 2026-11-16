@@ -99,6 +99,10 @@ Input requirements, parameter defaults, output naming, encoding rules and known 
 
 ## Getting Started
 
+### Install (no Python needed)
+
+Download `DataForgeStudio-Setup-3.0.0.exe` from the [latest release](https://github.com/hakupao/tools_box/releases/latest) and run it. It installs to `%LOCALAPPDATA%\Programs\DataForgeStudio` without administrator rights. The sections below are only needed to run from source.
+
 ### Requirements
 
 - **Windows 10 / 11**
@@ -168,7 +172,7 @@ If the config file is corrupted, the app first backs it up as `dataforge_studio_
 
 ## Upgrading from v2
 
-- 🔁 Run the 3.0.0 installer over the existing installation; there is no need to uninstall first.
+- 🔁 Run the 3.0.0 installer (from the [latest release](https://github.com/hakupao/tools_box/releases/latest)) over the existing installation; there is no need to uninstall first.
 - ⚙️ Settings carry over: the unified 2.x config file location is unchanged (`%LOCALAPPDATA%\dataforge_studio\dataforge_studio_config.json`) and is read directly at startup. The 1.x file `%LOCALAPPDATA%\tools_box\tools_box_config.json` is used as a fallback when the new file does not exist. Separate Data Masking / EDC config files next to the program (or in an old source folder) are read the first time the corresponding tool is opened; masking profiles and EDC click positions are kept.
 - 🖱️ Old EDC configs have no "target window"; record once, or pick the target window on the page, before the first run.
 - 🗑️ Removed in v3: the 仕様書 (spec) workflow (DataSet generation, data cleaning, Codelist processing), the dead-link checker, and the Data Masking Pattern2 placeholder page.

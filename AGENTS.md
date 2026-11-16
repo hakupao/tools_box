@@ -5,7 +5,7 @@
 ## 项目概况
 
 - Windows 桌面数据工具箱，PySide6 + QFluentWidgets（`PySide6-Fluent-Widgets`），Excel 读写用 openpyxl，EDC 用 pywin32 COM、pyautogui、keyboard、mouse、pyperclip。
-- 包名 `dataforge`，源码在 `src/dataforge/`，版本号只写在 `src/dataforge/__init__.py` 的 `__version__`（当前 3.0.0）。`pyproject.toml` 和 `packaging/scripts/build_installer.ps1` 跟它保持一致，由 `tests/dataforge/test_release.py` 锁定。
+- 包名 `dataforge`，源码在 `src/dataforge/`，版本号只写在 `src/dataforge/__init__.py` 的 `__version__`（当前 3.0.0）。`pyproject.toml` 的 `version` 和 `CHANGELOG.md` 的版本标题跟它保持一致，由 `tests/dataforge/test_release.py` 锁定；`packaging/scripts/build_installer.ps1` 打包时直接读取它。
 - 入口：`python -m dataforge`（`src/dataforge/__main__.py` → `dataforge.app.main`）。
 - 设计文档：`docs/superpowers/specs/2026-10-29-dataforge-v3-rebuild-design.md`。工具规则的唯一出处：`docs/tools/*.md`。
 
@@ -64,7 +64,7 @@ python -m venv .venv
 
 - 禁止 `setStyleSheet`、QSS 字符串、hex 颜色（`#RRGGBB`）。原因：它们不随主题切换，v2 就是靠几百行 QSS 强制浅色。
 - 禁止 `setTextColor(x, x)` 这种亮暗同值的写法；确实需要语义色时用 `setTextColor(亮色, 暗色)` 成对写，并集中在一个模块里定义。
-- 禁止 `setFixedWidth`（图标尺寸除外）和按像素写死的宽度。原因：工具页要在宽 / 中 / 窄三档宽度下自动排版（断点在 `ui/layout.py`：1100、750，最小宽度 640）。
+- 禁止 `setFixedWidth` 和按像素写死的宽度（图标尺寸除外：图标用 `setFixedSize` 固定大小）。原因：工具页要在宽 / 中 / 窄三档宽度下自动排版（断点在 `ui/layout.py`：1100、750，最小宽度 640）。
 - 禁止 `processEvents`。原因：耗时操作全部放到后台任务里，不靠它维持界面。
 - 禁止 `AA_DontUseNativeDialogs`、`DontUseNativeDialog` 和标题栏 DWM 补丁。原因：使用原生文件对话框，主题交给 QFluentWidgets。
 - 禁止强制某一种主题。主题默认 `Theme.AUTO`，设置页可改，切换统一调用 `dataforge.ui.theme.apply_theme_mode`。
@@ -115,8 +115,8 @@ python -m venv .venv
 
 ## 文档
 
-- 文档用简体中文。
-- `tests/dataforge/test_release.py` 会扫描 README.md、AGENTS.md、packaging/README.md 和 `docs/*.md` 中的过期内容（v2 的入口和目录、已移除的依赖、已禁止的 API 名）。确实需要提到时，同一行要写明"禁止 / 不得 / 不再 / 移除"。
+- 文档用简体中文。例外：`README.md` 是英文版，`README_CN.md` 是它的中文版，两者内容要对应，改一份就同步改另一份。
+- `tests/dataforge/test_release.py` 会扫描 README.md、README_CN.md、AGENTS.md、packaging/README.md 和 `docs/*.md` 中的过期内容（v2 的入口和目录、已移除的依赖、已禁止的 API 名）。确实需要提到时，同一行要写明"禁止 / 不用 / 不得 / 不再 / 移除"。英文的 README.md 写不了这些词，所以其中不得出现这些名称。
 
 ## v2 内容
 

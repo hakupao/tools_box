@@ -99,6 +99,10 @@
 
 ## 快速开始
 
+### 安装（不需要 Python）
+
+从 [最新 Release](https://github.com/hakupao/tools_box/releases/latest) 下载 `DataForgeStudio-Setup-3.0.0.exe` 并运行。默认安装到 `%LOCALAPPDATA%\Programs\DataForgeStudio`，不需要管理员权限。下面几节只在从源码运行时需要。
+
 ### 运行环境
 
 - **Windows 10 / 11**
@@ -168,11 +172,11 @@ powershell -ExecutionPolicy Bypass -File .\packaging\scripts\measure_startup.ps1
 
 ## 从 v2 升级
 
-- 🔁 直接运行 3.0.0 安装包覆盖安装即可，不用先卸载。
+- 🔁 直接运行 3.0.0 安装包（从 [最新 Release](https://github.com/hakupao/tools_box/releases/latest) 下载）覆盖安装即可，不用先卸载。
 - ⚙️ 配置会自动沿用：2.x 的统一配置文件位置没有变（`%LOCALAPPDATA%\dataforge_studio\dataforge_studio_config.json`），启动时直接读取；更早版本（1.x）用的 `%LOCALAPPDATA%\tools_box\tools_box_config.json` 在新文件不存在时作为后备读取。程序目录旁边（或旧源码目录里）单独的数据模糊化、EDC 配置文件，在第一次打开对应工具时读入。数据模糊化的配置档和 EDC 的点击位置都会保留。
 - 🖱️ EDC 的旧配置里没有"目标窗口"，第一次运行前需要录制一次，或者在页面上选择目标窗口。
 - 🗑️ 仕様書工作流（生成 DataSet、数据清洗、Codelist 处理）和死链检测已经移除，数据模糊化 Pattern2 的占位页也已移除。
-- 🎨 程序不再依赖 pandas；主题改为跟随系统，也可以在设置页手动选择浅色或深色。
+- 🎨 主题改为跟随系统，也可以在设置页手动选择浅色或深色。
 
 完整变化见 [CHANGELOG.md](CHANGELOG.md)。
 
