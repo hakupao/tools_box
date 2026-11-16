@@ -1,7 +1,9 @@
 """把 assets/icons/app_icon.svg 渲染成多尺寸的 assets/icons/favicon.ico。
 
 用法（仓库根目录）：
-    .venv\\Scripts\\python scripts\\build_icon.py [--svg 源文件] [--out 输出文件]
+    .venv\\Scripts\\python scripts\\build_icon.py [--svg 源文件] [--svg-small 小尺寸源文件] [--out 输出文件]
+
+16 和 32 用 app_icon_small.svg（只有四个色块，边缘对齐像素），其余尺寸用 app_icon.svg。
 
 每个尺寸以 PNG 记录写入 ico。Qt 没有多尺寸 ico 的写入功能，所以文件头由本脚本自己写。
 """
@@ -23,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
 SIZES: tuple[int, ...] = (16, 32, 48, 64, 128, 256)
+SMALL_SIZES: tuple[int, ...] = (16, 32)
 
 
 def render_svg(svg_path: Path, size: int) -> QImage:
@@ -76,13 +79,18 @@ def _atomic_write(path: Path, data: bytes) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="把 SVG 图标生成多尺寸 ico")
     parser.add_argument("--svg", default="assets/icons/app_icon.svg")
+    parser.add_argument("--svg-small", default="assets/icons/app_icon_small.svg")
     parser.add_argument("--out", default="assets/icons/favicon.ico")
     args = parser.parse_args(argv)
     svg = ROOT / args.svg
+    svg_small = ROOT / args.svg_small
     out = ROOT / args.out
 
     _app = QGuiApplication.instance() or QGuiApplication(sys.argv[:1])
-    pngs = [(size, encode_png(render_svg(svg, size))) for size in SIZES]
+    pngs = [
+        (size, encode_png(render_svg(svg_small if size in SMALL_SIZES else svg, size)))
+        for size in SIZES
+    ]
     _atomic_write(out, build_ico(pngs))
     logger.info("已生成 %s（尺寸：%s）", out, ", ".join(map(str, SIZES)))
     return 0

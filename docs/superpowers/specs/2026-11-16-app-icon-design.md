@@ -22,7 +22,7 @@
 ## 做法比较
 
 1. **手写 SVG + 脚本生成 ico（已选）**：SVG 作为源文件，用已有的 PySide6 渲染各个尺寸后打包。不用装新依赖，结果可重复。
-2. 在方案 1 的基础上给 16 和 32 单独画一版简化图：小尺寸最清晰，但要维护两份 SVG。先不做；生成后看了实际效果再决定要不要补。
+2. 在方案 1 的基础上给 16 和 32 单独画一版简化图：小尺寸最清晰，但要维护两份 SVG。看过生成效果后（32 下眼睛发糊，16 下图案看不清），用户选择补上这一版。
 3. 用 Inkscape、ImageMagick 或在线工具转换：要装外部工具，结果也不容易重复，不采用。
 
 ## 图案（用户已选"C 四格工具"）
@@ -37,7 +37,8 @@
 
 ## 实现要点
 
-- 新增 `assets/icons/app_icon.svg`（源文件，viewBox 256×256）。
+- 新增 `assets/icons/app_icon.svg`（源文件，viewBox 256×256），用于 48 及以上尺寸。
+- 新增 `assets/icons/app_icon_small.svg`（viewBox 32×32），只有四个色块，坐标在 16 和 32 下都落在整像素上，用于 16 和 32。
 - 新增 `scripts/build_icon.py`：用 `QSvgRenderer` 把 SVG 渲染成六个尺寸的 PNG，再写成 ico 文件。每个尺寸存成一条 PNG 记录。Qt 没有现成的多尺寸 ico 写入，ico 的文件头由脚本自己写。
 - 生成结果覆盖 `assets/icons/favicon.ico`。
 - 验收：
