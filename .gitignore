@@ -58,3 +58,7 @@ logs/
 dist_installer/
 
 .superpowers/
+
+# oh-my-claudecode runtime state (project skills stay committable)
+.omc/*
+!.omc/skills/
